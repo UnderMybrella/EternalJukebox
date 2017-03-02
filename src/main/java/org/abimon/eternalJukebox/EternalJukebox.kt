@@ -4,6 +4,7 @@ import com.mashape.unirest.http.Unirest
 import io.vertx.core.Vertx
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
+import io.vertx.ext.web.handler.CorsHandler
 import io.vertx.ext.web.handler.StaticHandler
 import org.abimon.visi.io.HTTPDataSource
 import org.json.JSONArray
@@ -17,6 +18,7 @@ import java.util.*
 val eternalDir = File("eternal")
 val songsDir = File("songs")
 val logDir = File("logs")
+val ipAddr = "http://${Unirest.get("http://ipecho.net/plain").asString().body}:11037/"
 
 fun main(args: Array<String>) {
     if(!eternalDir.exists())
@@ -31,6 +33,7 @@ fun main(args: Array<String>) {
 
     val router = Router.router(vertx)
 
+    router.route().handler(CorsHandler.create("*"))
     router.route("/eternal/id").blockingHandler(::id)
     router.route("/song").blockingHandler(::song)
     router.route("/files/*").handler(StaticHandler.create("files"))
@@ -39,6 +42,7 @@ fun main(args: Array<String>) {
     router.route().handler { context -> println(context.request().path()) }
 
     http.requestHandler { router.accept(it) }.listen(11037)
+    println("Listening at $ipAddr")
 }
 
 var bearer = ""
@@ -139,7 +143,7 @@ fun id(context: RoutingContext) {
         info.put("name", trackInfoBody["name"])
         info.put("title", trackInfoBody["name"]) //Just in case
         info.put("artist", ((trackInfoBody["artists"] as JSONArray)[0] as JSONObject)["name"])
-        info.put("url", "song?id=$id")
+        info.put("url", "${ipAddr}song?id=$id")
         eternal.put("info", info)
 
         val analysis = JSONObject()
