@@ -187,6 +187,13 @@ a:link {text-decoration: none; }
     padding-top:6px;
 }
 
+#footer-list {
+    text-align:left;
+    margin-left:auto;
+    margin-right:auto;
+    width:450px;
+}
+
 .cbut {
     background:-webkit-gradient( linear, left top, left bottom, color-stop(0.05, #ededed), color-stop(1, #dfdfdf) );
     background-color:#ededed;

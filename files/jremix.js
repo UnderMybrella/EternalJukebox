@@ -5,12 +5,12 @@ function createJRemixer(context, jquery) {
     var remixer = {
 
         remixTrackById: function(id, callback) {
-            $.getJSON("id", { id:id}, function(data) {
+            $.getJSON("http://104.199.156.132:11037/eternal/id", { id:id}, function(data) {
                 remixer.remixTrack(data, callback)
             });
         },
 
-        remixTrack : function(track, callback) {
+        remixTrack : function(track, jukeboxData, callback) {
 
             function fetchAudio(url) {
                 var request = new XMLHttpRequest();
@@ -193,7 +193,7 @@ function createJRemixer(context, jquery) {
             }
 
             preprocessTrack(track);
-            fetchAudio(track.info.url);
+            fetchAudio(jukeboxData.audioURL == null ? track.info.url : ("http://104.199.156.132:11037/audio?fallback=" + track.info.id + "&url=" + encodeURIComponent(jukeboxData.audioURL)));
         },
 
         getPlayer : function() {
