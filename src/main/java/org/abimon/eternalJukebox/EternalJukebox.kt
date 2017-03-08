@@ -21,7 +21,7 @@ val eternalDir = File("eternal")
 val songsDir = File("songs")
 val audioDir = File("audio")
 val logDir = File("logs")
-val ipAddr = "http://localhost:11037/"//"http://${Unirest.get("http://ipecho.net/plain").asString().body}:11037/"
+val ipAddr = "http://${Unirest.get("http://ipecho.net/plain").asString().body}:11037/"
 
 fun main(args: Array<String>) {
     if(!eternalDir.exists())
