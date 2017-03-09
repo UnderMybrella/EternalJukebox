@@ -1,0 +1,10 @@
+{
+  "comment":"This is a JSON file. If you don't know what that means, it's probably not a good idea to be using this. But, if you're insistent, here you go: http://json.org/",
+  "ip":"http://$ip:$port",
+  "port":11037,
+  "logAllPaths":true,
+  "fileManager":[
+    "/files/*",
+    "public_files"
+  ]
+}

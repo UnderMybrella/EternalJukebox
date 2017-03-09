@@ -8,7 +8,7 @@
     <artifactId>EternalJukebox</artifactId>
     <version>1.0-SNAPSHOT</version>
     <properties>
-        <kotlin.version>1.0.6</kotlin.version>
+        <kotlin.version>1.1.0</kotlin.version>
     </properties>
 
     <dependencies>
@@ -20,6 +20,11 @@
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib</artifactId>
+            <version>${kotlin.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-reflect</artifactId>
             <version>${kotlin.version}</version>
         </dependency>
         <dependency>
