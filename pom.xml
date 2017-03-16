@@ -9,13 +9,19 @@
     <version>1.0-SNAPSHOT</version>
     <properties>
         <kotlin.version>1.1.0</kotlin.version>
+        <vertx.version>3.4.0</vertx.version>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-web</artifactId>
-            <version>3.3.3</version>
+            <version>${vertx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-auth-oauth2</artifactId>
+            <version>${vertx.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>

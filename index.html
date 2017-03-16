@@ -509,7 +509,7 @@
     }
 
     function fetchAnalysis(id) {
-        var url = 'http://104.199.156.132:11037/eternal/id?id=' + id;
+        var url = 'id?id=' + id;
         info('Fetching the analysis');
         $.getJSON(url, function(data) { gotTheAnalysis(data); } )
             .error( function() {
