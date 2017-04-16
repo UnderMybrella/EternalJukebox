@@ -18,7 +18,7 @@ import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.*
 import io.vertx.ext.web.sstore.LocalSessionStore
-import org.abimon.eternalJukebox.objects.YoutubeVideo
+import org.abimon.eternalJukebox.objects.*
 import org.abimon.notifly.NotificationPayload
 import org.abimon.notifly.notification
 import org.abimon.visi.collections.Pool
@@ -31,6 +31,7 @@ import org.json.JSONException
 import org.json.JSONObject
 import org.jsoup.Jsoup
 import java.io.File
+import java.io.FileOutputStream
 import java.net.URLEncoder
 import java.sql.Connection
 import java.sql.DriverManager
@@ -59,6 +60,9 @@ data class JukeboxConfig(
         var songEndpoint: Optional<String> = "/song".asOptional(),
         var fileManager: Optional<Pair<String, String>> = Pair("/files/*", "files").asOptional(),
         var indexEndpoint: Optional<String> = "/index.html".asOptional(),
+        var canonizerIndexEndpoint: Optional<String> = "/canonizer_index.html".asOptional(),
+        var canonizerGoEndpoint: Optional<String> = "/canonizer_go.html".asOptional(),
+        var canonizerSearchEndpoint: Optional<String> = "/canonizer_search.html".asOptional(),
         var faqEndpoint: Optional<String> = "/faq.html".asOptional(),
         var loginEndpoint: Optional<String> = "/login.html".asOptional(),
         var popularTracksEndpoint: Optional<String> = "/popular_tracks".asOptional(),
@@ -103,7 +107,9 @@ data class JukeboxConfig(
 
         var storageSize: Long = 10L * 1000 * 1000 * 1000, //How much storage space should be devoted to Spotify caches, YouTube caches, and uploaded files.
         var storageBuffer: Long = storageSize / 10 * 9,
-        var storageEmergency: Long = storageSize / 10 * 11
+        var storageEmergency: Long = storageSize / 10 * 11,
+
+        var devMode: Boolean = false
 )
 
 val eternalDir = File("eternal")
@@ -257,6 +263,11 @@ val objMapper: ObjectMapper = ObjectMapper()
         .setSerializationInclusion(JsonInclude.Include.NON_ABSENT)
 
 fun main(args: Array<String>) {
+    Unirest.setObjectMapper(object : com.mashape.unirest.http.ObjectMapper {
+        override fun writeValue(value: Any): String = objMapper.writeValueAsString(value)
+        override fun <T : Any?> readValue(value: String, valueType: Class<T>): T = objMapper.readValue(value, valueType)
+    })
+
     if (!eternalDir.exists())
         eternalDir.mkdir()
     if (!songsDir.exists())
@@ -300,6 +311,10 @@ fun main(args: Array<String>) {
             errPrintln("You've attempted to use secure features of this program, such as logins, while not using security features for them (HTTPS, Secure Cookies). See $projectHosting for more information.\nYou've then opted to override this using httpsOverride. This is not a good idea. I repeat, do *not* use this in a production environment without an exceptionally good reason!")
         else
             forceError("Error: You've attempted to use secure features of this program, such as logins, while not using security features for them (HTTPS, Secure Cookies). See $projectHosting for more information.\nIf you absolutely *must* override this (development environment), then you can override this in the config file with the key httpsOverride. Do not do this in a production environment, short of some other protocol to handle security (eg: CloudFlare)")
+    }
+
+    if(config.devMode) {
+        System.setProperty("vertx.disableFileCPResolving", "true")
     }
 
     val vertx = Vertx.vertx()
@@ -380,6 +395,9 @@ fun main(args: Array<String>) {
     config.fileManager.ifPresent { files -> router.route(files.first).handler(StaticHandler.create(files.second)) }
     config.indexEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("index.html") } }
     config.faqEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("faq.html") } }
+    config.canonizerIndexEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("canonizer_index.html") } }
+    config.canonizerGoEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("canonizer_go.html") } }
+    config.canonizerSearchEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("canonizer_search.html") } }
     config.loginEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("login.html") } }
     config.popularTracksEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::popular) }
     config.faviconPath.ifPresent { favicon -> router.route("/favicon.ico").handler(FaviconHandler.create(favicon)) }
@@ -539,14 +557,14 @@ fun songForID(id: String): Optional<File> {
         checkStorage()
         for(i in 0 until 3) {
             try {
-                val trackInfo = Unirest.get("https://api.spotify.com/v1/tracks/$id").asJson()
+                val trackInfo = Unirest.get("https://api.spotify.com/v1/tracks/$id").asObject(SpotifyTrack::class.java)
                 if (trackInfo.status != 200)
                     continue
-                val trackInfoBody = trackInfo.body.`object`
+                val track = trackInfo.body
 
-                val name = trackInfoBody["name"] as String
-                val artist = ((trackInfoBody["artists"] as JSONArray)[0] as JSONObject)["name"] as String
-                val duration = trackInfoBody["duration_ms"] as Int
+                val name = track.name
+                val artist = track.artists[0].name
+                val duration = track.duration_ms
                 val results = searchYoutube("$artist - $name")
                 if (results.isEmpty()) {
                     error("[$artist - $name] produced *no* results (See? $results)")
@@ -658,40 +676,37 @@ fun id(context: RoutingContext) {
 
         for(i in 0 until 3) {
             try {
-                val trackInfo = Unirest.get("https://api.spotify.com/v1/tracks/$id").asJson()
+                val trackInfo = Unirest.get("https://api.spotify.com/v1/tracks/$id").asObject(SpotifyTrack::class.java)
                 if (trackInfo.status != 200) {
                     context.response().setStatusCode(404).end()
                     return
                 }
-                val acousticInfo = Unirest.get("https://api.spotify.com/v1/audio-analysis/$id").header("Authorization", "Bearer $bearer").asJson()
+                val acousticInfo = Unirest.get("https://api.spotify.com/v1/audio-analysis/$id").header("Authorization", "Bearer $bearer").asObject(SpotifyAudio::class.java)
                 if (trackInfo.status != 200) {
                     context.response().setStatusCode(trackInfo.status).end()
                     return
                 }
-                val trackInfoBody = trackInfo.body.`object`
-                val track = acousticInfo.body.`object`
+                val trackInfoBody = trackInfo.body
+                val track = acousticInfo.body
 
-                val eternal = JSONObject()
-
-                val info = JSONObject()
-                info.put("id", trackInfoBody["id"])
-                info.put("name", trackInfoBody["name"])
-                info.put("title", trackInfoBody["name"]) //Just in case
-                info.put("artist", ((trackInfoBody["artists"] as JSONArray)[0] as JSONObject)["name"])
-                info.put("url", "${config.ip}/song?id=$id")
-                eternal.put("info", info)
-
-                val analysis = JSONObject()
-                analysis.put("sections", track["sections"])
-                analysis.put("bars", track["bars"])
-                analysis.put("beats", track["beats"])
-                analysis.put("tatums", track["tatums"])
-                analysis.put("segments", track["segments"])
-                eternal.put("analysis", analysis)
-
-                eternal.put("audio_summary", track["track"])
-
-                file.writeText(eternal.toString())
+                val eternal = EternalAudio(
+                        EternalInfo(
+                                trackInfoBody.id,
+                                trackInfoBody.name,
+                                trackInfoBody.name,
+                                trackInfoBody.artists[0].name,
+                                "${config.ip}/song?id=$id"
+                        ),
+                        EternalAnalysis(
+                                track.sections,
+                                track.bars,
+                                track.beats,
+                                track.tatums,
+                                track.segments
+                        ),
+                        track.track
+                )
+                objMapper.writeValue(FileOutputStream(file), eternal)
                 context.response().sendFile(file.absolutePath)
                 break
             }
