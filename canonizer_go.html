@@ -25,7 +25,7 @@
           	<a id='show-search' class="brand">The Autocanonizer</a>
           	<div class="dropdown-content">
       			<a href="canonizer_index.html">The Autocanonizer</a>
-      			<a href="index.html">Eternal Jukebox</a>
+      			<a href="index.html">The Eternal Jukebox</a>
     		</div>
           </li>
           <li class="active"><a id='show-main'  href="canonizer_index.html">Main</a></li>
@@ -409,13 +409,7 @@ function setDisplayMode() {
 function init() {
     jQuery.ajaxSettings.traditional = true;  
     setDisplayMode(false);
-
-    window.oncontextmenu = function(event) {
-        event.preventDefault();
-        event.stopPropagation();
-        return false;
-    };
-
+    
     document.ondblclick = function DoubleClick(event) {
         event.preventDefault();
         event.stopPropagation();

@@ -58,7 +58,7 @@ function createJRemixer(context, jquery) {
             function preprocessTrack(track) {
                 trace('preprocessTrack');
                 var types = ['sections', 'bars', 'beats', 'tatums', 'segments'];
-                
+
                 for (var i in types) {
                     var type = types[i];
                     trace('preprocessTrack ' + type);
@@ -75,7 +75,7 @@ function createJRemixer(context, jquery) {
                         } else {
                             q.prev = null
                         }
-                        
+
                         if (j < qlist.length - 1) {
                             q.next = qlist[j+1];
                         } else {
@@ -134,7 +134,7 @@ function createJRemixer(context, jquery) {
 
                     for (var j = last; j < qchildren.length; j++) {
                         var qchild = qchildren[j];
-                        if (qchild.start >= qparent.start 
+                        if (qchild.start >= qparent.start
                                     && qchild.start < qparent.start + qparent.duration) {
                             qchild.parent = qparent;
                             qchild.indexInParent = qparent.children.length;
@@ -162,7 +162,7 @@ function createJRemixer(context, jquery) {
                             q.oseg = qseg;
                             last = j;
                             break
-                        } 
+                        }
                     }
                 }
             }

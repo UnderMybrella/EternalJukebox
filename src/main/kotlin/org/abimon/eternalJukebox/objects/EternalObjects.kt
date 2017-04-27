@@ -34,3 +34,4 @@ open class AnalysisType(open val start: Double, open val duration: Double, open 
     var oseg: SpotifyAudioSegment? = null
     val overlappingSegments = ArrayList<SpotifyAudioSegment>()
 }
+

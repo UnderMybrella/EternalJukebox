@@ -35,10 +35,6 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import org.jsoup.Jsoup
-import java.awt.Color
-import java.awt.Rectangle
-import java.awt.geom.AffineTransform
-import java.awt.image.BufferedImage
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URLEncoder
@@ -51,7 +47,6 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
 import java.util.concurrent.*
-import javax.imageio.ImageIO
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty
 import kotlin.reflect.full.memberProperties
@@ -68,13 +63,20 @@ data class JukeboxConfig(
         var idEndpoint: Optional<String> = "/id".asOptional(),
         var audioEndpoint: Optional<String> = "/audio".asOptional(),
         var songEndpoint: Optional<String> = "/song".asOptional(),
+        var apiBreakdownEndpoint: Optional<String> = "/api/remix_track".asOptional(),
         var fileManager: Optional<Pair<String, String>> = Pair("/files/*", "files").asOptional(),
-        var indexEndpoint: Optional<String> = "/index.html".asOptional(),
+
+        var retroIndexEndpoint: Optional<String> = "/retro_index.html".asOptional(),
+        var faqEndpoint: Optional<String> = "/faq.html".asOptional(),
+
+        var jukeboxIndexEndpoint: Optional<String> = "/jukebox_index.html".asOptional(),
+        var jukeboxGoEndpoint: Optional<String> = "/jukebox_go.html".asOptional(),
+        var jukeboxSearchEndpoint: Optional<String> = "/jukebox_search.html".asOptional(),
+
         var canonizerIndexEndpoint: Optional<String> = "/canonizer_index.html".asOptional(),
         var canonizerGoEndpoint: Optional<String> = "/canonizer_go.html".asOptional(),
         var canonizerSearchEndpoint: Optional<String> = "/canonizer_search.html".asOptional(),
-        var apiBreakdownEndpoint: Optional<String> = "/api/remix_track".asOptional(),
-        var faqEndpoint: Optional<String> = "/faq.html".asOptional(),
+
         var loginEndpoint: Optional<String> = "/login.html".asOptional(),
         var popularTracksEndpoint: Optional<String> = "/popular_tracks".asOptional(),
         var faviconPath: Optional<String> = "files/favicon.png".asOptional(),
@@ -86,7 +88,7 @@ data class JukeboxConfig(
         var storeSongs: Boolean = true,
         var storeAudio: Boolean = true,
 
-        var redirects: Map<String, String> = HashMap(),
+        var redirects: Map<String, String> = hashMapOf(Pair("index.html", "jukebox_index.html"), Pair("/", "jukebox_index.html")),
 
         var spotifyBase64: Optional<String> = Optional.empty(),
         var spotifyClient: Optional<String> = Optional.empty(),
@@ -403,14 +405,27 @@ fun main(args: Array<String>) {
     config.idEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::id) }
     config.audioEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::audio) }
     config.songEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::song) }
+
     config.fileManager.ifPresent { files -> router.route(files.first).handler(StaticHandler.create(files.second)) }
-    config.indexEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("index.html") } }
-    config.faqEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("faq.html") } }
-    config.canonizerIndexEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("canonizer_index.html") } }
-    config.canonizerGoEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("canonizer_go.html") } }
-    config.canonizerSearchEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("canonizer_search.html") } }
+
+
+    router.route(config.retroIndexEndpoint, "retro_index.html")
+    router.route(config.faqEndpoint, "faq.html")
+
+    router.route(config.jukeboxIndexEndpoint, "jukebox_index.html")
+    router.route(config.jukeboxGoEndpoint, "jukebox_go.html")
+    router.route(config.jukeboxSearchEndpoint, "jukebox_search.html")
+    
+    router.route(config.canonizerIndexEndpoint, "canonizer_index.html")
+    router.route(config.canonizerGoEndpoint, "canonizer_go.html")
+    router.route(config.canonizerSearchEndpoint, "canonizer_search.html")
+    
+    
+
     config.apiBreakdownEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::api) }
+
     config.loginEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("login.html") } }
+
     config.popularTracksEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::popular) }
     config.faviconPath.ifPresent { favicon -> router.route("/favicon.ico").handler(FaviconHandler.create(favicon)) }
 
@@ -455,6 +470,8 @@ fun main(args: Array<String>) {
     http.requestHandler { router.accept(it) }.listen(config.port)
     println("Listening at ${config.ip}")
 }
+
+fun Router.route(optionalEndpoint: Optional<String>, file: String) = optionalEndpoint.ifPresent { endpoint -> this.route(endpoint).handler { context -> context.response().sendFile(file) } }
 
 fun makeConnection(): PoolableObject<Connection> = PoolableObject(DriverManager.getConnection("jdbc:mysql://localhost/${config.mysqlDatabase()}?user=${config.mysqlUsername()}&password=${config.mysqlPassword()}&serverTimezone=GMT"))
 
@@ -719,43 +736,43 @@ fun api(context: RoutingContext) {
 
         preprocessTrack(eternal)
 
-        val x_padding = 90
-        val y_padding = 200
-        val maxWidth = 90
-        val radius = 250
-        val qlist = eternal.analysis.beats
-        var n = qlist.size.toDouble()
-        var R = radius
-        var alpha = Math.PI * 2.0 / n.toDouble()
-        var perimeter = 2 * n * R * Math.sin(alpha / 2.0)
-        var a = perimeter / n
-        var width = 10    //(a * 20).coerceAtMost(maxWidth.toDouble())
-        var angleOffset = - Math.PI / 2.0
-
-        val img = BufferedImage(x_padding + R, y_padding + R, BufferedImage.TYPE_INT_ARGB)
-        val g = img.createGraphics()
-
-        var angle = angleOffset
-        val rng = Random()
-        for(q in qlist) {
-            val x = x_padding + R + R * Math.cos(angle)
-            val y = y_padding + R + R * Math.sin(angle)
-            g.color = Color(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256))
-            val transform = AffineTransform()
-            val rect = Rectangle(x.toInt(), y.toInt(), width, a.toInt())
-
-            transform.translate(rect.x / 2.0, rect.y / 2.0)
-            transform.rotate(Math.toRadians(360 * (angle / (Math.PI * 2))))
-            transform.translate((-rect.x).toDouble(), (-rect.y).toDouble())
-
-            val transformed = transform.createTransformedShape(rect)
-            g.fill(transformed)
-            angle += alpha
-        }
-
-        val f = File("$id.png")
-        ImageIO.write(img, "PNG", f)
-        context.response().sendFile(f.absolutePath)
+//        val x_padding = 90
+//        val y_padding = 200
+//        val maxWidth = 90
+//        val radius = 500
+//        val qlist = eternal.analysis.beats
+//        var n = qlist.size.toDouble()
+//        var R = radius
+//        var alpha = Math.PI * 2.0 / n.toDouble()
+//        var perimeter = 2 * n * R * Math.sin(alpha / 2.0)
+//        var a = perimeter / n
+//        var width = (a * 2).coerceAtMost(maxWidth.toDouble()).toInt()
+//        var angleOffset = - Math.PI / 2.0
+//
+//        val img = BufferedImage(x_padding + R, y_padding + R, BufferedImage.TYPE_INT_ARGB)
+//        val g = img.createGraphics()
+//
+//        var angle = angleOffset
+//        val rng = Random()
+//        for(q in qlist) {
+//            val x = x_padding + R + R * Math.cos(angle)
+//            val y = y_padding + R + R * Math.sin(angle)
+//            g.color = Color(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256))
+//            val transform = AffineTransform()
+//            val rect = Rectangle(x.toInt(), y.toInt(), width, a.toInt())
+//
+//            transform.translate(rect.x / 2.0, rect.y / 2.0)
+//            transform.rotate(Math.toRadians(360 * (angle / (Math.PI * 2))))
+//            transform.translate((-rect.x).toDouble(), (-rect.y).toDouble())
+//
+//            val transformed = transform.createTransformedShape(rect)
+//            g.fill(transformed)
+//            angle += alpha
+//        }
+//
+//        val f = File("$id.png")
+//        ImageIO.write(img, "PNG", f)
+//        context.response().sendFile(f.absolutePath)
 
     } catch(json: RuntimeException) {
         error("An error occurred while parsing JSON: $json")
@@ -815,6 +832,7 @@ fun id(context: RoutingContext) {
                         ),
                         track.track
                 )
+
                 objMapper.writeValue(FileOutputStream(file), eternal)
                 context.response().sendFile(file.absolutePath)
                 break
