@@ -24,34 +24,34 @@ function createJRemixer(context, jquery) {
                     trace('audio loaded');
                      if (false) {
                         track.buffer = context.createBuffer(request.response, false);
-                        track.status = 'ok'
+                        track.status = 'ok';
                         callback(1, track, 100);
                     } else {
                         context.decodeAudioData(request.response, 
                             function(buffer) {      // completed function
                                 track.buffer = buffer;
-                                track.status = 'ok'
+                                track.status = 'ok';
                                 callback(1, track, 100);
                             }, 
                             function(e) { // error function
-                                track.status = 'error: loading audio'
+                                track.status = 'error: loading audio';
                                 callback(-1, track, 0);
                                 console.log('audio error', e);
                             }
                         );
                     }
-                }
+                };
 
                 request.onerror = function(e) {
                     trace('error loading loaded');
-                    track.status = 'error: loading audio'
+                    track.status = 'error: loading audio';
                     callback(-1, track, 0);
-                }
+                };
 
                 request.onprogress = function(e) {
                     var percent = Math.round(e.loaded * 100  / e.total);
                     callback(0, track, percent);
-                }
+                };
                 request.send();
             }
 
@@ -63,11 +63,11 @@ function createJRemixer(context, jquery) {
                     var type = types[i];
                     trace('preprocessTrack ' + type);
                     for (var j in track.analysis[type]) {
-                        var qlist = track.analysis[type]
+                        var qlist = track.analysis[type];
 
-                        j = parseInt(j)
+                        j = parseInt(j);
 
-                        var q = qlist[j]
+                        var q = qlist[j];
                         q.track = track;
                         q.which = j;
                         if (j > 0) {
@@ -129,7 +129,7 @@ function createJRemixer(context, jquery) {
                 var qchildren = track.analysis[child];
 
                 for (var i in qparents) {
-                    var qparent = qparents[i]
+                    var qparent = qparents[i];
                     qparent.children = [];
 
                     for (var j = last; j < qchildren.length; j++) {
@@ -154,7 +154,7 @@ function createJRemixer(context, jquery) {
                 var segs = track.analysis.segments;
 
                 for (var i = 0; i < quanta.length; i++) {
-                    var q = quanta[i]
+                    var q = quanta[i];
 
                     for (var j = last; j < segs.length; j++) {
                         var qseg = segs[j];
@@ -173,7 +173,7 @@ function createJRemixer(context, jquery) {
                 var segs = track.analysis.segments;
 
                 for (var i = 0; i < quanta.length; i++) {
-                    var q = quanta[i]
+                    var q = quanta[i];
                     q.overlappingSegments = [];
 
                     for (var j = last; j < segs.length; j++) {
@@ -193,7 +193,7 @@ function createJRemixer(context, jquery) {
             }
 
             preprocessTrack(track);
-            fetchAudio(jukeboxData.audioURL == null ? track.info.url : ("audio?fallback=" + track.info.id + "&url=" + encodeURIComponent(jukeboxData.audioURL)));
+            fetchAudio(jukeboxData.audioURL === null ? track.info.url : ("audio?fallback=" + track.info.id + "&url=" + encodeURIComponent(jukeboxData.audioURL)));
         },
 
         getPlayer : function() {
@@ -260,31 +260,31 @@ function createJRemixer(context, jquery) {
             }
 
             var player = {
-                play: function(when, q) {
+                play: function (when, q) {
                     return playQuantum(when, q);
                     //queuePlay(0, q);
                 },
 
-                playNow: function(q) {
+                playNow: function (q) {
                     queuePlay(0, q);
                 },
 
-                addCallback: function(callback) {
+                addCallback: function (callback) {
                 },
 
-                queue: function(q) {
+                queue: function (q) {
                     var now = context.currentTime;
                     if (now > queueTime) {
                         queueTime = now;
-                    } 
+                    }
                     queueTime = queuePlay(queueTime, q);
                 },
 
-                queueRest: function(duration) {
+                queueRest: function (duration) {
                     queueTime += duration;
                 },
 
-                stop: function(q) {
+                stop: function (q) {
                     if (q === undefined) {
                         if (curAudioSource) {
                             curAudioSource.stop(0);
@@ -294,7 +294,7 @@ function createJRemixer(context, jquery) {
                         //audioGain.disconnect();
                     } else {
                         if ('audioSource' in q) {
-                            if (q.audioSource != null) {
+                            if (q.audioSource !== null) {
                                 q.audioSource.stop(0);
                             }
                         }
@@ -302,10 +302,10 @@ function createJRemixer(context, jquery) {
                     curQ = null;
                 },
 
-                curTime: function() {
+                curTime: function () {
                     return context.currentTime;
                 }
-            }
+            };
             return player;
         },
 
@@ -320,11 +320,11 @@ function createJRemixer(context, jquery) {
             request.onload = function() {
                 var buffer = context.createBuffer(request.response, false);
                 callback(true, buffer);
-            }
+            };
 
             request.onerror = function(e) {
                 callback(false, null);
-            }
+            };
             request.send();
         },
     };

@@ -1,6 +1,7 @@
 package org.abimon.eternalJukebox.objects
 
 data class SpotifyTrack(
+        val href: String,
         val id: String,
         val name: String,
         val uri: String,
@@ -63,27 +64,27 @@ data class SpotifyAudioTrack(
 )
 
 data class SpotifyAudioBar(
-        val start: Double,
-        val duration: Double,
-        val confidence: Double
-)
+        override val start: Double,
+        override val duration: Double,
+        override val confidence: Double
+): AnalysisType(start, duration, confidence)
 
 data class SpotifyAudioBeat(
-        val start: Double,
-        val duration: Double,
-        val confidence: Double
-)
+        override val start: Double,
+        override val duration: Double,
+        override val confidence: Double
+): AnalysisType(start, duration, confidence)
 
 data class SpotifyAudioTatum(
-        val start: Double,
-        val duration: Double,
-        val confidence: Double
-)
+        override val start: Double,
+        override val duration: Double,
+        override val confidence: Double
+): AnalysisType(start, duration, confidence)
 
 data class SpotifyAudioSection(
-        val start: Double,
-        val duration: Double,
-        val confidence: Double,
+        override val start: Double,
+        override val duration: Double,
+        override val confidence: Double,
         val loudness: Double,
         val tempo: Double,
         val tempo_confidence: Double,
@@ -93,15 +94,15 @@ data class SpotifyAudioSection(
         val mode_confidence: Double,
         val time_signature: Int,
         val time_signature_confidence: Double
-)
+): AnalysisType(start, duration, confidence)
 
 data class SpotifyAudioSegment(
-        val start: Double,
-        val duration: Double,
-        val confidence: Double,
+        override val start: Double,
+        override var duration: Double,
+        override val confidence: Double,
         val loudness_start: Int,
         val loudness_max_time: Int,
         val loudness_max: Int,
         val pitches: DoubleArray,
         val timbre: DoubleArray
-)
+): AnalysisType(start, duration, confidence)

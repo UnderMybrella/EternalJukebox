@@ -3,6 +3,11 @@ package org.abimon.eternalJukebox
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
+import com.fasterxml.jackson.datatype.jsr310.JSR310Module
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
 import com.mashape.unirest.http.JsonNode
 import com.mashape.unirest.http.Unirest
 import com.mashape.unirest.http.exceptions.UnirestException
@@ -30,6 +35,10 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import org.jsoup.Jsoup
+import java.awt.Color
+import java.awt.Rectangle
+import java.awt.geom.AffineTransform
+import java.awt.image.BufferedImage
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URLEncoder
@@ -42,6 +51,7 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
 import java.util.concurrent.*
+import javax.imageio.ImageIO
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty
 import kotlin.reflect.full.memberProperties
@@ -63,6 +73,7 @@ data class JukeboxConfig(
         var canonizerIndexEndpoint: Optional<String> = "/canonizer_index.html".asOptional(),
         var canonizerGoEndpoint: Optional<String> = "/canonizer_go.html".asOptional(),
         var canonizerSearchEndpoint: Optional<String> = "/canonizer_search.html".asOptional(),
+        var apiBreakdownEndpoint: Optional<String> = "/api/remix_track".asOptional(),
         var faqEndpoint: Optional<String> = "/faq.html".asOptional(),
         var loginEndpoint: Optional<String> = "/login.html".asOptional(),
         var popularTracksEndpoint: Optional<String> = "/popular_tracks".asOptional(),
@@ -257,7 +268,7 @@ fun uploadGist(desc: String, content: String, name: String = "error.txt"): Optio
 }
 
 val objMapper: ObjectMapper = ObjectMapper()
-        .findAndRegisterModules()
+        .registerModules(Jdk8Module(), KotlinModule(), JSR310Module(), JavaTimeModule(), ParameterNamesModule())
         .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
         .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
         .setSerializationInclusion(JsonInclude.Include.NON_ABSENT)
@@ -398,6 +409,7 @@ fun main(args: Array<String>) {
     config.canonizerIndexEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("canonizer_index.html") } }
     config.canonizerGoEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("canonizer_go.html") } }
     config.canonizerSearchEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("canonizer_search.html") } }
+    config.apiBreakdownEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::api) }
     config.loginEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("login.html") } }
     config.popularTracksEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::popular) }
     config.faviconPath.ifPresent { favicon -> router.route("/favicon.ico").handler(FaviconHandler.create(favicon)) }
@@ -653,6 +665,103 @@ fun audio(context: RoutingContext) {
             context.response().sendFile(fallback.get().absolutePath)
         else
             context.response().setStatusCode(404).end()
+    }
+}
+fun api(context: RoutingContext) {
+    val request = context.request()
+
+    val id = request.getParam("id").replace("[^A-Za-z0-9]".toRegex(), "")
+
+    if (!config.spotifyBase64.isPresent) {
+        context.response().setStatusCode(501).putHeader("Content-Type", "application/json").end("{\"error\":\"Server not configured for new Spotify requests; bug the administrator\"}")
+        return
+    }
+
+    if (expires.isBefore(Instant.now()))
+        reloadSpotifyToken()
+
+    try {
+        val file = File(eternalDir, "$id.json")
+        if(!file.exists()) {
+            val trackInfo = Unirest.get("https://api.spotify.com/v1/tracks/$id").asObject(SpotifyTrack::class.java)
+            if (trackInfo.status != 200) {
+                context.response().setStatusCode(404).end()
+                return
+            }
+            val acousticInfo = Unirest.get("https://api.spotify.com/v1/audio-analysis/$id").header("Authorization", "Bearer $bearer").asObject(SpotifyAudio::class.java)
+            if (trackInfo.status != 200) {
+                context.response().setStatusCode(trackInfo.status).end()
+                return
+            }
+            val trackInfoBody = trackInfo.body
+            val track = acousticInfo.body
+
+            val eternal = EternalAudio(
+                    EternalInfo(
+                            trackInfoBody.id,
+                            trackInfoBody.name,
+                            trackInfoBody.name,
+                            trackInfoBody.artists[0].name,
+                            "${config.ip}/song?id=$id"
+                    ),
+                    EternalAnalysis(
+                            track.sections,
+                            track.bars,
+                            track.beats,
+                            track.tatums,
+                            track.segments
+                    ),
+                    track.track
+            )
+            objMapper.writeValue(FileOutputStream(file), eternal)
+        }
+        val eternal = objMapper.readValue(file, EternalAudio::class.java)
+
+        preprocessTrack(eternal)
+
+        val x_padding = 90
+        val y_padding = 200
+        val maxWidth = 90
+        val radius = 250
+        val qlist = eternal.analysis.beats
+        var n = qlist.size.toDouble()
+        var R = radius
+        var alpha = Math.PI * 2.0 / n.toDouble()
+        var perimeter = 2 * n * R * Math.sin(alpha / 2.0)
+        var a = perimeter / n
+        var width = 10    //(a * 20).coerceAtMost(maxWidth.toDouble())
+        var angleOffset = - Math.PI / 2.0
+
+        val img = BufferedImage(x_padding + R, y_padding + R, BufferedImage.TYPE_INT_ARGB)
+        val g = img.createGraphics()
+
+        var angle = angleOffset
+        val rng = Random()
+        for(q in qlist) {
+            val x = x_padding + R + R * Math.cos(angle)
+            val y = y_padding + R + R * Math.sin(angle)
+            g.color = Color(rng.nextInt(256), rng.nextInt(256), rng.nextInt(256))
+            val transform = AffineTransform()
+            val rect = Rectangle(x.toInt(), y.toInt(), width, a.toInt())
+
+            transform.translate(rect.x / 2.0, rect.y / 2.0)
+            transform.rotate(Math.toRadians(360 * (angle / (Math.PI * 2))))
+            transform.translate((-rect.x).toDouble(), (-rect.y).toDouble())
+
+            val transformed = transform.createTransformedShape(rect)
+            g.fill(transformed)
+            angle += alpha
+        }
+
+        val f = File("$id.png")
+        ImageIO.write(img, "PNG", f)
+        context.response().sendFile(f.absolutePath)
+
+    } catch(json: RuntimeException) {
+        error("An error occurred while parsing JSON: $json")
+        json.printStackTrace()
+    } catch(th: Throwable) {
+        error("An unexpected error occurred: $th")
     }
 }
 /** Wants track information and acoustics */
