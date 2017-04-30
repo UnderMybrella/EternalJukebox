@@ -122,7 +122,8 @@ data class JukeboxConfig(
         var storageBuffer: Long = storageSize / 10 * 9,
         var storageEmergency: Long = storageSize / 10 * 11,
 
-        var devMode: Boolean = false
+        var devMode: Boolean = false,
+        var format: String = "mp3"
 )
 
 val eternalDir = File("eternal")
@@ -362,7 +363,7 @@ fun main(args: Array<String>) {
             if (context.fileUploads().isNotEmpty()) {
                 val file = context.fileUploads().first()
                 val id = "CSTM${b64Encoder.encodeToString(file.uploadedFileName().toByteArray(Charsets.UTF_8))}"
-                val song = File(audioDir, "$id.mp3")
+                val song = File(audioDir, "$id.${config.format}")
 
                 val process = ProcessBuilder()
                         .command("ffmpeg", "-i", file.uploadedFileName(), song.absolutePath)
@@ -579,7 +580,7 @@ fun song(context: RoutingContext) {
         context.response().setStatusCode(404).end()
 }
 fun songForID(id: String): Optional<File> {
-    val file = File(songsDir, "$id.mp3")
+    val file = File(songsDir, "$id.${config.format}")
     if(file.exists())
         return file.asOptional()
     else {
@@ -602,14 +603,17 @@ fun songForID(id: String): Optional<File> {
 
                 val closestResult = if(true) results[0].id else results.sortedWith(Comparator<YoutubeVideo> { (_, duration1), (_, duration2) -> Math.abs(duration - duration1.toMillis()).compareTo(Math.abs(duration - duration2.toMillis()))}).first().id
                 val process = ProcessBuilder()
-                        .command("bash", "yt.sh", "https://youtu.be/$closestResult", file.absolutePath)
+                        .command("bash", "yt.sh", "https://youtu.be/$closestResult", file.absolutePath, config.format)
                         .redirectErrorStream(true)
                         .redirectOutput(File(logDir, "$id.log"))
                         .start()
 
-                process.waitFor()
-                if (file.exists())
-                    return file.asOptional()
+                if(process.waitFor(50, TimeUnit.SECONDS)) {
+                    if (file.exists())
+                        return file.asOptional()
+                    else
+                        return Optional.empty()
+                }
                 else
                     return Optional.empty()
             }
@@ -651,7 +655,7 @@ fun audio(context: RoutingContext) {
 
     val url = request.getParam("url") ?: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
     if(url.matches(b64CustomID)) {
-        val file = File(audioDir, "$url.mp3")
+        val file = File(audioDir, "$url.${config.format}")
         if(file.exists()) {
             context.response().sendFile(file.absolutePath)
             return
@@ -659,7 +663,7 @@ fun audio(context: RoutingContext) {
     }
 
     val b64 = b64Encoder.encodeToString(url.toByteArray(Charsets.UTF_8)).replace("/", "-")
-    val file = File(audioDir, "$b64.mp3")
+    val file = File(audioDir, "$b64.${config.format}")
 
     if (file.exists()) {
         context.response().sendFile(file.absolutePath)
@@ -668,7 +672,7 @@ fun audio(context: RoutingContext) {
 
     checkStorage()
     val process = ProcessBuilder()
-            .command("bash", "yt.sh", url, file.absolutePath)
+            .command("bash", "yt.sh", url, file.absolutePath, config.format)
             .redirectErrorStream(true)
             .redirectOutput(File(logDir, "$b64.log"))
             .start()
