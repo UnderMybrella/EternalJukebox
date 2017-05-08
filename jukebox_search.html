@@ -137,10 +137,6 @@ function getTitle(title, artist, url) {
     return title;
 }
 
-function listFavoriteTracks() {
-    //listTracks('#favorite-list', favSongs);
-}
-
 function init() {
     $("#go-search").click(function() {
         searchForTrack();
@@ -152,7 +148,9 @@ function init() {
         }
     });
 
-    listFavoriteTracks();
+    $.getJSON('popular_jukebox', { count : 12}, function(data) {
+            listTracks('#favourite-list', data);
+    });
 }
 
 window.onload = init;

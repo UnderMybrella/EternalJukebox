@@ -23,7 +23,7 @@
           	<a id='show-search' class="brand">The Autocanonizer</a>
           	<div class="dropdown-content">
       			<a href="canonizer_index.html">The Autocanonizer</a>
-      			<a href="index.html">The Eternal Jukebox</a>
+      			<a href="index.html">Eternal Jukebox</a>
     		</div>
           </li>
           <li><a id='show-main'  href="canonizer_index.html">Main</a></li>
@@ -135,10 +135,6 @@ function getTitle(title, artist, url) {
     return title;
 }
 
-function listFavoriteTracks() {
-    //listTracks('#favorite-list', favSongs);
-}
-
 function init() {
     $("#go-search").click(function() {
         searchForTrack();
@@ -149,8 +145,10 @@ function init() {
             searchForTrack();
         }
     });
-
-    listFavoriteTracks();
+    
+	$.getJSON('popular_canonizer', { count : 12}, function(data) {
+            listTracks('#favourite-list', data);
+    });
 }
 
 window.onload = init;

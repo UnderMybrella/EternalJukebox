@@ -483,7 +483,7 @@
     }
 
     function listPopularTracks() {
-        $.getJSON('popular_tracks', { count : 12}, function(data) {
+        $.getJSON('popular_jukebox', { count : 12}, function(data) {
             listTracks('#popular-list', data);
             ga_track('list', 'popular-tracks', '');
         });

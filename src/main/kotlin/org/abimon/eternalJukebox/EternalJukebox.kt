@@ -26,7 +26,6 @@ import io.vertx.ext.web.sstore.LocalSessionStore
 import org.abimon.eternalJukebox.objects.*
 import org.abimon.notifly.NotificationPayload
 import org.abimon.notifly.notification
-import org.abimon.visi.collections.Pool
 import org.abimon.visi.collections.PoolableObject
 import org.abimon.visi.io.errPrintln
 import org.abimon.visi.io.forceError
@@ -40,91 +39,11 @@ import java.io.FileOutputStream
 import java.net.URLEncoder
 import java.sql.Connection
 import java.sql.DriverManager
-import java.sql.ResultSet
-import java.sql.Statement
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
 import java.util.concurrent.*
-import kotlin.reflect.KClass
-import kotlin.reflect.KMutableProperty
-import kotlin.reflect.full.memberProperties
-
-data class SSLCertPair(val key: String, val cert: String) {
-    constructor(keys: Array<String>): this(keys[0], keys[1])
-}
-
-data class JukeboxConfig(
-        var ip: String = "http://\$ip:\$port",
-        var ssl: Optional<SSLCertPair> = Optional.empty(),
-
-        var searchEndpoint: Optional<String> = "/search".asOptional(),
-        var idEndpoint: Optional<String> = "/id".asOptional(),
-        var audioEndpoint: Optional<String> = "/audio".asOptional(),
-        var songEndpoint: Optional<String> = "/song".asOptional(),
-        var apiBreakdownEndpoint: Optional<String> = "/api/remix_track".asOptional(),
-        var fileManager: Optional<Pair<String, String>> = Pair("/files/*", "files").asOptional(),
-
-        var retroIndexEndpoint: Optional<String> = "/retro_index.html".asOptional(),
-        var faqEndpoint: Optional<String> = "/faq.html".asOptional(),
-
-        var jukeboxIndexEndpoint: Optional<String> = "/jukebox_index.html".asOptional(),
-        var jukeboxGoEndpoint: Optional<String> = "/jukebox_go.html".asOptional(),
-        var jukeboxSearchEndpoint: Optional<String> = "/jukebox_search.html".asOptional(),
-
-        var canonizerIndexEndpoint: Optional<String> = "/canonizer_index.html".asOptional(),
-        var canonizerGoEndpoint: Optional<String> = "/canonizer_go.html".asOptional(),
-        var canonizerSearchEndpoint: Optional<String> = "/canonizer_search.html".asOptional(),
-
-        var loginEndpoint: Optional<String> = "/login.html".asOptional(),
-        var popularTracksEndpoint: Optional<String> = "/popular_tracks".asOptional(),
-        var faviconPath: Optional<String> = "files/favicon.png".asOptional(),
-        var logAllPaths: Boolean = false,
-        var logMissingPaths: Boolean = false,
-        var port: Int = 11037,
-
-        var storeSongInformation: Boolean = true,
-        var storeSongs: Boolean = true,
-        var storeAudio: Boolean = true,
-
-        var redirects: Map<String, String> = hashMapOf(Pair("index.html", "jukebox_index.html"), Pair("/", "jukebox_index.html")),
-
-        var spotifyBase64: Optional<String> = Optional.empty(),
-        var spotifyClient: Optional<String> = Optional.empty(),
-        var spotifySecret: Optional<String> = Optional.empty(),
-
-        var cors: Boolean = true,
-
-        var discordClient: Optional<String> = Optional.empty(),
-        var discordSecret: Optional<String> = Optional.empty(),
-
-        var httpOnlyCookies: Boolean = false,
-        var secureCookies: Boolean = false,
-
-        var csrf: Boolean = true,
-        var csrfSecret: String = UUID.randomUUID().toString(),
-
-        var epoch: Long = 1489148833,
-
-        var mysqlUsername: Optional<String> = Optional.empty(),
-        var mysqlPassword: Optional<String> = Optional.empty(),
-        var mysqlDatabase: Optional<String> = Optional.empty(),
-
-        var httpsOverride: Boolean = false,
-
-        var uploads: Boolean = false,
-
-        var firebaseApp: Optional<String> = Optional.empty(),
-        var firebaseDevice: Optional<String> = Optional.empty(),
-
-        var storageSize: Long = 10L * 1000 * 1000 * 1000, //How much storage space should be devoted to Spotify caches, YouTube caches, and uploaded files.
-        var storageBuffer: Long = storageSize / 10 * 9,
-        var storageEmergency: Long = storageSize / 10 * 11,
-
-        var devMode: Boolean = false,
-        var format: String = "mp3"
-)
 
 val eternalDir = File("eternal")
 val songsDir = File("songs")
@@ -142,107 +61,25 @@ val b64CustomID = "CSTM[$b64Alphabet]+".toRegex()
 
 var config = JukeboxConfig()
 
-val mysqlConnectionPool = Pool<Connection>(128)
-
 fun getIP(): String {
-    try{
+    try {
         Unirest.get("https://google.com").asString().body
-    }
-    catch(e: UnirestException) {
+    } catch(e: UnirestException) {
         println("The internet's offline. Or something *really* bad has happened: $e")
         return "localhost"
     }
 
-    for(web in arrayOf("http://ipecho.net/plain", "http://icanhazip.com", "http://ipinfo.io/ip",
+    for (web in arrayOf("http://ipecho.net/plain", "http://icanhazip.com", "http://ipinfo.io/ip",
             "https://ident.me/", "http://checkip.amazonaws.com", "http://smart-ip.net/myip",
             "http://bot.whatismyipaddress.com", "https://secure.informaction.com/ipecho/", "http://curlmyip.com")) {
         try {
             return Unirest.get(web).asString().body
-        }
-        catch(e: UnirestException) {
+        } catch(e: UnirestException) {
             println("$web is offline, trying the next one...")
         }
     }
 
     return "localhost"
-}
-
-fun <T: Any> mapToMutablePojo(json: JSONObject, pojo: KClass<T>, obj: T) {
-    json.keys().forEach { key ->
-        pojo.memberProperties
-                .filterIsInstance(KMutableProperty::class.java)
-                .firstOrEmpty { property -> property.name == key }
-                .ifPresent { property ->
-                    val type = property.returnType.classifier
-                    try {
-                        when (type) {
-                            String::class -> property.setter.call(obj, "${json[key]}")
-                            Optional::class -> {
-                                val optionalType = property.returnType.arguments[0].type?.classifier
-
-                                when (optionalType) {
-                                    String::class -> property.setter.call(obj, if("${json[key]}".isBlank()) Optional.empty<String>() else "${json[key]}".asOptional())
-                                    Pair::class -> {
-                                        /** We only deal with String pairs here, so no need for type checks */
-                                        val pair = json[key]
-                                        if (pair is JSONArray) { //This. This is what we want
-                                            if(pair.length() == 0)
-                                                property.setter.call(obj, Optional.empty<Pair<String, String>>())
-                                            else if (pair.length() == 1) //Ehh, not so much
-                                                property.setter.call(obj, Pair("${pair.firstOrNull() ?: ""}", "").asOptional())
-                                            else
-                                                property.setter.call(obj, Pair("${pair[0]}", "${pair[1]}").asOptional()) //Ignore anything else
-                                        } else if (pair is JSONObject) { //This is tolerable?
-                                            if (pair.length() == 0)
-                                                property.setter.call(obj, Optional.empty<Pair<String, String>>())
-                                            else if (pair.has("first")) {
-                                                if (pair.has("second"))
-                                                    property.setter.call(obj, Pair("${pair["first"]}", "${pair["second"]}").asOptional())
-                                                else
-                                                    property.setter.call(obj, Pair("${pair["first"]}", "").asOptional())
-                                            } else if (pair.has("second"))
-                                                property.setter.call(obj, Pair("${pair["first"]}", "").asOptional())
-                                            else if (pair.length() < 2)
-                                                property.setter.call(obj, Pair("${pair[pair.names()[0] as String]}", "").asOptional())
-                                            else
-                                                property.setter.call(obj, Pair("${pair[pair.names()[0] as String]}", "${pair[pair.names()[1] as String]}").asOptional())
-                                        } else if (pair is String) { //W h y
-                                            if (pair.contains('|') && pair.split('|', limit = 2).size == 2)
-                                                property.setter.call(obj, Pair(pair.split('|', limit = 2)[0], pair.split('|', limit = 2)[1]).asOptional())
-                                            else if(pair.isEmpty())
-                                                property.setter.call(obj, Optional.empty<Pair<String, String>>())
-                                            else
-                                                property.setter.call(obj, Pair(pair, "").asOptional())
-                                        }
-                                    }
-                                    else -> {
-                                        println(optionalType)
-                                    }
-                                }
-                            }
-                            Boolean::class -> property.setter.call(obj, json[key] as Boolean)
-                            Int::class -> property.setter.call(obj, json[key] as Int)
-                            Map::class -> { //We only have the one map here
-                                val jsonVal = json[key]
-                                if(jsonVal is JSONObject) {
-                                    val map = HashMap<String, String>()
-                                    map.putAll(jsonVal.names().map { name -> name as String }.map { name -> Pair(name, "${jsonVal[name]}") }.toTypedArray())
-                                    property.setter.call(obj, map)
-                                }
-                            }
-                            else -> println("$key is a ${(type as KClass<*>).simpleName}")
-                        }
-                    } catch(wrongClass: ClassCastException) {
-                        println("Whoops, you tried to use the wrong type of object for $key. You used a ${json[key]::class.simpleName} whereas we needed a ${(type as KClass<*>).simpleName}")
-                    } catch(hack: Exception) {
-                        val url = uploadGist("Exception attempting to set key $key to $property", hack.exportStackTrace())
-                        if(url.isPresent)
-                            error("An error occurred while loading the configuration file. Go file an issue here ($projectHosting) with this URL: ${url()}")
-                        else
-                            error("An error occurred while loading the configuration file. Go file an issue here ($projectHosting) with this stacktrace: ${hack.exportStackTrace()}")
-                    }
-                }
-    }
 }
 
 fun uploadGist(desc: String, content: String, name: String = "error.txt"): Optional<String> {
@@ -261,7 +98,7 @@ fun uploadGist(desc: String, content: String, name: String = "error.txt"): Optio
             .header("Accept", "application/vnd.github.v3+json")
             .body(json.toString()).asString()
 
-    when(response.status) {
+    when (response.status) {
         201 -> return (JSONObject(response.body)["html_url"] as String).asOptional()
         else -> {
             println("Gist failed with error ${response.status}: ${response.body}")
@@ -296,38 +133,40 @@ fun main(args: Array<String>) {
     if (configFile.exists()) {
         try {
             config = objMapper.readValue(configFile, JukeboxConfig::class.java)
-        }
-        catch(jsonError: JSONException) {
+        } catch(jsonError: JSONException) {
             error("Something went wrong reading the config file ($configFile): $jsonError")
         }
     } else
         println("Config file ($configFile) does not exist, using default values (see $projectHosting for configuration details)")
 
-    if(config.ip.contains("\$ip") || config.ip.contains("\$port"))
+    if (config.ip.contains("\$ip") || config.ip.contains("\$port"))
         config.ip = config.ip.replace("\$ip", getIP()).replace("\$port", "${config.port}")
 
-    if(config.spotifyClient.isPresent && config.spotifySecret.isPresent && config.spotifyBase64.isEmpty) {
+    if (config.spotifyClient.isPresent && config.spotifySecret.isPresent && config.spotifyBase64.isEmpty) {
         config.spotifyBase64 = b64Encoder.encodeToString("${config.spotifyClient()}:${config.spotifySecret()}".toByteArray(Charsets.UTF_8)).asOptional()
         config.spotifyClient = Optional.empty()
         config.spotifySecret = Optional.empty()
     }
 
-    if(config.spotifyBase64.isEmpty)
+    if (config.spotifyBase64.isEmpty)
         println("Note: Spotify Authentication details are absent; server running in offline/cache mode. New song retrievals will fail (see $projectHosting for more information)!")
 
-    if(!mysqlEnabled())
+    if (!mysqlEnabled())
         println("Note: MySQL details are absent; server running in 'simple' mode. Popular song retrieval will fail, as will logins (see $projectHosting for more information)!")
-    else
-        ensureTokenTable()
+    else {
+        createAccountsTable()
+        createPopularJukeboxTable()
+        createPopularCanonizerTable()
+    }
 
-    if(isInsecure()) {
+    if (isInsecure()) {
         if (config.httpsOverride)
             errPrintln("You've attempted to use secure features of this program, such as logins, while not using security features for them (HTTPS, Secure Cookies). See $projectHosting for more information.\nYou've then opted to override this using httpsOverride. This is not a good idea. I repeat, do *not* use this in a production environment without an exceptionally good reason!")
         else
             forceError("Error: You've attempted to use secure features of this program, such as logins, while not using security features for them (HTTPS, Secure Cookies). See $projectHosting for more information.\nIf you absolutely *must* override this (development environment), then you can override this in the config file with the key httpsOverride. Do not do this in a production environment, short of some other protocol to handle security (eg: CloudFlare)")
     }
 
-    if(config.devMode) {
+    if (config.devMode) {
         System.setProperty("vertx.disableFileCPResolving", "true")
     }
 
@@ -343,7 +182,7 @@ fun main(args: Array<String>) {
 
     val router = Router.router(vertx)
 
-    if(config.uploads) {
+    if (config.uploads) {
         router.post().blockingHandler {
             checkStorage()
             it.next()
@@ -351,14 +190,12 @@ fun main(args: Array<String>) {
         router.post().handler(BodyHandler.create(tmpUploadDir.name).setDeleteUploadedFilesOnEnd(true).setBodyLimit(10 * 1000 * 1000))
     }
 
-    if(config.logAllPaths)
-        router.route().handler { context ->
-            println("Request was sent from ${context.request().remoteAddress()}: ${context.request().path()}")
-            println("User: ${context.user()}")
-            context.next()
-        }
+    if (config.logAllPaths && mysqlEnabled()) {
+        createRequestsTable()
+        router.route().handler(::logRequest)
+    }
 
-    if(config.uploads) {
+    if (config.uploads) {
         router.post("/upload/song").blockingHandler { context ->
             if (context.fileUploads().isNotEmpty()) {
                 val file = context.fileUploads().first()
@@ -381,10 +218,10 @@ fun main(args: Array<String>) {
         }
     }
 
-    if(config.cors)
+    if (config.cors)
         router.route().handler(CorsHandler.create("*"))
 
-    if(anyLogins()) {
+    if (anyLogins()) {
         router.route().handler(CookieHandler.create())
         router.route().handler(SessionHandler
                 .create(LocalSessionStore.create(vertx))
@@ -392,12 +229,12 @@ fun main(args: Array<String>) {
                 .setCookieSecureFlag(config.secureCookies)
         )
 
-        if(config.csrf)
+        if (config.csrf)
             router.route("/user/").handler(CSRFHandler.create(config.csrfSecret))
     }
 
     router.route().handler { context ->
-        if(config.redirects.containsKey(context.request().path()))
+        if (config.redirects.containsKey(context.request().path()))
             context.reroute(config.redirects[context.request().path()])
         else
             context.next()
@@ -407,30 +244,32 @@ fun main(args: Array<String>) {
     config.audioEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::audio) }
     config.songEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::song) }
 
-    config.fileManager.ifPresent { files -> router.route(files.first).handler(StaticHandler.create(files.second)) }
-
+    config.fileManager.ifPresent { (first, second) -> router.route(first).handler(StaticHandler.create(second)) }
 
     router.route(config.retroIndexEndpoint, "retro_index.html")
     router.route(config.faqEndpoint, "faq.html")
 
     router.route(config.jukeboxIndexEndpoint, "jukebox_index.html")
-    router.route(config.jukeboxGoEndpoint, "jukebox_go.html")
+    router.popularRoute(config.jukeboxGoEndpoint, "jukebox_go.html", true)
     router.route(config.jukeboxSearchEndpoint, "jukebox_search.html")
-    
+
     router.route(config.canonizerIndexEndpoint, "canonizer_index.html")
-    router.route(config.canonizerGoEndpoint, "canonizer_go.html")
+    router.popularRoute(config.canonizerGoEndpoint, "canonizer_go.html", false)
     router.route(config.canonizerSearchEndpoint, "canonizer_search.html")
-    
-    
+
+    router.get("/robots.txt").handler { context -> context.response().end(config.robotsTxt) }
 
     config.apiBreakdownEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::api) }
 
     config.loginEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("login.html") } }
 
-    config.popularTracksEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::popular) }
-    config.faviconPath.ifPresent { favicon -> router.route("/favicon.ico").handler(FaviconHandler.create(favicon)) }
+    config.popularJukeboxTracksEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::popularJukebox) }
+    config.popularCanonizerTracksEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::popularCanonizer) }
 
-    if(allowDiscordLogins()) {
+    config.faviconPath.ifPresent { favicon -> router.route("/favicon.ico").handler(FaviconHandler.create(favicon)) }
+    config.appleTouchIconPath.ifPresent { touchIcon -> router.route("/apple-touch-icon.png").handler { it.response().sendFile(touchIcon) } }
+
+    if (allowDiscordLogins()) {
         val discordOAuth2 = OAuth2Auth.create(vertx, OAuth2FlowType.AUTH_CODE, OAuth2ClientOptions()
                 .setClientID(config.discordClient())
                 .setClientSecret(config.discordSecret())
@@ -439,10 +278,6 @@ fun main(args: Array<String>) {
                 .setAuthorizationPath("/api/oauth2/authorize"))
         router.route("/logins/discord").handler(UserSessionHandler.create(discordOAuth2))
         router.route("/callbacks/discord").handler(UserSessionHandler.create(discordOAuth2))
-        router.route("/ensure/discord").handler { context ->
-            ensureServiceTable(LoginService.DISCORD)
-            context.response().end()
-        }
 
         val oauth2 = OAuth2AuthHandler.create(discordOAuth2, config.ip).setupCallback(router.get("/callbacks/discord")).addAuthority("identify")
 
@@ -457,7 +292,7 @@ fun main(args: Array<String>) {
         }
     }
 
-    if(config.logMissingPaths) {
+    if (config.logMissingPaths) {
         router.route().handler { context ->
             context.response().setStatusCode(404).end()
             println("Request was sent from ${context.request().remoteAddress()} that didn't match any paths, sending a 404 for ${context.request().path()}")
@@ -473,6 +308,15 @@ fun main(args: Array<String>) {
 }
 
 fun Router.route(optionalEndpoint: Optional<String>, file: String) = optionalEndpoint.ifPresent { endpoint -> this.route(endpoint).handler { context -> context.response().sendFile(file) } }
+fun Router.popularRoute(optionalEndpoint: Optional<String>, file: String, jukebox: Boolean) = optionalEndpoint.ifPresent { endpoint ->
+    this.route(endpoint).handler { context ->
+        context.response().sendFile(file)
+        if(jukebox)
+            populariseJukebox(context)
+        else
+            populariseCanonizer(context)
+    }
+}
 
 fun makeConnection(): PoolableObject<Connection> = PoolableObject(DriverManager.getConnection("jdbc:mysql://localhost/${config.mysqlDatabase()}?user=${config.mysqlUsername()}&password=${config.mysqlPassword()}&serverTimezone=GMT"))
 
@@ -519,17 +363,57 @@ fun sendFirebaseMessage(notificationPayload: Optional<NotificationPayload> = Opt
         }
     }
 }
+
 var bearer = ""
 var expires: Instant = Instant.now()
 
-/** NYI */
-fun popular(context: RoutingContext) {
+fun popularJukebox(context: RoutingContext) {
     val request = context.request()
+    val popular = getPopularJukeboxSongs((request.getParam("count") ?: "30").toIntOrNull() ?: 30)
+    val array = JSONArray()
+
+    popular.forEach { id ->
+        eternalForID(id).ifPresent { (info) ->
+            val track = JSONObject()
+
+            track.put("id", info.id)
+            track.put("name", info.name)
+            track.put("title", info.name) //Just in case
+            track.put("artist", info.artist)
+            track.put("url", info.url)
+
+            array.put(track)
+        }
+    }
+
+    context.response().putHeader("Content-Type", "application/json").end(array.toString())
 }
+fun popularCanonizer(context: RoutingContext) {
+    val request = context.request()
+    val popular = getPopularCanonizerSongs((request.getParam("count") ?: "30").toIntOrNull() ?: 30)
+    val array = JSONArray()
+
+    popular.forEach { id ->
+        eternalForID(id).ifPresent { (info) ->
+            val track = JSONObject()
+
+            track.put("id", info.id)
+            track.put("name", info.name)
+            track.put("title", info.name) //Just in case
+            track.put("artist", info.artist)
+            track.put("url", info.url)
+
+            array.put(track)
+        }
+    }
+
+    context.response().putHeader("Content-Type", "application/json").end(array.toString())
+}
+
 fun search(context: RoutingContext) {
     val request = context.request()
 
-    if(!config.spotifyBase64.isPresent) {
+    if (!config.spotifyBase64.isPresent) {
         context.response().setStatusCode(501).putHeader("Content-Type", "application/json").end("{\"error\":\"Server not configured for new Spotify requests; bug the administrator\"}")
         return
     }
@@ -537,7 +421,7 @@ fun search(context: RoutingContext) {
     if (expires.isBefore(Instant.now()))
         reloadSpotifyToken()
 
-    for(i in 0 until 3) {
+    for (i in 0 until 3) {
         try {
             val array = JSONArray()
 
@@ -547,7 +431,7 @@ fun search(context: RoutingContext) {
                     .queryString("limit", request.getParam("results") ?: "30")
                     .asJson()
 
-            for(item in trackInfo.body.`object`.getJSONObject("tracks").getJSONArray("items")) {
+            for (item in trackInfo.body.`object`.getJSONObject("tracks").getJSONArray("items")) {
                 val obj = item as JSONObject
                 val track = JSONObject()
 
@@ -562,30 +446,31 @@ fun search(context: RoutingContext) {
 
             context.response().putHeader("Content-Type", "application/json").end(array.toString())
             break
-        }
-        catch(json: JSONException) {
+        } catch(json: JSONException) {
             error("An error occurred while parsing JSON: $json")
             continue
         }
     }
 }
+
 fun song(context: RoutingContext) {
     val request = context.request()
 
     val id = request.getParam("id").replace("[^A-Za-z0-9]".toRegex(), "")
     val song = songForID(id)
-    if(song.isPresent)
+    if (song.isPresent)
         context.response().sendFile(song.get().absolutePath)
     else
         context.response().setStatusCode(404).end()
 }
+
 fun songForID(id: String): Optional<File> {
     val file = File(songsDir, "$id.${config.format}")
-    if(file.exists())
+    if (file.exists())
         return file.asOptional()
     else {
         checkStorage()
-        for(i in 0 until 3) {
+        for (i in 0 until 3) {
             try {
                 val trackInfo = Unirest.get("https://api.spotify.com/v1/tracks/$id").asObject(SpotifyTrack::class.java)
                 if (trackInfo.status != 200)
@@ -601,23 +486,21 @@ fun songForID(id: String): Optional<File> {
                     return Optional.empty()
                 }
 
-                val closestResult = if(true) results[0].id else results.sortedWith(Comparator<YoutubeVideo> { (_, duration1), (_, duration2) -> Math.abs(duration - duration1.toMillis()).compareTo(Math.abs(duration - duration2.toMillis()))}).first().id
+                val closestResult = if (true) results[0].id else results.sortedWith(Comparator<YoutubeVideo> { (_, duration1), (_, duration2) -> Math.abs(duration - duration1.toMillis()).compareTo(Math.abs(duration - duration2.toMillis())) }).first().id
                 val process = ProcessBuilder()
                         .command("bash", "yt.sh", "https://youtu.be/$closestResult", file.absolutePath, config.format)
                         .redirectErrorStream(true)
                         .redirectOutput(File(logDir, "$id.log"))
                         .start()
 
-                if(process.waitFor(50, TimeUnit.SECONDS)) {
+                if (process.waitFor(50, TimeUnit.SECONDS)) {
                     if (file.exists())
                         return file.asOptional()
                     else
                         return Optional.empty()
-                }
-                else
+                } else
                     return Optional.empty()
-            }
-            catch(json: JSONException) {
+            } catch(json: JSONException) {
                 error("An error occured while parsing JSON: $json")
                 continue
             }
@@ -626,37 +509,33 @@ fun songForID(id: String): Optional<File> {
 
     return Optional.empty()
 }
+
 val temporalComponents = arrayOf(ChronoUnit.SECONDS, ChronoUnit.MINUTES, ChronoUnit.HOURS, ChronoUnit.DAYS)
 
 fun searchYoutube(search: String): Array<YoutubeVideo> {
-    try {
-        val html = Jsoup.parse(Unirest.get("https://www.youtube.com/results").queryString("search_query", URLEncoder.encode(search, "UTF-8")).asString().body)
-        val listElements = html.select("ol.item-section").select("li").map { li -> li.select("div.yt-lockup-dismissable") }
-        val videos = ArrayList<YoutubeVideo>(listElements.size)
-        listElements.forEach { ytVid ->
-            val id = ytVid.select("a[href]").attr("href")
-            if(id.isNotBlank()) {
-                val ytID = id.substringAfter("=").substring(0, 11)
-                val videoTime = ytVid.select("span.video-time").singleOrNull()?.text() ?: "4:20"
-                var duration = Duration.ZERO
-                videoTime.split(':').reversed().forEachIndexed { index, s -> duration = duration.plus(s.toLong(), temporalComponents[index]) }
-                videos.add(YoutubeVideo(ytID, duration))
-            }
+    val html = Jsoup.parse(Unirest.get("https://www.youtube.com/results").queryString("search_query", URLEncoder.encode(search, "UTF-8")).asString().body)
+    val listElements = html.select("ol.item-section").select("li").map { li -> li.select("div.yt-lockup-dismissable") }
+    val videos = ArrayList<YoutubeVideo>(listElements.size)
+    listElements.forEach { ytVid ->
+        val id = ytVid.select("a[href]").attr("href")
+        if (id.isNotBlank()) {
+            val ytID = id.substringAfter("=").substring(0, 11)
+            val videoTime = ytVid.select("span.video-time").singleOrNull()?.text() ?: "1:00"
+            var duration = Duration.ZERO
+            videoTime.split(':').reversed().forEachIndexed { index, s -> duration = duration.plus(s.toLong(), temporalComponents[index]) }
+            videos.add(YoutubeVideo(ytID, duration))
         }
-        return videos.toTypedArray()
-    } catch (th: Throwable) {
-        th.printStackTrace()
     }
-
-    return arrayOf()
+    return videos.toTypedArray()
 }
+
 fun audio(context: RoutingContext) {
     val request = context.request()
 
     val url = request.getParam("url") ?: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-    if(url.matches(b64CustomID)) {
+    if (url.matches(b64CustomID)) {
         val file = File(audioDir, "$url.${config.format}")
-        if(file.exists()) {
+        if (file.exists()) {
             context.response().sendFile(file.absolutePath)
             return
         }
@@ -682,12 +561,13 @@ fun audio(context: RoutingContext) {
         context.response().sendFile(file.absolutePath)
     else {
         val fallback = songForID(request.getParam("fallback") ?: "")
-        if(fallback.isPresent)
+        if (fallback.isPresent)
             context.response().sendFile(fallback.get().absolutePath)
         else
             context.response().setStatusCode(404).end()
     }
 }
+
 fun api(context: RoutingContext) {
     val request = context.request()
 
@@ -703,7 +583,7 @@ fun api(context: RoutingContext) {
 
     try {
         val file = File(eternalDir, "$id.json")
-        if(!file.exists()) {
+        if (!file.exists()) {
             val trackInfo = Unirest.get("https://api.spotify.com/v1/tracks/$id").asObject(SpotifyTrack::class.java)
             if (trackInfo.status != 200) {
                 context.response().setStatusCode(404).end()
@@ -785,37 +665,40 @@ fun api(context: RoutingContext) {
         error("An unexpected error occurred: $th")
     }
 }
+
 /** Wants track information and acoustics */
 fun id(context: RoutingContext) {
     val request = context.request()
 
     val id = request.getParam("id").replace("[^A-Za-z0-9]".toRegex(), "")
 
-    val file = File(eternalDir, "$id.json")
-    if(file.exists())
-        context.response().sendFile(file.absolutePath)
-    else {
-        if(!config.spotifyBase64.isPresent) {
-            context.response().setStatusCode(501).putHeader("Content-Type", "application/json").end("{\"error\":\"Server not configured for new Spotify requests; bug the administrator\"}")
-            return
-        }
+    if (!config.spotifyBase64.isPresent) {
+        context.response().setStatusCode(501).putHeader("Content-Type", "application/json").end("{\"error\":\"Server not configured for new Spotify requests; bug the administrator\"}")
+        return
+    }
 
+    val eternal = eternalForID(id)
+    if(eternal.isPresent)
+        context.response().putHeader("Content-Type", "application/json").end(objMapper.writeValueAsString(eternal()))
+    else
+        context.response().setStatusCode(404).end()
+}
+
+fun eternalForID(id: String): Optional<EternalAudio> {
+    val file = File(eternalDir, "$id.json")
+    if (file.exists())
+        return objMapper.readValue(file, EternalAudio::class.java).asOptional()
+    else {
         checkStorage()
         if (expires.isBefore(Instant.now()))
             reloadSpotifyToken()
 
-        for(i in 0 until 3) {
+        for (i in 0 until 3) {
             try {
                 val trackInfo = Unirest.get("https://api.spotify.com/v1/tracks/$id").asObject(SpotifyTrack::class.java)
-                if (trackInfo.status != 200) {
-                    context.response().setStatusCode(404).end()
-                    return
-                }
+                if (trackInfo.status != 200)
+                    return Optional.empty()
                 val acousticInfo = Unirest.get("https://api.spotify.com/v1/audio-analysis/$id").header("Authorization", "Bearer $bearer").asObject(SpotifyAudio::class.java)
-                if (trackInfo.status != 200) {
-                    context.response().setStatusCode(trackInfo.status).end()
-                    return
-                }
                 val trackInfoBody = trackInfo.body
                 val track = acousticInfo.body
 
@@ -838,31 +721,31 @@ fun id(context: RoutingContext) {
                 )
 
                 objMapper.writeValue(FileOutputStream(file), eternal)
-                context.response().sendFile(file.absolutePath)
-                break
-            }
-            catch(json: RuntimeException) {
+                return eternal.asOptional()
+            } catch(json: RuntimeException) {
                 error("An error occurred while parsing JSON: $json")
                 continue
-            }
-            catch(th: Throwable) {
+            } catch(th: Throwable) {
                 error("An unexpected error occurred: $th")
             }
         }
     }
+
+    return Optional.empty()
 }
 
 val executor: ExecutorService = Executors.newCachedThreadPool()
 
-fun RoutingContext.token(): AccessToken = if(user() is AccessToken) user() as AccessToken else throw IllegalArgumentException("User is not an Access Token!")
+fun RoutingContext.token(): AccessToken = if (user() is AccessToken) user() as AccessToken else throw IllegalArgumentException("User is not an Access Token!")
 fun AccessToken.refresh(): String {
     var finished = false
     refresh { finished = true }
-    while(!finished) Thread.sleep(1000)
+    while (!finished) Thread.sleep(1000)
 
     return principal().getString("access_token")
 }
-fun AccessToken.accessToken(): String = if(expired()) refresh() else principal().getString("access_token")
+
+fun AccessToken.accessToken(): String = if (expired()) refresh() else principal().getString("access_token")
 fun <T> AccessToken.use(action: (String) -> T): Future<T> = executor.submit(Callable<T> { action.invoke(accessToken()) })
 
 fun reloadSpotifyToken() {
@@ -882,36 +765,13 @@ fun reloadSpotifyToken() {
 fun allowDiscordLogins(): Boolean = config.discordClient.isPresent && config.discordSecret.isPresent && mysqlEnabled()
 fun anyLogins(): Boolean = allowDiscordLogins()
 fun mysqlEnabled(): Boolean = config.mysqlDatabase.isPresent && config.mysqlUsername.isPresent && config.mysqlPassword.isPresent
-fun ResultSet.toIterable(): Iterable<ResultSet> {
-    val results = this
 
-    return object : Iterable<ResultSet> {
-        val iterator = object : Iterator<ResultSet> {
-            override fun hasNext(): Boolean = results.next()
-
-            override fun next(): ResultSet = results
-        }
-
-        override fun iterator(): Iterator<ResultSet> {
-            results.beforeFirst()
-            return iterator
-        }
-    }
-}
-
-fun Statement.executeAndClose(sql: String) {
-    execute(sql)
-    close()
-}
-fun Statement.executeQueryAndClose(sql: String): ResultSet {
-    closeOnCompletion()
-    return executeQuery(sql)
-}
-fun <T: HttpRequestWithBody> T.jsonBody(json: JSONObject): T {
+fun <T : HttpRequestWithBody> T.jsonBody(json: JSONObject): T {
     header("Content-Type", "application/json")
     body(json.toString())
     return this
 }
+
 fun JsonNode.toJsonObject(): JSONObject = JSONObject(`object`.toString())
 
 fun error(msg: Any) {
@@ -921,47 +781,5 @@ fun error(msg: Any) {
         body(msg.toString())
     }.asOptional())
 }
-
-fun getConnection(): PoolableObject<Connection> = mysqlConnectionPool.getOrAddOrWait(60, TimeUnit.SECONDS, ::makeConnection) as PoolableObject<Connection>
-
-fun ensureServiceTable(service: LoginService) {
-    val reference = mysqlConnectionPool.getOrAddOrWait(60, TimeUnit.SECONDS, ::makeConnection) as PoolableObject
-    reference.use { connection ->
-        val tables = connection.createStatement().executeQuery("show tables;")
-        if(!tables.first())
-            createServiceTable(service)
-        else {
-            if(!tables.toIterable().any { resultSet -> resultSet.getString(1) == service.tableName })
-                createServiceTable(service)
-        }
-    }
-}
-fun createServiceTable(service: LoginService) = getConnection().use { connection -> connection.createStatement().executeAndClose("CREATE TABLE IF NOT EXISTS ${service.tableName} (id VARCHAR(63) PRIMARY KEY, service_id VARCHAR(255));") }
-fun ensureTokenTable() = getConnection().use { connection -> connection.createStatement().executeAndClose("CREATE TABLE IF NOT EXISTS accounts (id VARCHAR(63) PRIMARY KEY, token VARCHAR(255));") }
-//fun getOrCreateUser(service: LoginService, serviceID: String): TimeLord {
-//    var timelord: TimeLord? = null
-//    getConnection().use { connection ->
-//        val prepared = connection.prepareStatement("SELECT id FROM discord WHERE service_id=?")
-//        prepared.setString(1, serviceID)
-//        prepared.execute()
-//        if(prepared.resultSet.toIterable().any())
-//            timelord = TimeLord(, service, serviceID)
-//        else {
-//            println("No user!")
-//            val insert = connection.prepareStatement("INSERT INTO discord VALUES (?, ?)")
-//            val snowflake = getSnowflake()
-//            insert.setString(1, snowflake)
-//            insert.setString(2, serviceID)
-//            insert.execute()
-//            insert.close()
-//
-//            timelord = TimeLord(snowflake, service, serviceID)
-//        }
-//
-//        prepared.close()
-//    }
-//
-//    return timelord!!
-//}
 
 fun isInsecure(): Boolean = anyLogins() && (!config.secureCookies || config.ssl.isEmpty)
