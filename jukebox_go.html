@@ -667,15 +667,15 @@
                 p += '&sq=0'
             }
 
-            if (jukeboxData.currentThreshold != jukeboxData.computedThreshold) {
+            if (jukeboxData.currentThreshold !== jukeboxData.computedThreshold) {
                 p +=  '&thresh=' + jukeboxData.currentThreshold;
             }
             
-            if (jukeboxData.audioURL != null) {
+            if (jukeboxData.audioURL !== null) {
             	p += "&audio=" + encodeURIComponent(jukeboxData.audioURL);  
             }
 
-            if (jukeboxData.minRandomBranchChance != defaultMinRandomBranchChance) {
+            if (jukeboxData.minRandomBranchChance !== defaultMinRandomBranchChance) {
                 addBranchParams = true;
             }
             if (jukeboxData.maxRandomBranchChance != defaultMaxRandomBranchChance) {
@@ -1657,7 +1657,7 @@
         
 		$( "#audio-url" ).keypress(function(event) {
     		var keycode = event.keyCode || event.which;
-    		if(keycode == '13') {
+    		if(keycode === '13') {
         		jukeboxData.audioURL = event.target.value;  
         		setTunedURL();
         		window.location.reload(true);
@@ -1683,7 +1683,7 @@
         			console.log("Error: " + error);
         		}
     		});
-		})
+		});
 		
 		$("#disable-keys").change(
             function(event) {

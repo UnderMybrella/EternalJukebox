@@ -10,7 +10,7 @@ function createJRemixer(context, jquery) {
             });
         },
 
-        remixTrack : function(track, jukeboxData, callback) {
+        remixTrack : function(track, canonizerData, callback) {
 
             function fetchAudio(url) {
                 var request = new XMLHttpRequest();
@@ -41,18 +41,18 @@ function createJRemixer(context, jquery) {
                             }
                         );
                     }
-                }
+                };
 
                 request.onerror = function(e) {
                     trace('error loading loaded');
                     track.status = 'error: loading audio'
                     callback(-1, track, 0);
-                }
+                };
 
                 request.onprogress = function(e) {
                     var percent = Math.round(e.position * 100  / e.totalSize);
                     callback(0, track, percent);
-                }
+                };
                 request.send();
             }
 
@@ -175,7 +175,7 @@ function createJRemixer(context, jquery) {
                 var segs = track.analysis.segments;
 
                 for (var i = 0; i < quanta.length; i++) {
-                    var q = quanta[i]
+                    var q = quanta[i];
                     q.overlappingSegments = [];
 
                     for (var j = last; j < segs.length; j++) {
@@ -195,7 +195,7 @@ function createJRemixer(context, jquery) {
             }
 
             preprocessTrack(track);
-            fetchAudio(jukeboxData.audioURL == null ? track.info.url : ("audio?fallback=" + track.info.id + "&url=" + encodeURIComponent(jukeboxData.audioURL)));
+            fetchAudio(canonizerData.audioURL === null ? track.info.url : ("audio?fallback=" + track.info.id + "&url=" + encodeURIComponent(canonizerData.audioURL)));
         },
 
         getPlayer : function() {
