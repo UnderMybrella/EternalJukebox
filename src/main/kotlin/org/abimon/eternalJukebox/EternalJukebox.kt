@@ -429,7 +429,13 @@ fun search(context: RoutingContext) {
                     .queryString("q", request.getParam("q") ?: "Never Gonna Give You Up")
                     .queryString("type", "track")
                     .queryString("limit", request.getParam("results") ?: "30")
+                    .header("Authorization", "Bearer $bearer")
                     .asJson()
+
+            if(trackInfo.status >= 300) {
+                context.response().setStatusCode(trackInfo.status).putHeader("Content-Type", "application/json").end("{\"error\":\"Spotify responded with a status code of ${trackInfo.status} and an error of ${trackInfo.statusText}\"}")
+                return
+            }
 
             for (item in trackInfo.body.`object`.getJSONObject("tracks").getJSONArray("items")) {
                 val obj = item as JSONObject
@@ -447,7 +453,7 @@ fun search(context: RoutingContext) {
             context.response().putHeader("Content-Type", "application/json").end(array.toString())
             break
         } catch(json: JSONException) {
-            error("An error occurred while parsing JSON: $json")
+            error("An error occurred while parsing JSON for search: $json")
             continue
         }
     }
@@ -472,9 +478,11 @@ fun songForID(id: String): Optional<File> {
         checkStorage()
         for (i in 0 until 3) {
             try {
-                val trackInfo = Unirest.get("https://api.spotify.com/v1/tracks/$id").asObject(SpotifyTrack::class.java)
-                if (trackInfo.status != 200)
+                val trackInfo = Unirest.get("https://api.spotify.com/v1/tracks/$id").header("Authorization", "Bearer $bearer").asObject(SpotifyTrack::class.java)
+                if (trackInfo.status != 200) {
+                    println("Non 200 code for song for $id; iteration $i")
                     continue
+                }
                 val track = trackInfo.body
 
                 val name = track.name
@@ -501,7 +509,7 @@ fun songForID(id: String): Optional<File> {
                 } else
                     return Optional.empty()
             } catch(json: JSONException) {
-                error("An error occured while parsing JSON: $json")
+                error("An error occured while parsing JSON for song of id $id: $json")
                 continue
             }
         }
@@ -584,9 +592,9 @@ fun api(context: RoutingContext) {
     try {
         val file = File(eternalDir, "$id.json")
         if (!file.exists()) {
-            val trackInfo = Unirest.get("https://api.spotify.com/v1/tracks/$id").asObject(SpotifyTrack::class.java)
+            val trackInfo = Unirest.get("https://api.spotify.com/v1/tracks/$id").header("Authorization", "Bearer $bearer").asObject(SpotifyTrack::class.java)
             if (trackInfo.status != 200) {
-                context.response().setStatusCode(404).end()
+                context.response().setStatusCode(404).putHeader("Content-Type", "application/json").end("{\"error\":\"Spotify returned a status code of ${trackInfo.status} with error ${trackInfo.statusText}\"}")
                 return
             }
             val acousticInfo = Unirest.get("https://api.spotify.com/v1/audio-analysis/$id").header("Authorization", "Bearer $bearer").asObject(SpotifyAudio::class.java)
@@ -659,7 +667,7 @@ fun api(context: RoutingContext) {
 //        context.response().sendFile(f.absolutePath)
 
     } catch(json: RuntimeException) {
-        error("An error occurred while parsing JSON: $json")
+        error("An error occurred while parsing JSON for the api: $json")
         json.printStackTrace()
     } catch(th: Throwable) {
         error("An unexpected error occurred: $th")
@@ -695,10 +703,17 @@ fun eternalForID(id: String): Optional<EternalAudio> {
 
         for (i in 0 until 3) {
             try {
-                val trackInfo = Unirest.get("https://api.spotify.com/v1/tracks/$id").asObject(SpotifyTrack::class.java)
-                if (trackInfo.status != 200)
+                val trackInfo = Unirest.get("https://api.spotify.com/v1/tracks/$id").header("Authorization", "Bearer $bearer").asObject(SpotifyTrack::class.java)
+                if (trackInfo.status != 200) {
+                    println("Non 200 status code for track retrieval (Code: ${trackInfo.status}, error ${trackInfo.statusText}) for ID $id and iteration $i")
                     return Optional.empty()
+                }
                 val acousticInfo = Unirest.get("https://api.spotify.com/v1/audio-analysis/$id").header("Authorization", "Bearer $bearer").asObject(SpotifyAudio::class.java)
+                if (acousticInfo.status != 200) {
+                    println("Non 200 status code for track retrieval (Code: ${acousticInfo.status}, error ${acousticInfo.statusText}) for ID $id and iteration $i")
+                    return Optional.empty()
+                }
+
                 val trackInfoBody = trackInfo.body
                 val track = acousticInfo.body
 
@@ -723,7 +738,7 @@ fun eternalForID(id: String): Optional<EternalAudio> {
                 objMapper.writeValue(FileOutputStream(file), eternal)
                 return eternal.asOptional()
             } catch(json: RuntimeException) {
-                error("An error occurred while parsing JSON: $json")
+                error("An error occurred while parsing JSON for retrieving eternal song $id: $json")
                 continue
             } catch(th: Throwable) {
                 error("An unexpected error occurred: $th")

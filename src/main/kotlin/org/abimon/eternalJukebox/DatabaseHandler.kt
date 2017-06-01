@@ -10,12 +10,12 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 val mysqlConnectionPool = Pool<Connection>(128)
-fun getConnection(): PoolableObject<Connection> = mysqlConnectionPool.getOrAddOrWait(60, TimeUnit.SECONDS, ::makeConnection) as PoolableObject<Connection>
+fun getConnection(): Optional<PoolableObject<Connection>> = if(mysqlEnabled()) Optional.of(mysqlConnectionPool.getOrAddOrWait(60, TimeUnit.SECONDS, ::makeConnection) as PoolableObject<Connection>) else Optional.empty()
 
-fun createAccountsTable() = getConnection().use { connection -> connection.createStatement().executeAndClose("CREATE TABLE IF NOT EXISTS accounts (id VARCHAR(63) PRIMARY KEY, discord_id VARCHAR(24), discord_token VARCHAR(255), refresh_token VARCHAR(255));") }
-fun createPopularJukeboxTable() = getConnection().use { connection -> connection.createStatement().executeAndClose("CREATE TABLE IF NOT EXISTS popular_jukebox (id VARCHAR(63) PRIMARY KEY, hits INT);") }
-fun createPopularCanonizerTable() = getConnection().use { connection -> connection.createStatement().executeAndClose("CREATE TABLE IF NOT EXISTS popular_canonizer (id VARCHAR(63) PRIMARY KEY, hits INT);") }
-fun createRequestsTable() = getConnection().use { connection -> connection.createStatement().executeAndClose("CREATE TABLE IF NOT EXISTS requests (id INT PRIMARY KEY AUTO_INCREMENT, time LONG, ip VARCHAR(255), request VARCHAR(255));") }
+fun createAccountsTable() = getConnection().ifPresent { it.use { connection -> connection.createStatement().executeAndClose("CREATE TABLE IF NOT EXISTS accounts (id VARCHAR(63) PRIMARY KEY, discord_id VARCHAR(24), discord_token VARCHAR(255), refresh_token VARCHAR(255));") } }
+fun createPopularJukeboxTable() = getConnection().ifPresent { it.use { connection -> connection.createStatement().executeAndClose("CREATE TABLE IF NOT EXISTS popular_jukebox (id VARCHAR(63) PRIMARY KEY, hits INT);") } }
+fun createPopularCanonizerTable() = getConnection().ifPresent { it.use { connection -> connection.createStatement().executeAndClose("CREATE TABLE IF NOT EXISTS popular_canonizer (id VARCHAR(63) PRIMARY KEY, hits INT);") } }
+fun createRequestsTable() = getConnection().ifPresent { it.use { connection -> connection.createStatement().executeAndClose("CREATE TABLE IF NOT EXISTS requests (id INT PRIMARY KEY AUTO_INCREMENT, time LONG, ip VARCHAR(255), request VARCHAR(255));") } }
 fun ResultSet.toIterable(): Iterable<ResultSet> {
     val results = this
 
@@ -57,23 +57,25 @@ fun populariseJukebox(context: RoutingContext) {
 
     popularised[key] = System.currentTimeMillis() + 1000 * 60 * 60 //1 hr cooldown
 
-    getConnection().use { connection ->
-        val preparedSelect = connection.prepareStatement("SELECT id FROM popular_jukebox WHERE id=?")
-        preparedSelect.setString(1, id)
-        preparedSelect.execute()
-        val results = preparedSelect.resultSet
-        if (!results.isBeforeFirst) {
-            val prepared = connection.prepareStatement("INSERT INTO popular_jukebox VALUES(?, 1)")
-            prepared.setString(1, id)
-            prepared.execute()
-            prepared.close()
-        } else {
-            val prepared = connection.prepareStatement("UPDATE popular_jukebox SET hits = hits + 1 WHERE id=?")
-            prepared.setString(1, id)
-            prepared.execute()
-            prepared.close()
+    getConnection().ifPresent {
+        it.use { connection ->
+            val preparedSelect = connection.prepareStatement("SELECT id FROM popular_jukebox WHERE id=?")
+            preparedSelect.setString(1, id)
+            preparedSelect.execute()
+            val results = preparedSelect.resultSet
+            if (!results.isBeforeFirst) {
+                val prepared = connection.prepareStatement("INSERT INTO popular_jukebox VALUES(?, 1)")
+                prepared.setString(1, id)
+                prepared.execute()
+                prepared.close()
+            } else {
+                val prepared = connection.prepareStatement("UPDATE popular_jukebox SET hits = hits + 1 WHERE id=?")
+                prepared.setString(1, id)
+                prepared.execute()
+                prepared.close()
+            }
+            preparedSelect.close()
         }
-        preparedSelect.close()
     }
 }
 fun populariseCanonizer(context: RoutingContext) {
@@ -89,35 +91,39 @@ fun populariseCanonizer(context: RoutingContext) {
 
     popularised[key] = System.currentTimeMillis() + 1000 * 60 * 60 //1 hr cooldown
 
-    getConnection().use { connection ->
-        val preparedSelect = connection.prepareStatement("SELECT id FROM popular_canonizer WHERE id=?")
-        preparedSelect.setString(1, id)
-        preparedSelect.execute()
-        val results = preparedSelect.resultSet
-        if (!results.isBeforeFirst) {
-            val prepared = connection.prepareStatement("INSERT INTO popular_canonizer VALUES(?, 1)")
-            prepared.setString(1, id)
-            prepared.execute()
-            prepared.close()
-        } else {
-            val prepared = connection.prepareStatement("UPDATE popular_canonizer SET hits = hits + 1 WHERE id=?")
-            prepared.setString(1, id)
-            prepared.execute()
-            prepared.close()
+    getConnection().ifPresent {
+        it.use { connection ->
+            val preparedSelect = connection.prepareStatement("SELECT id FROM popular_canonizer WHERE id=?")
+            preparedSelect.setString(1, id)
+            preparedSelect.execute()
+            val results = preparedSelect.resultSet
+            if (!results.isBeforeFirst) {
+                val prepared = connection.prepareStatement("INSERT INTO popular_canonizer VALUES(?, 1)")
+                prepared.setString(1, id)
+                prepared.execute()
+                prepared.close()
+            } else {
+                val prepared = connection.prepareStatement("UPDATE popular_canonizer SET hits = hits + 1 WHERE id=?")
+                prepared.setString(1, id)
+                prepared.execute()
+                prepared.close()
+            }
+            preparedSelect.close()
         }
-        preparedSelect.close()
     }
 }
 
 fun getPopularJukeboxSongs(max: Int = 30): List<String> {
     val list = ArrayList<String>()
-    getConnection().use { connection ->
-        val preparedSelect = connection.prepareStatement("SELECT * FROM popular_jukebox")
-        preparedSelect.execute()
-        val results = preparedSelect.resultSet
-        if (results.isBeforeFirst) {
-            val resultList = results.toIterable().map { result -> Pair(result.getString("id"), result.getInt("hits")) }.sortedWith(Comparator<Pair<String, Int>> { (_, oneHits), (_, twoHits) -> oneHits.compareTo(twoHits) }).reversed()
-            list.addAll(resultList.subList(0, resultList.size.coerceAtMost(max)).map { (id) -> id })
+    getConnection().ifPresent {
+        it.use { connection ->
+            val preparedSelect = connection.prepareStatement("SELECT * FROM popular_jukebox")
+            preparedSelect.execute()
+            val results = preparedSelect.resultSet
+            if (results.isBeforeFirst) {
+                val resultList = results.toIterable().map { result -> Pair(result.getString("id"), result.getInt("hits")) }.sortedWith(Comparator<Pair<String, Int>> { (_, oneHits), (_, twoHits) -> oneHits.compareTo(twoHits) }).reversed()
+                list.addAll(resultList.subList(0, resultList.size.coerceAtMost(max)).map { (id) -> id })
+            }
         }
     }
 
@@ -126,13 +132,15 @@ fun getPopularJukeboxSongs(max: Int = 30): List<String> {
 
 fun getPopularCanonizerSongs(max: Int = 30): List<String> {
     val list = ArrayList<String>()
-    getConnection().use { connection ->
-        val preparedSelect = connection.prepareStatement("SELECT * FROM popular_canonizer")
-        preparedSelect.execute()
-        val results = preparedSelect.resultSet
-        if (results.isBeforeFirst) {
-            val resultList = results.toIterable().map { result -> Pair(result.getString("id"), result.getInt("hits")) }.sortedWith(Comparator<Pair<String, Int>> { (_, oneHits), (_, twoHits) -> oneHits.compareTo(twoHits) }).reversed()
-            list.addAll(resultList.subList(0, resultList.size.coerceAtMost(max)).map { (id) -> id })
+    getConnection().ifPresent {
+        it.use { connection ->
+            val preparedSelect = connection.prepareStatement("SELECT * FROM popular_canonizer")
+            preparedSelect.execute()
+            val results = preparedSelect.resultSet
+            if (results.isBeforeFirst) {
+                val resultList = results.toIterable().map { result -> Pair(result.getString("id"), result.getInt("hits")) }.sortedWith(Comparator<Pair<String, Int>> { (_, oneHits), (_, twoHits) -> oneHits.compareTo(twoHits) }).reversed()
+                list.addAll(resultList.subList(0, resultList.size.coerceAtMost(max)).map { (id) -> id })
+            }
         }
     }
 
@@ -140,13 +148,15 @@ fun getPopularCanonizerSongs(max: Int = 30): List<String> {
 }
 
 fun logRequest(ctx: RoutingContext) {
-    getConnection().use { connection ->
-        val prepared = connection.prepareStatement("INSERT INTO requests(time, ip, request) VALUES(?, ?, ?)")
-        prepared.setLong(1, System.currentTimeMillis())
-        prepared.setString(2, ctx.request().remoteAddress().toString())
-        prepared.setString(3, ctx.request().path())
-        prepared.execute()
-        prepared.close()
+    getConnection().ifPresent {
+        it.use { connection ->
+            val prepared = connection.prepareStatement("INSERT INTO requests(time, ip, request) VALUES(?, ?, ?)")
+            prepared.setLong(1, System.currentTimeMillis())
+            prepared.setString(2, ctx.request().remoteAddress().toString())
+            prepared.setString(3, ctx.request().path())
+            prepared.execute()
+            prepared.close()
+        }
     }
     ctx.next()
 }
