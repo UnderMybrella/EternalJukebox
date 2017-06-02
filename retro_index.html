@@ -80,7 +80,7 @@
     	<li>Now powered by <a href="http://http://spotify.com/">Spotify </a></li>
     	<li>Built at  <a href="http://boston.musichackday.org/">Music Hack Day @ MIT</a> by <a href="http://twitter.com/plamere"> Paul Lamere </a></li> 
     	<li>Now hosted by <a href="https://github.com/UnderMybrella/EternalJukebox"> UnderMybrella </a></li>
-    	<li>Read the <a href="faq.html"> FAQ </a></li>
+    	<li>Read the <a href="retro_faq.html"> FAQ </a></li>
     	<li>More info at <a href="http://musicmachinery.com/2012/11/12/the-infinite-jukebox/">Music Machinery</a></li>
     	<li>Check out the <a href="http://www.reddit.com/r/infinitejukebox/"> Infinite Jukebox Reddit </a></li>
     </ul>
@@ -483,7 +483,7 @@
     }
 
     function listPopularTracks() {
-        $.getJSON('popular_jukebox', { count : 12}, function(data) {
+        $.getJSON('api/popular_jukebox', { count : 12}, function(data) {
             listTracks('#popular-list', data);
             ga_track('list', 'popular-tracks', '');
         });
@@ -509,7 +509,7 @@
     }
 
     function fetchAnalysis(id) {
-        var url = 'id?id=' + id;
+        var url = 'api/id?id=' + id;
         info('Fetching the analysis');
         $.getJSON(url, function(data) { gotTheAnalysis(data); } )
             .error( function() {

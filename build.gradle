@@ -27,6 +27,7 @@ sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
+    jcenter()
     maven { url 'https://jitpack.io' }
 }
 
@@ -39,6 +40,7 @@ dependencies {
     compile "mysql:mysql-connector-java:6.0.6"
     compile "com.mashape.unirest:unirest-java:1.4.9"
     compile 'org.jsoup:jsoup:1.10.2'
+    compile 'com.auth0:java-jwt:3.2.0'
 
     compile "com.fasterxml.jackson.core:jackson-core:$jackson_version"
     compile "com.fasterxml.jackson.core:jackson-annotations:$jackson_version"
@@ -48,7 +50,7 @@ dependencies {
     compile "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
     compile "com.fasterxml.jackson.module:jackson-module-parameter-names:$jackson_version"
 
-    compile 'com.github.undermybrella:Visi:0aa0292'
+    compile 'com.github.undermybrella:Visi:84ef47a'
 
     testCompile group: 'junit', name: 'junit', version: '4.12'
 }

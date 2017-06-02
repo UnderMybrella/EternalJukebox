@@ -1,10 +1,15 @@
 package org.abimon.eternalJukebox
 
+import com.auth0.jwt.JWT
+import com.auth0.jwt.JWTVerifier
+import com.auth0.jwt.algorithms.Algorithm
+import com.auth0.jwt.exceptions.InvalidClaimException
+import com.auth0.jwt.exceptions.JWTDecodeException
+import com.auth0.jwt.interfaces.DecodedJWT
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
-import com.fasterxml.jackson.datatype.jsr310.JSR310Module
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
@@ -13,12 +18,14 @@ import com.mashape.unirest.http.Unirest
 import com.mashape.unirest.http.exceptions.UnirestException
 import com.mashape.unirest.request.HttpRequestWithBody
 import io.vertx.core.Vertx
+import io.vertx.core.VertxOptions
+import io.vertx.core.http.HttpHeaders
+import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.HttpServerOptions
+import io.vertx.core.json.JsonObject
 import io.vertx.core.net.PemKeyCertOptions
-import io.vertx.ext.auth.oauth2.AccessToken
-import io.vertx.ext.auth.oauth2.OAuth2Auth
-import io.vertx.ext.auth.oauth2.OAuth2ClientOptions
-import io.vertx.ext.auth.oauth2.OAuth2FlowType
+import io.vertx.ext.auth.oauth2.providers.GoogleAuth
+import io.vertx.ext.web.Cookie
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.*
@@ -29,7 +36,10 @@ import org.abimon.notifly.notification
 import org.abimon.visi.collections.PoolableObject
 import org.abimon.visi.io.errPrintln
 import org.abimon.visi.io.forceError
-import org.abimon.visi.lang.*
+import org.abimon.visi.lang.ByteUnit
+import org.abimon.visi.lang.asOptional
+import org.abimon.visi.lang.invoke
+import org.abimon.visi.lang.isEmpty
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -43,18 +53,21 @@ import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
-import java.util.concurrent.*
+import java.util.concurrent.TimeUnit
+import kotlin.collections.HashMap
+import kotlin.reflect.KClass
 
 val eternalDir = File("eternal")
 val songsDir = File("songs")
 val audioDir = File("audio")
 val logDir = File("logs")
 val tmpUploadDir = File("uploads")
+val profileDir = File("profiles")
 
 val configFile = File("config.json")
 val projectHosting = "https://github.com/UnderMybrella/EternalJukebox" //Just in case this changes or needs to be referenced
 
-val b64Encoder = Base64.getUrlEncoder()
+val b64Encoder: Base64.Encoder = Base64.getUrlEncoder()
 val b64Decoder = Base64.getUrlEncoder()
 val b64Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
 val b64CustomID = "CSTM[$b64Alphabet]+".toRegex()
@@ -108,7 +121,7 @@ fun uploadGist(desc: String, content: String, name: String = "error.txt"): Optio
 }
 
 val objMapper: ObjectMapper = ObjectMapper()
-        .registerModules(Jdk8Module(), KotlinModule(), JSR310Module(), JavaTimeModule(), ParameterNamesModule())
+        .registerModules(Jdk8Module(), KotlinModule(), JavaTimeModule(), ParameterNamesModule())
         .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
         .enable(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
         .setSerializationInclusion(JsonInclude.Include.NON_ABSENT)
@@ -129,6 +142,8 @@ fun main(args: Array<String>) {
         logDir.mkdir()
     if (!tmpUploadDir.exists())
         tmpUploadDir.mkdir()
+    if (!profileDir.exists())
+        profileDir.mkdir()
 
     if (configFile.exists()) {
         try {
@@ -148,15 +163,19 @@ fun main(args: Array<String>) {
         config.spotifySecret = Optional.empty()
     }
 
+    hmacSign = config.googleSecret.map { Algorithm.HMAC512(it) }
+    verifier = hmacSign.map { JWT.require(it).withIssuer(config.ip).build() }
+
     if (config.spotifyBase64.isEmpty)
         println("Note: Spotify Authentication details are absent; server running in offline/cache mode. New song retrievals will fail (see $projectHosting for more information)!")
 
     if (!mysqlEnabled())
-        println("Note: MySQL details are absent; server running in 'simple' mode. Popular song retrieval will fail, as will logins (see $projectHosting for more information)!")
+        println("Note: MySQL details are absent; server running in 'simple' mode. Popular song retrieval will fail, as will logins and a bunch of other things (see $projectHosting for more information)!")
     else {
         createAccountsTable()
         createPopularJukeboxTable()
         createPopularCanonizerTable()
+        createShortURLTable()
     }
 
     if (isInsecure()) {
@@ -166,11 +185,10 @@ fun main(args: Array<String>) {
             forceError("Error: You've attempted to use secure features of this program, such as logins, while not using security features for them (HTTPS, Secure Cookies). See $projectHosting for more information.\nIf you absolutely *must* override this (development environment), then you can override this in the config file with the key httpsOverride. Do not do this in a production environment, short of some other protocol to handle security (eg: CloudFlare)")
     }
 
-    if (config.devMode) {
+    if (!config.cacheFiles)
         System.setProperty("vertx.disableFileCPResolving", "true")
-    }
 
-    val vertx = Vertx.vertx()
+    val vertx = Vertx.vertx(VertxOptions().setBlockedThreadCheckInterval(config.vertxBlockingTime))
     val options = HttpServerOptions()
 
     config.ssl.ifPresent { (key, cert) ->
@@ -182,11 +200,15 @@ fun main(args: Array<String>) {
 
     val router = Router.router(vertx)
 
+    if (config.cacheFiles) {
+
+    }
+
     if (config.uploads) {
-        router.post().blockingHandler {
-            checkStorage()
-            it.next()
-        }
+//        router.post().blockingHandler {
+//            checkStorage()
+//            it.next()
+//        }
         router.post().handler(BodyHandler.create(tmpUploadDir.name).setDeleteUploadedFilesOnEnd(true).setBodyLimit(10 * 1000 * 1000))
     }
 
@@ -219,9 +241,9 @@ fun main(args: Array<String>) {
     }
 
     if (config.cors)
-        router.route().handler(CorsHandler.create("*"))
+        router.route().handler(CorsHandler.create("*").allowCredentials(false).allowedMethod(HttpMethod.GET))
 
-    if (anyLogins()) {
+    if (allowGoogleLogins()) {
         router.route().handler(CookieHandler.create())
         router.route().handler(SessionHandler
                 .create(LocalSessionStore.create(vertx))
@@ -229,13 +251,32 @@ fun main(args: Array<String>) {
                 .setCookieSecureFlag(config.secureCookies)
         )
 
-        if (config.csrf)
-            router.route("/user/").handler(CSRFHandler.create(config.csrfSecret))
+        router.route().handler { context ->
+            val auth = context.request().getHeader(HttpHeaders.AUTHORIZATION)
+            if (auth != null)
+                verifier.ifPresent { verifier ->
+                    verifier.verifySafe(auth).ifPresent { token ->
+                        context.data()[config.eternityUserKey] = token
+                        context.data()["${config.eternityUserKey}-Auth"] = true
+                    }
+                }
+
+            if (!context.data().containsKey(config.eternityUserKey))
+                context.gingerbreadMan().ifPresent { gingerbread -> context.data()[config.eternityUserKey] = gingerbread }
+
+            context.next()
+        }
+
+        if (config.csrf) {
+            val csrfHandler = CSRFHandler.create(config.csrfSecret)
+            router.get().handler(csrfHandler)
+            router.route("/api/profile/*").handler { ctxt -> if (!(ctxt.data()["${config.eternityUserKey}-Auth"] as? Boolean ?: false)) csrfHandler.handle(ctxt) else ctxt.next() }
+        }
     }
 
     router.route().handler { context ->
         if (config.redirects.containsKey(context.request().path()))
-            context.reroute(config.redirects[context.request().path()])
+            context.response().redirect(config.redirects[context.request().path()]!!)
         else
             context.next()
     }
@@ -244,22 +285,22 @@ fun main(args: Array<String>) {
     config.audioEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::audio) }
     config.songEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::song) }
 
-    config.fileManager.ifPresent { (first, second) -> router.route(first).handler(StaticHandler.create(second)) }
+    config.fileManager.ifPresent { (first, second) -> router.route(first).handler(StaticFileHandler(first.substringBeforeLast("/*"), File(second))) }
 
-    router.route(config.retroIndexEndpoint, "retro_index.html")
-    router.route(config.faqEndpoint, "faq.html")
+    router.htmlRoute(config.retroIndexEndpoint, "retro_index.html")
+    router.htmlRoute(config.faqEndpoint, "faq.html")
 
-    router.route(config.jukeboxIndexEndpoint, "jukebox_index.html")
-    router.popularRoute(config.jukeboxGoEndpoint, "jukebox_go.html", true)
-    router.route(config.jukeboxSearchEndpoint, "jukebox_search.html")
+    router.htmlRoute(config.jukeboxIndexEndpoint, "jukebox_index.html")
+    router.popularHtmlRoute(config.jukeboxGoEndpoint, "jukebox_go.html", true)
+    router.htmlRoute(config.jukeboxSearchEndpoint, "jukebox_search.html")
 
-    router.route(config.canonizerIndexEndpoint, "canonizer_index.html")
-    router.popularRoute(config.canonizerGoEndpoint, "canonizer_go.html", false)
-    router.route(config.canonizerSearchEndpoint, "canonizer_search.html")
+    router.htmlRoute(config.canonizerIndexEndpoint, "canonizer_index.html")
+    router.popularHtmlRoute(config.canonizerGoEndpoint, "canonizer_go.html", false)
+    router.htmlRoute(config.canonizerSearchEndpoint, "canonizer_search.html")
 
     router.get("/robots.txt").handler { context -> context.response().end(config.robotsTxt) }
 
-    config.apiBreakdownEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::api) }
+    //config.apiBreakdownEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler(::api) }
 
     config.loginEndpoint.ifPresent { endpoint -> router.route(endpoint).handler { context -> context.response().sendFile("login.html") } }
 
@@ -269,26 +310,105 @@ fun main(args: Array<String>) {
     config.faviconPath.ifPresent { favicon -> router.route("/favicon.ico").handler(FaviconHandler.create(favicon)) }
     config.appleTouchIconPath.ifPresent { touchIcon -> router.route("/apple-touch-icon.png").handler { it.response().sendFile(touchIcon) } }
 
-    if (allowDiscordLogins()) {
-        val discordOAuth2 = OAuth2Auth.create(vertx, OAuth2FlowType.AUTH_CODE, OAuth2ClientOptions()
-                .setClientID(config.discordClient())
-                .setClientSecret(config.discordSecret())
-                .setSite("https://discordapp.com")
-                .setTokenPath("/api/oauth2/token")
-                .setAuthorizationPath("/api/oauth2/authorize"))
-        router.route("/logins/discord").handler(UserSessionHandler.create(discordOAuth2))
-        router.route("/callbacks/discord").handler(UserSessionHandler.create(discordOAuth2))
+    config.shrinkEndpoint.ifPresent { endpoint -> router.post(endpoint).blockingHandler(::shrink) }
+    config.expandEndpoint.ifPresent { endpoint -> router.get(endpoint).blockingHandler(::expand) }
 
-        val oauth2 = OAuth2AuthHandler.create(discordOAuth2, config.ip).setupCallback(router.get("/callbacks/discord")).addAuthority("identify")
-
-        router.route("/logins/discord").handler(oauth2)
-        router.route("/logins/discord").handler { context ->
-            println("Successfully authenticated through Discord, redirecting back to ${context.session()["redirect-login"] ?: "login.html"} after account information is checked")
-
-            context.token().use { token ->
-                val id = Unirest.get("https://discordapp.com/api/users/@me").header("Authorization", "Bearer $token").asJson().body.`object`["id"] as String
-                //val timelord = getOrCreateUser(LoginService.DISCORD, id)
+    config.expandRedirectEndpoint.ifPresent { endpoint -> router.route(endpoint).blockingHandler { context ->
+        val params = expand(context.pathParam("id") ?: "none")
+        if(params.isPresent) {
+            val paramsMap = params().split("&").map { it.split("=") }.filter { it.size == 2 }.map { Pair(it[0], it[1]) }.toMap(HashMap())
+            val service = paramsMap.remove("type") ?: "jukebox"
+            when(service.toLowerCase()) {
+                "jukebox" -> context.response().redirect("/jukebox_go.html?${paramsMap.entries.joinToString("&"){(k,v) -> "$k=$v"}}")
+                "canonizer" -> context.response().redirect("/canonizer_go.html?${paramsMap.entries.joinToString("&"){(k,v) -> "$k=$v"}}")
+                else -> context.response().redirect("/jukebox_index.html")
             }
+        }
+        else
+            context.response().redirect("/jukebox_index.html")
+    } }
+
+    if (allowGoogleLogins()) {
+        val gauth = GoogleAuth.create(vertx, config.googleClient(), config.googleSecret())
+
+        router.route("/google_callback").blockingHandler { context ->
+            val params = context.request().params()
+            if (params.contains("error")) {
+                println("Fail!")
+                context.response().end()
+            } else if (params.contains("code")) {
+                gauth.getToken(JsonObject().put("code", params.get("code")).put("redirect_uri", "${config.ip}/google_callback"), { res ->
+                    if (res.failed()) {
+                        println("Fail!")
+                        res.cause().printStackTrace()
+                        context.response().end()
+                    } else {
+                        val googleToken = res.result().principal().mapTo(GoogleToken::class)
+                        val cookie = createOrUpdateUser(googleToken)
+                        println("$googleToken produced $cookie")
+                        context.addCookie(Cookie.cookie(config.eternityUserKey, cookie).setSecure(true).setHttpOnly(true).setMaxAge(60 * 60 * 24))
+                        context.response().redirect("/profile.html")
+                    }
+                })
+            }
+        }
+
+        router.route("/profile.html").blockingHandler { context ->
+            if(context.data()[config.eternityUserKey] == null || getUserByToken(context.data()[config.eternityUserKey] as DecodedJWT).isEmpty)
+                return@blockingHandler context.response().redirect("https://accounts.google.com/o/oauth2/v2/auth?client_id=${config.googleClient()}&redirect_uri=${config.ip}/google_callback&response_type=code&scope=openid+profile&access_type=offline&prompt=consent")
+            context.response().sendFile("profile.html")
+        }
+
+        router.route("/api/profile").blockingHandler { context ->
+            val user = context.data()[config.eternityUserKey] as? DecodedJWT ?: return@blockingHandler context.response().setStatusCode(401).end("No user provided")
+            val profile = File(profileDir, "${user.subject}.json")
+            if (!profile.exists())
+                return@blockingHandler context.response().putHeader("Content-Type", "application/json").end("{\"stars\":[]}")
+            return@blockingHandler context.response().sendFile(profile.absolutePath).end()
+        }
+
+        router.route("/api/profile/google").blockingHandler { context ->
+            val user = getUserByToken(context.data()[config.eternityUserKey] as? DecodedJWT ?: return@blockingHandler context.response().setStatusCode(401).end("No user token provided"))
+            if(user.isPresent)
+                context.response().putHeader("Content-Type", "application/json").end(objMapper.writeValueAsString(getGoogleUser(user())))
+            else
+                context.response().setStatusCode(401).end("No user provided")
+        }
+
+        router.get("/api/profile/stars").blockingHandler { context ->
+            val user = context.data()[config.eternityUserKey] as? DecodedJWT ?: return@blockingHandler context.response().putHeader("Content-Type", "text/plain").setStatusCode(401).end("No user provided")
+            val profile = File(profileDir, "${user.subject}.json")
+            if (!profile.exists())
+                return@blockingHandler context.response().putHeader("Content-Type", "application/json").end("[]")
+            return@blockingHandler context.response().putHeader("Content-Type", "application/json").end(objMapper.writeValueAsString(objMapper.readValue(profile, EternalProfile::class.java).starred))
+        }
+
+        router.put("/api/profile/stars/:id").blockingHandler { context ->
+            val user = context.data()[config.eternityUserKey] as? DecodedJWT ?: return@blockingHandler context.response().putHeader("Content-Type", "text/plain").setStatusCode(401).end("No user provided")
+            val id = context.request().getParam("id")
+            val profile = File(profileDir, "${user.subject}.json")
+            if (!profile.exists()) {
+                objMapper.writeValue(profile, EternalProfile(hashSetOf(id)))
+                return@blockingHandler context.response().putHeader("Content-Type", "application/json").setStatusCode(204).end()
+            }
+
+            val profileObj = objMapper.readValue(profile, EternalProfile::class.java)
+            profileObj.starred.add(id)
+            objMapper.writeValue(profile, profileObj)
+            return@blockingHandler context.response().putHeader("Content-Type", "application/json").setStatusCode(204).end()
+        }
+
+        router.delete("/api/profile/stars/:id").blockingHandler { context ->
+            val user = context.data()[config.eternityUserKey] as? DecodedJWT ?: return@blockingHandler context.response().putHeader("Content-Type", "text/plain").setStatusCode(401).end("No user provided")
+            val id = context.request().getParam("id")
+            val profile = File(profileDir, "${user.subject}.json")
+            if (!profile.exists())
+                return@blockingHandler context.response().putHeader("Content-Type", "application/json").setStatusCode(204).end()
+
+            val profileObj = objMapper.readValue(profile, EternalProfile::class.java)
+            profileObj.starred.remove(id)
+            objMapper.writeValue(profile, profileObj)
+            return@blockingHandler context.response().putHeader("Content-Type", "application/json").setStatusCode(204).end()
         }
     }
 
@@ -307,20 +427,9 @@ fun main(args: Array<String>) {
     println("Listening at ${config.ip}")
 }
 
-fun Router.route(optionalEndpoint: Optional<String>, file: String) = optionalEndpoint.ifPresent { endpoint -> this.route(endpoint).handler { context -> context.response().sendFile(file) } }
-fun Router.popularRoute(optionalEndpoint: Optional<String>, file: String, jukebox: Boolean) = optionalEndpoint.ifPresent { endpoint ->
-    this.route(endpoint).handler { context ->
-        context.response().sendFile(file)
-        if(jukebox)
-            populariseJukebox(context)
-        else
-            populariseCanonizer(context)
-    }
-}
+fun <T : Any> JsonObject.mapTo(clazz: KClass<T>): T = objMapper.readValue(toString(), clazz.java)
 
 fun makeConnection(): PoolableObject<Connection> = PoolableObject(DriverManager.getConnection("jdbc:mysql://localhost/${config.mysqlDatabase()}?user=${config.mysqlUsername()}&password=${config.mysqlPassword()}&serverTimezone=GMT"))
-
-fun getSnowflake(): String = Snowstorm.getInstance(config.epoch).get()
 
 fun checkStorage() {
     var totalUsed = 0L
@@ -359,13 +468,15 @@ fun sendFirebaseMessage(notificationPayload: Optional<NotificationPayload> = Opt
             payload.put("to", device)
             notificationPayload.ifPresent { notification -> payload.put("notification", JSONObject(objMapper.writeValueAsString(notification))) }
             dataPayload.ifPresent { data -> payload.put("data", data) }
-            val response = Unirest.post("https://fcm.googleapis.com/fcm/send").header("Authorization", "key=$token").jsonBody(payload).asJson().body.toJsonObject()
+            Unirest.post("https://fcm.googleapis.com/fcm/send").header("Authorization", "key=$token").jsonBody(payload).asJson().body.toJsonObject()
         }
     }
 }
 
 var bearer = ""
 var expires: Instant = Instant.now()
+var hmacSign: Optional<Algorithm> = Optional.empty()
+var verifier: Optional<JWTVerifier> = Optional.empty()
 
 fun popularJukebox(context: RoutingContext) {
     val request = context.request()
@@ -388,6 +499,7 @@ fun popularJukebox(context: RoutingContext) {
 
     context.response().putHeader("Content-Type", "application/json").end(array.toString())
 }
+
 fun popularCanonizer(context: RoutingContext) {
     val request = context.request()
     val popular = getPopularCanonizerSongs((request.getParam("count") ?: "30").toIntOrNull() ?: 30)
@@ -410,6 +522,27 @@ fun popularCanonizer(context: RoutingContext) {
     context.response().putHeader("Content-Type", "application/json").end(array.toString())
 }
 
+fun expand(context: RoutingContext) {
+    val params = expand(context.pathParam("id") ?: "none")
+    if(params.isPresent) {
+        val paramsMap = params().split("&").map { it.split("=") }.filter { it.size == 2 }.map { Pair(it[0], it[1]) }.toMap(HashMap())
+        val service = paramsMap.remove("type") ?: "jukebox"
+        val response = JSONObject()
+        when(service.toLowerCase()) {
+            "jukebox" -> response.put("url", "/jukebox_go.html?${paramsMap.entries.joinToString("&"){(k,v) -> "$k=$v"}}")
+            "canonizer" -> response.put("url", "/canonizer_go.html?${paramsMap.entries.joinToString("&"){(k,v) -> "$k=$v"}}")
+            else -> response.put("url", "/jukebox_index.html")
+        }
+
+        eternalForID(paramsMap.remove("id") ?: "4uLU6hMCjMI75M1A2tKUQC").ifPresent { eternal -> response.put("info", JSONObject(eternal.info)) }
+        context.response().jsonContent().end(response.toString())
+    }
+    else
+        context.response().setStatusCode(404).end()
+}
+
+fun shrink(context: RoutingContext) = context.response().jsonContent().end("{\"id\":\"${getOrShrinkParams(context.bodyAsString)}\"}")
+
 fun search(context: RoutingContext) {
     val request = context.request()
 
@@ -420,6 +553,8 @@ fun search(context: RoutingContext) {
 
     if (expires.isBefore(Instant.now()))
         reloadSpotifyToken()
+
+    val returnSummary = request.getParam("summary")?.toBoolean() ?: false
 
     for (i in 0 until 3) {
         try {
@@ -445,7 +580,13 @@ fun search(context: RoutingContext) {
                 track.put("name", obj["name"])
                 track.put("title", obj["name"]) //Just in case
                 track.put("artist", ((obj["artists"] as JSONArray)[0] as JSONObject)["name"])
-                track.put("url", "${config.ip}/song?id=${obj["id"]}")
+                track.put("url", "${config.songEndpoint.orElse("/song")}?id=${obj["id"]}")
+
+                if (returnSummary) {
+                    eternalForID(obj["id"] as String).ifPresent { eternal ->
+                        track.put("audio_summary", JSONObject(eternal.audio_summary))
+                    }
+                }
 
                 array.put(track)
             }
@@ -576,6 +717,7 @@ fun audio(context: RoutingContext) {
     }
 }
 
+/**
 fun api(context: RoutingContext) {
     val request = context.request()
 
@@ -611,7 +753,7 @@ fun api(context: RoutingContext) {
                             trackInfoBody.name,
                             trackInfoBody.name,
                             trackInfoBody.artists[0].name,
-                            "${config.ip}/song?id=$id"
+                            "${config.ip}${config.songEndpoint.orElse("/song")}?id=$id"
                     ),
                     EternalAnalysis(
                             track.sections,
@@ -673,6 +815,7 @@ fun api(context: RoutingContext) {
         error("An unexpected error occurred: $th")
     }
 }
+*/
 
 /** Wants track information and acoustics */
 fun id(context: RoutingContext) {
@@ -686,7 +829,7 @@ fun id(context: RoutingContext) {
     }
 
     val eternal = eternalForID(id)
-    if(eternal.isPresent)
+    if (eternal.isPresent)
         context.response().putHeader("Content-Type", "application/json").end(objMapper.writeValueAsString(eternal()))
     else
         context.response().setStatusCode(404).end()
@@ -723,7 +866,7 @@ fun eternalForID(id: String): Optional<EternalAudio> {
                                 trackInfoBody.name,
                                 trackInfoBody.name,
                                 trackInfoBody.artists[0].name,
-                                "${config.ip}/song?id=$id"
+                                "${config.songEndpoint.orElse("/song")}?id=$id"
                         ),
                         EternalAnalysis(
                                 track.sections,
@@ -749,19 +892,26 @@ fun eternalForID(id: String): Optional<EternalAudio> {
     return Optional.empty()
 }
 
-val executor: ExecutorService = Executors.newCachedThreadPool()
+fun RoutingContext.gingerbreadMan(): Optional<DecodedJWT> {
+    var gingerbread = Optional.empty<DecodedJWT>()
+    verifier.ifPresent { verifier ->
+        val cookie = getCookie(config.eternityUserKey) ?: return@ifPresent
+        gingerbread = verifier.verifySafe(cookie.value)
+    }
 
-fun RoutingContext.token(): AccessToken = if (user() is AccessToken) user() as AccessToken else throw IllegalArgumentException("User is not an Access Token!")
-fun AccessToken.refresh(): String {
-    var finished = false
-    refresh { finished = true }
-    while (!finished) Thread.sleep(1000)
-
-    return principal().getString("access_token")
+    return gingerbread
 }
 
-fun AccessToken.accessToken(): String = if (expired()) refresh() else principal().getString("access_token")
-fun <T> AccessToken.use(action: (String) -> T): Future<T> = executor.submit(Callable<T> { action.invoke(accessToken()) })
+fun JWTVerifier.verifySafe(token: String): Optional<DecodedJWT> {
+    try {
+        return verify(token).asOptional()
+    } catch(invalid: InvalidClaimException) {
+        invalid.printStackTrace()
+    } catch(decode: JWTDecodeException) {
+        decode.printStackTrace()
+    }
+    return Optional.empty()
+}
 
 fun reloadSpotifyToken() {
     config.spotifyBase64.ifPresent { base64 ->
@@ -777,8 +927,7 @@ fun reloadSpotifyToken() {
     }
 }
 
-fun allowDiscordLogins(): Boolean = config.discordClient.isPresent && config.discordSecret.isPresent && mysqlEnabled()
-fun anyLogins(): Boolean = allowDiscordLogins()
+fun allowGoogleLogins(): Boolean = config.googleClient.isPresent && config.googleSecret.isPresent && mysqlEnabled()
 fun mysqlEnabled(): Boolean = config.mysqlDatabase.isPresent && config.mysqlUsername.isPresent && config.mysqlPassword.isPresent
 
 fun <T : HttpRequestWithBody> T.jsonBody(json: JSONObject): T {
@@ -797,4 +946,4 @@ fun error(msg: Any) {
     }.asOptional())
 }
 
-fun isInsecure(): Boolean = anyLogins() && (!config.secureCookies || config.ssl.isEmpty)
+fun isInsecure(): Boolean = allowGoogleLogins() && (!config.secureCookies || config.ssl.isEmpty)

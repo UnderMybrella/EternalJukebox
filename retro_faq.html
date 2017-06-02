@@ -1,0 +1,91 @@
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=windows-1252">
+<link rel="stylesheet" href="files/styles.css" type="text/css" media="screen">
+<title>The Eternal Jukebox</title>
+<script type="text/javascript" charset="utf-8" async="" src="files/button.js"></script></head>
+<body>
+
+<div id="faq">
+<a href="retro_index.html"><h1>The <strike>Infinite</strike> Eternal Jukebox</h1></a>
+<h1>Frequently Asked Questions </h1>
+<ul>
+    <li> <b> What is this? </b> - <i>For when your favorite song just isn't long enough. </i> This web app lets you
+    search a song on Spotify and will then generate a never-ending and ever changing version of the song.  It does what
+    Infinite Gangnam Style did but for any song.
+    </li><li> <b> How does it work? </b> - We use the <a href="https://developer.spotify.com/web-api/get-audio-features/">Spotify
+    API</a> to break the song into beats. We play the song beat by beat, but at every beat there's a chance
+    that we will jump to a different part of song that happens to sound very similar to the current beat.  For beat similarity
+    we look at pitch, timbre, loudness, duration and the position of the beat within a bar. There's a nifty visualization
+    that shows all the possible transitions that can occur at any beat.
+    </li><li> <b> Are there any ways to control the song? </b> Yes - here are some keys:
+       <ul> 
+         <li> <b> [space] </b> - Start and stop playing the song
+         </li><li> <b> [left arrow] </b> - Decrement the current play velocity by one
+         </li><li> <b> [right arrow] </b> - Increment the current play velocity by one
+         </li><li> <b> [Down arrow] </b> - Sets the current play velocity to zero
+         </li><li> <b> [control] </b> - freeze on the current beat
+         </li><li> <b> [shift]  </b> - bounce between the current beat and all of the similar sounding beats. These are the
+         branch points.
+         </li><li> <b>  'h' </b> - Bring it on home - toggles infinite mode off/on. 
+       </li></ul>
+        
+    </li><li> <b> What do the colored blocks represent?</b> - Each block represents a beat in the song. The colors are related
+    to the timbre of the music for that beat.
+    </li><li> <b> How can I tune the Jukebox?</b> - For detailed tuning instructions see <a href="http://musicmachinery.com/2012/11/26/tuning-the-infinite-jukebox/">Tuning the Infinite Jukebox</a> on Music
+    Machinery.  This is an experimental feature. You can tune by clicking the tune button.
+    Adjust the slider to the left for higher audio quality, and adjust the slider to the right for more branch points.  You
+    can also delete any edge by clicking on it to select it (when selected the edge turns red).  Delete the edge by
+    pressing the [del] key.  The Infinite Jukebox will try hard to maximize the amount of the song that is played when in
+    infinite mode.  This behavior can be turned off by de-selecting the 'Loop Extension Optimization' checkbox.  If we don't
+    get the track right for the song you request, you can change the audio by putting in a YouTube URL into the Audio URL box.  You can
+    throw away all of your tunings by pressing the 'reset' button. You can share your tuned songs, all your edits are
+    encoded in the URL.
+    </li><li> <b> How come this doesn't work in my browser?</b> - The app requires the web audio APIs
+    which are currently best supported in Chrome and Safari. You can read more details about this issue in this blog post:
+    <a href="http://musicmachinery.com/2012/11/22/why-does-the-infinite-jukebox-only-work-in-chrome-and-safari/">Why does
+    the Infinite Jukebox work only in Chrome and Safari.</a>
+    </li><li> <b> How come the Infinite Jukebox stops when I put the tab in the background?</b> - 
+    Infinite Jukebox wants your full attention! Also,
+    Chrome lowers the priority of Javascript when it is not in the foreground making it impossible to do time-sensitive
+    processing that is required for the Infinite Jukebox.  However, you can open the jukebox in its own window and 
+    minimize it without any of the stuttering problems.
+    </li><li> <b> I have an awesome infinite track that I'd like everyone to hear. What do I do?</b> - You can tweet it with the tags
+    #infinitejukebox and #halloffame, or you can submit it to the <a href="http://www.reddit.com/r/infinitejukebox">InfiniteJukebox
+    subreddit</a>.
+    </li><li> <b> Who made the cool logo?</b> - The logo was contributed by <a href="http://jasperallijn.crevado.com/">Jasper Allijn</a>.
+    </li><li> <b> Who made this?</b> - <a href="http://twitter.com/plamere">Paul Lamere</a> at <a href="http://boston.musichackday.org/"> Music Hack Day Boston</a> on November
+    11, 2012. More info at <a href="http://musicmachinery.com/2012/11/12/the-infinite-jukebox/"> Music Machinery </a>
+    <iframe id="twitter-widget-0" scrolling="no" allowtransparency="true" class="twitter-follow-button twitter-follow-button-rendered" style="position: static; visibility: visible; width: 118px; height: 20px;" title="Twitter Follow Button" src="files/follow_button.html" data-screen-name="plamere" frameborder="0"></iframe>
+    <script type="text/javascript" async="" src="files/ga.js"></script><script id="twitter-wjs" src="files/widgets.js"></script><script>!function(d,s,id){var
+    js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document,
+    'script', 'twitter-wjs');</script>
+    </li><li> <b> Wasn't this originally <a href="http://labs.echonest.com/Uploader/index.html">somewhere else?</a></b> - The original project was made and hosted by 
+    <a href="http://twitter.com/plamere">Paul Lamere</a>, however it is now hosted by <a href="https://github.com/UnderMybrella/EternalJukebox">UnderMybrella</a> with the appropriate permission.
+    </li><li> <b> The audio seems to be jumping really randomly! Why?</b> - There's a couple of reasons this could be - The most likely being that the audio file we found for your song
+    doesn't match up perfectly with the version that Spotify has, which means you'll experience jumps at points that there shouldn't be throughout a song.
+    The solution to this is to find a version of it that matches up to the version on Spotify <b> as close as possible </b>. In the future, there may be a way to upload
+    a version if you can't find one online, but for now that's the best you've got.
+    If you <i>do</i> have a song that seems to be synchronised perfectly, but still seems to jump randomly, feel free to file an issue <a href="https://github.com/UnderMybrella/EternalJukebox/issues" target="_blank">here</a>
+    </li><li> <b> Something's not working!</b> - This is still a fairly early build, so there may be some bugs in the server. If you have an issue that is <b>repeatable</b>, please file an issue <a href="https://github.com/UnderMybrella/EternalJukebox/issues" target="_blank">here</a>
+</p></li></ul>
+</div>
+
+<script type="text/javascript">
+
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-3675615-27']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type =
+'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' :
+'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0];
+s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+
+<iframe id="rufous-sandbox" scrolling="no" allowtransparency="true" allowfullscreen="true" style="position: absolute; visibility: hidden; display: none; width: 0px; height: 0px; padding: 0px; border: medium none;" title="Twitter analytics iframe" frameborder="0"></iframe></body></html>

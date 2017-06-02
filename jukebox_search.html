@@ -6,6 +6,12 @@
   <link href="files/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
   <script src="files/underscore-min.js" type="text/javascript" charset="utf-8"></script>
   <title> The Eternal Jukebox </title>
+
+  <meta property="og:title" content="The Eternal Jukebox"/>
+  <meta property="og:description" content="For when your favorite song just isn't long enough"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:url" content="https://eternal.abimon.org/jukebox_search.html"/>
+  <meta property="og:image" content="https://eternal.abimon.org/files/eternal.png"/>
 </head>
 
 <body>
@@ -23,14 +29,17 @@
             <a id='show-search' class="brand">The Eternal Jukebox</a>
             <div class="dropdown-content">
               <a href="jukebox_index.html">The Eternal Jukebox</a>
+              <a href="retro_index.html">The Eternal Jukebox (Retro)</a>
               <a href="canonizer_index.html">The Autocanonizer</a>
             </div>
           </li>
           <li class="active"><a id='show-main'  href="jukebox_index.html">Main</a></li>
           <li><a id='show-loader' href="jukebox_search.html">Pick a song</a></li>
           <li><a id='show-about' href="http://musicmachinery.com/2012/11/12/the-infinite-jukebox/">About</a></li>
-          <li><a id='show-about' href="faq.html">FAQ</a></li>
-          <li><a href="http://www.reddit.com/r/infinitejukebox/">Check out the Infinite Jukebox Reddit </a></li>
+          <li><a id='show-faq' href="faq.html">FAQ</a></li>
+          <li><a id='show-profile' href="profile.html">Profile</a></li>
+          <li><a id='show-reddit' href="https://www.reddit.com/r/infinitejukebox/">Check out the Infinite Jukebox Reddit</a></li>
+          <li><a id='show-discord' href="https://discord.gg/KWN5BfD">Check out the Eternal Jukebox Discord</a></li>
         </ul>
       </div>
     </div>
@@ -68,7 +77,7 @@ function searchForTrack() {
     console.log(q);
 
     if (q.length > 0) {
-        var url = 'search'
+        var url = 'api/search'
         $.getJSON(url, { q:q, results:30}, function(data) {
             console.log(data);
 
@@ -148,7 +157,7 @@ function init() {
         }
     });
 
-    $.getJSON('popular_jukebox', { count : 12}, function(data) {
+    $.getJSON('api/popular_jukebox', { count : 12}, function(data) {
             listTracks('#favourite-list', data);
     });
 }

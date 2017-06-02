@@ -9,6 +9,12 @@
     <script src="files/underscore-min.js" type="text/javascript" charset="utf-8"></script>
     <script type="text/javascript" src="files/canonizer_jremix.js"></script>
     <title> The Autocanonizer</title>
+
+    <meta property="og:title" content="The Autocanonizer"/>
+    <meta property="og:description" content="Get Bach to basics"/>
+    <meta property="og:type" content="website"/>
+    <meta property="og:url" content="https://eternal.abimon.org/canonizer_go.html?id=4uLU6hMCjMI75M1A2tKUQC.html"/>
+    <meta property="og:image" content="https://eternal.abimon.org/files/ss.png"/>
 </head>
 
 <body>
@@ -26,12 +32,18 @@
                         <a id='show-search' class="brand">The Autocanonizer</a>
                         <div class="dropdown-content">
                             <a href="canonizer_index.html">The Autocanonizer</a>
-                            <a href="index.html">The Eternal Jukebox</a>
+                            <a href="jukebox_index.html">The Eternal Jukebox</a>
+                            <a href="retro_index.html">The Eternal Jukebox (Retro)</a>
                         </div>
                     </li>
                     <li class="active"><a id='show-main' href="canonizer_index.html">Main</a></li>
                     <li><a id='show-loader' href="canonizer_search.html">Pick a song</a></li>
                     <li><a id='show-about' href="http://musicmachinery.com/2014/03/13/the-autocanonizer/">About</a></li>
+                    <li><a id='show-profile' href="profile.html">Profile</a></li>
+                    <li><a id='show-reddit' href="https://www.reddit.com/r/infinitejukebox/">Check out the Infinite
+                        Jukebox Reddit</a></li>
+                    <li><a id='show-discord' href="https://discord.gg/KWN5BfD">Check out the Eternal Jukebox Discord</a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -60,25 +72,36 @@
 <div id="hero">
     <div id="stats">
         <button class="btn btn-small" id='play'>Play</button>
-        <button class="btn btn-small" id="tune"> Tune</button>
-        <span id="numbers"> 
+        <button class="btn btn-small" id="tune">Tune</button>
+        <button class="btn btn-small" id="star">Star</button>
+        <button class="btn btn-small" id="short-url">Short URL</button>
+        <button class="btn btn-small" id="jukebox">Eternal Jukebox Version</button>
+        <span id="numbers">
             <span class='nval' id='mtime'> 00:00:00 </span> 
         </span>
     </div>
     <div id='tiles'></div>
 </div>
 
-<div class="ui-dialog ui-widget ui-widget-content ui-corner-all ui-draggable" style="display: none; outline: 0px none; z-index: 1000;" tabindex="-1" role="dialog" aria-labelledby="ui-id-1"><div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix"><span id="ui-id-1" class="ui-dialog-title">Fine tune your endless song</span><a href="#" class="ui-dialog-titlebar-close ui-corner-all" role="button"><span class="ui-icon ui-icon-closethick">close</span></a></div><div id="controls" visibility="visible" style="display: block;" class="ui-dialog-content ui-widget-content">
-    <div>
-        <div id="control-instructions">
-            You can tune control the frequency and quality of the branching. See the FAQ for more details.
+<div class="ui-dialog ui-widget ui-widget-content ui-corner-all ui-draggable"
+     style="display: none; outline: 0px none; z-index: 1000;" tabindex="-1" role="dialog" aria-labelledby="ui-id-1">
+    <div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix"><span id="ui-id-1"
+                                                                                            class="ui-dialog-title">Fine tune your endless song</span><a
+            href="#" class="ui-dialog-titlebar-close ui-corner-all" role="button"><span
+            class="ui-icon ui-icon-closethick">close</span></a></div>
+    <div id="controls" visibility="visible" style="display: block;" class="ui-dialog-content ui-widget-content">
+        <div>
+            <div id="control-instructions">
+                You can retune the Auto Canonizer to use a different audio track here.
+            </div>
+            <div class="l-cb" id="l-audio-url">Audio URL: <input id="audio-url" type="url"></div>
+            <br>
+            <div class="l-cb" id="l-audio-upload"><input id="audio-upload" type="file" name="song_upload"
+                                                         accept="audio/*"></div>
+            <button class="btn btn-small" id="reset-edges"> Reset</button>
         </div>
-        <div class="l-cb" id="l-audio-url">Audio URL: <input id="audio-url" type="url"> </div>
-        <br>
-        <div class="l-cb" id="l-audio-upload"><input id="audio-upload" type="file" name="song_upload" accept="audio/*"> </div>
-        <button class="btn btn-small" id="reset-edges"> Reset </button>
     </div>
-</div></div>
+</div>
 
 </body>
 <script src="files/bootstrap/js/bootstrap.min.js"></script>
@@ -123,7 +146,7 @@
     var cmax = [-100, -100, -100];
 
     var canonizerData = {
-        audioURL : null,
+        audioURL: null,
         tuningOpen: false
     };
 
@@ -390,7 +413,7 @@
 
 
     function fetchAnalysis(id) {
-        var url = 'id?id=' + id;
+        var url = 'api/id?id=' + id;
         info('Fetching the analysis');
         $.getJSON(url, function (data) {
             gotTheAnalysis(data);
@@ -407,7 +430,6 @@
             return 'error';
         }
     }
-
 
     function isSegment(q) {
         return 'timbre' in q;
@@ -441,6 +463,45 @@
     function setDisplayMode() {
     }
 
+    function getShareURL(callback) {
+        var q = document.URL.split('?')[1];
+
+        $.ajax({
+            url: "api/shrink",
+            dataType: "json",
+            type: "POST",
+            data: q === undefined ? "type=canonizer" : "type=canonizer&" + q,
+            success: function (data) {
+                return callback(data["id"]);
+            },
+            error: function (xhr, textStatus, error) {
+                console.log("Error: " + error);
+                return "NOT-VALID";
+            }
+        });
+    }
+
+    function checkIfStarred() {
+        getShareURL(function (id) {
+            $.ajax({
+                url: "api/profile/stars",
+                dataType: "json",
+                type: "GET",
+                success: function (data) {
+                    for (var i = 0; i < data.length; i++) {
+                        if (data[i] === id) {
+                            $("#star").text("Unstar");
+                            break;
+                        }
+                    }
+                },
+                error: function (xhr, textStatus, error) {
+                    console.log("Error: " + error)
+                }
+            });
+        });
+    }
+
     function init() {
         jQuery.ajaxSettings.traditional = true;
         setDisplayMode(false);
@@ -449,7 +510,7 @@
             event.preventDefault();
             event.stopPropagation();
             return false;
-        }
+        };
 
         $("#error").hide();
 
@@ -463,10 +524,47 @@
             }
         );
 
+        $("#star").click(
+            function () {
+                getShareURL(function (shortID) {
+                    $.ajax({
+                        url: "api/profile/stars/" + shortID,
+                        type: $("#star").text() === "Star" ? "PUT" : "DELETE",
+                        headers: {
+                            "X-XSRF-TOKEN": document.cookie.substring(document.cookie.indexOf("XSRF-TOKEN")).split(";")[0].split("=").slice(1).join("=")
+                        },
+                        success: function (data) {
+                            if ($("#star").text() === "Star") {
+                                $("#info").text("Successfully starred!");
+                                $("#star").text("Unstar");
+                            } else {
+                                $("#info").text("Successfully unstarred!");
+                                $("#star").text("Star");
+                            }
+                        },
+                        error: function (xhr, textStatus, error) {
+                            if (error === "Unauthorized")
+                                $("#info").text("An error occurred while starring: You're not logged in!");
+                            else
+                                $("#info").text("An error occurred while starring: " + error + "!");
+                        }
+                    });
+                });
+            }
+        );
+
+        $("#short-url").click(
+            function () {
+                getShareURL(function (id) {
+                    prompt("Copy the URL below and press 'Enter' to automatically close this prompt", window.location.origin + "/expand/" + id)
+                })
+            }
+        );
+
         $("#tune").click(
-            function() {
+            function () {
                 var controls = $("#controls");
-                if(canonizerData.tuningOpen)
+                if (canonizerData.tuningOpen)
                     controls.dialog('close');
                 else
                     controls.dialog('open');
@@ -480,15 +578,15 @@
                 autoOpen: false,
                 title: "Fine tune your endless song",
                 width: 350,
-                position: [4,4],
-                resizable:false,
+                position: [4, 4],
+                resizable: false
             }
         );
 
-        $( "#audio-url" ).keypress(function(event) {
+        $("#audio-url").keypress(function (event) {
             var keycode = event.keyCode || event.which;
             console.log(keycode);
-            if(keycode == '13') {
+            if (keycode == '13') {
                 canonizerData.audioURL = event.target.value;
                 console.log(canonizerData.audioURL);
                 setURL();
@@ -496,7 +594,7 @@
             }
         });
 
-        $( "#audio-upload" ).change(function (){
+        $("#audio-upload").change(function () {
             var formData = new FormData();
             formData.append("file", document.getElementById('audio-upload').files[0])
 
@@ -506,16 +604,33 @@
                 data: formData,
                 processData: false,
                 contentType: false,
-                success: function(data) {
+                success: function (data) {
                     jukeboxData.audioURL = data
                     setTunedURL();
                     window.location.reload(true);
                 },
-                error: function(xhr, textStatus, error) {
+                error: function (xhr, textStatus, error) {
                     console.log("Error: " + error);
                 }
             });
         });
+
+        $("#jukebox").click(
+            function () {
+                history.replaceState({}, document.title, document.URL.replace("canonizer_go", "jukebox_go"));
+                window.location.reload()
+            }
+        );
+
+        W = $(window).width() - 100;
+        paper = Raphael("tiles", W, TH);
+        $(document).keydown(keydown);
+        $("#jukebox").click(
+            function () {
+                history.replaceState({}, document.title, document.URL.replace("canonizer_go", "jukebox_go"));
+                window.location.reload()
+            }
+        );
 
         W = $(window).width() - 100;
         paper = Raphael("tiles", W, TH);
@@ -784,7 +899,7 @@
         tile.normal();
         tile.q = q;
         tile.init();
-        q.tile = tile
+        q.tile = tile;
         return tile;
     }
 
@@ -870,7 +985,7 @@
 
     function updateCursors(q) {
         var cursorWidth = 8;
-        if (masterCursor == null) {
+        if (masterCursor === null) {
             masterCursor = paper.rect(0, H - vPad, cursorWidth, vPad / 2);
             //masterCursor.attr("stroke", masterColor);
             masterCursor.attr("fill", masterColor);
@@ -956,7 +1071,7 @@
     }
 
     function interp(val, min, max) {
-        if (min == max) {
+        if (min === max) {
             return min;
         } else {
             return (val - min) / (max - min);
@@ -991,11 +1106,11 @@
         if (isNaN(time)) {
             return '';
         } else {
-            time = Math.round(time)
-            var hours = Math.floor(time / 3600)
-            time = time - hours * 3600
-            var mins = Math.floor(time / 60)
-            var secs = time - mins * 60
+            time = Math.round(time);
+            var hours = Math.floor(time / 3600);
+            time = time - hours * 3600;
+            var mins = Math.floor(time / 60);
+            var secs = time - mins * 60;
             return pad(hours, 2) + ':' + pad(mins, 2) + ':' + pad(secs, 2);
         }
     }

@@ -5,7 +5,7 @@ function createJRemixer(context, jquery) {
     var remixer = {
 
         remixTrackById: function(id, callback) {
-            $.getJSON("id", { id:id}, function(data) {
+            $.getJSON("api/id", { id:id}, function(data) {
                 remixer.remixTrack(data, callback)
             });
         },
@@ -193,7 +193,7 @@ function createJRemixer(context, jquery) {
             }
 
             preprocessTrack(track);
-            fetchAudio(jukeboxData.audioURL === null ? track.info.url : ("audio?fallback=" + track.info.id + "&url=" + encodeURIComponent(jukeboxData.audioURL)));
+            fetchAudio(jukeboxData.audioURL === null ? track.info.url : ("api/audio?fallback=" + track.info.id + "&url=" + encodeURIComponent(jukeboxData.audioURL)));
         },
 
         getPlayer : function() {
