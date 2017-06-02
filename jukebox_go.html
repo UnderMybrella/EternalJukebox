@@ -1284,7 +1284,7 @@
             return getSegmentColor(q);
         } else {
             q = getQuantumSegment(q);
-            if (q !== null) {
+            if (q != null) {
                 return getSegmentColor(q);
             } else {
                 return "#000";
@@ -1359,7 +1359,7 @@
     }
 
     function getSegmentColor(seg) {
-        var results = []
+        var results = [];
         for (var i = 0; i < 3; i++) {
             var t = seg.timbre[i + 1];
             var norm = (t - cmin[i]) / (cmax[i] - cmin[i]);
