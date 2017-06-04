@@ -179,6 +179,7 @@ fun main(args: Array<String>) {
         router.route().handler(CorsHandler.create("*").allowCredentials(false).allowedMethod(HttpMethod.GET))
 
     StaticResources.setup(router)
+    Experimental.setup(router)
     API.setup(vertx, router)
 
     if (config.logMissingPaths) {
