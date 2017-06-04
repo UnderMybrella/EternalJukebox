@@ -1,10 +1,25 @@
 package org.abimon.eternalJukebox
 
+import com.auth0.jwt.JWT
+import com.auth0.jwt.JWTVerifier
+import com.auth0.jwt.algorithms.Algorithm
+import com.auth0.jwt.exceptions.InvalidClaimException
+import com.auth0.jwt.exceptions.JWTDecodeException
+import com.auth0.jwt.interfaces.DecodedJWT
 import com.mashape.unirest.http.Unirest
+import io.vertx.core.Vertx
+import io.vertx.core.http.HttpHeaders
+import io.vertx.core.json.JsonObject
+import io.vertx.ext.auth.oauth2.OAuth2Auth
+import io.vertx.ext.auth.oauth2.providers.GoogleAuth
+import io.vertx.ext.web.Cookie
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.ext.web.handler.CSRFHandler
+import io.vertx.ext.web.handler.CookieHandler
+import io.vertx.ext.web.handler.SessionHandler
+import io.vertx.ext.web.sstore.LocalSessionStore
 import org.abimon.eternalJukebox.objects.*
 import org.abimon.notifly.notification
 import org.abimon.visi.lang.ByteUnit
@@ -24,11 +39,17 @@ import java.util.concurrent.TimeUnit
 
 object API {
     val csrfHandler: CSRFHandler by lazy { CSRFHandler.create(config.csrfSecret) }
+    val cookieHandler: CookieHandler by lazy { CookieHandler.create() }
     val bodyHandler: BodyHandler by lazy { BodyHandler.create(tmpUploadDir.name).setDeleteUploadedFilesOnEnd(true).setBodyLimit(if (config.uploads) 10 * 1000 * 1000 else 500 * 1000) }
+
     val b64Decoder = Base64.getUrlEncoder()
     val b64Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
     val b64CustomID = "CSTM[$b64Alphabet]+".toRegex()
     val temporalComponents = arrayOf(ChronoUnit.SECONDS, ChronoUnit.MINUTES, ChronoUnit.HOURS, ChronoUnit.DAYS)
+
+    val hmacSign: Algorithm by lazy { Algorithm.HMAC512(config.googleSecret) }
+    val verifier: JWTVerifier by lazy { JWT.require(hmacSign).withIssuer(config.ip).build() }
+    lateinit var gauth: OAuth2Auth
 
     fun handleCSRF(ctxt: RoutingContext) {
         if (!(ctxt.data()["${config.eternityUserKey}-Auth"] as? Boolean ?: false))
@@ -42,7 +63,7 @@ object API {
 
         //if(config.disableSearch)
 
-        if (!config.spotifyBase64.isPresent) {
+        if (config.spotifyBase64 == null) {
             context.response().setStatusCode(501).end(JSONObject().put("error", "[Search] Server not configured for new Spotify requests; bug the administrator"))
             return
         }
@@ -133,7 +154,7 @@ object API {
         if (eternal != null)
             context.ifDataNotCached(JSONObject(eternal).toString()) { response().jsonContent().sendCachedData(it) }
         else {
-            if (!config.spotifyBase64.isPresent)
+            if (config.spotifyBase64 == null)
                 context.response().setStatusCode(501).end(JSONObject().put("error", "[Track Info] Server not configured for new Spotify requests; bug the administrator"))
             else if (status != null) {
                 when (status.first) {
@@ -258,6 +279,108 @@ object API {
     }
 
     fun shrink(context: RoutingContext) = context.response().end(JSONObject().put("id", getOrShrinkParams(context.bodyAsString)))
+
+    fun authorise(context: RoutingContext) {
+        val auth = context.request().getHeader(HttpHeaders.AUTHORIZATION)
+        if (auth != null) {
+            val token = verifier.verifySafe(auth)
+            if (token != null) {
+                context.data()[config.eternityUserKey] = token
+                context.data()["${config.eternityUserKey}-Auth"] = true
+            }
+        }
+
+        if (!context.data().containsKey(config.eternityUserKey)) {
+            val gingerbread = context.gingerbreadMan()
+            if (gingerbread != null)
+                context.data()[config.eternityUserKey] = gingerbread
+        }
+
+        context.next()
+    }
+
+    fun googleCallback(context: RoutingContext) {
+        val params = context.request().params()
+        if (params.contains("error")) {
+            println("Fail!")
+            context.response().end()
+        } else if (params.contains("code")) {
+            gauth.getToken(JsonObject().put("code", params.get("code")).put("redirect_uri", "${config.ip}/google_callback"), { res ->
+                if (res.failed()) {
+                    println("Fail!")
+                    res.cause().printStackTrace()
+                    context.response().end()
+                } else {
+                    val googleToken = res.result().principal().mapTo(GoogleToken::class)
+                    val cookie = createOrUpdateUser(googleToken)
+                    println("$googleToken produced $cookie")
+                    context.addCookie(Cookie.cookie(config.eternityUserKey, cookie).setSecure(true).setHttpOnly(true).setMaxAge(60 * 60 * 24))
+                    context.response().redirect("/profile.html")
+                }
+            })
+        }
+    }
+
+    fun profileWebpage(context: RoutingContext) {
+        if (context.data()[config.eternityUserKey] == null || getUserByToken(context.data()[config.eternityUserKey] as DecodedJWT) == null)
+            context.response().redirect("https://accounts.google.com/o/oauth2/v2/auth?client_id=${config.googleClient}&redirect_uri=${config.ip}/google_callback&response_type=code&scope=openid+profile&access_type=offline&prompt=consent")
+        else
+            context.response().sendFile("profile.html")
+    }
+    fun profile(context: RoutingContext) {
+        val user = context.data()[config.eternityUserKey] as? DecodedJWT ?: return context.response().setStatusCode(401).end(JSONObject().put("error", "[Profile] No user provided"))
+        val profile = File(profileDir, "${user.subject}.json")
+        if (profile.exists())
+            context.response().sendFile(profile.absolutePath).end()
+        else
+            context.response().end(JSONObject().put("stars", JSONArray()))
+    }
+    fun googleProfile(context: RoutingContext) {
+        val user = getUserByToken(context.data()[config.eternityUserKey] as? DecodedJWT ?: return context.response().setStatusCode(401).end(JSONObject().put("error", "[Profile] No user provided")))
+        if (user != null)
+            context.response().putHeader("Content-Type", "application/json").end(objMapper.writeValueAsString(getGoogleUser(user)))
+        else
+            context.response().setStatusCode(401).end("No user provided")
+    }
+
+    fun getStars(context: RoutingContext) {
+        val user = context.data()[config.eternityUserKey] as? DecodedJWT ?: return context.response().setStatusCode(401).end(JSONObject().put("error", "[Stars] No user provided"))
+        val profile = File(profileDir, "${user.subject}.json")
+        if (profile.exists())
+            context.response().end(JSONArray(objMapper.readValue(profile, EternalProfile::class.java).starred))
+        else
+            context.response().end(JSONArray())
+    }
+    fun addStar(context: RoutingContext) {
+        val user = context.data()[config.eternityUserKey] as? DecodedJWT ?: return context.response().setStatusCode(401).end(JSONObject().put("error", "[Stars] No user provided"))
+        val id = context.pathParam("id")
+        if(expand(id) == null)
+            return context.response().setStatusCode(400).end(JSONObject().put("error", "[Stars] Invalid short ID"))
+
+        val profile = File(profileDir, "${user.subject}.json")
+        if (!profile.exists()) {
+            objMapper.writeValue(profile, EternalProfile(hashSetOf(id)))
+            return context.response().setStatusCode(204).end()
+        }
+
+        val profileObj = objMapper.readValue(profile, EternalProfile::class.java)
+        profileObj.starred.add(id)
+        objMapper.writeValue(profile, profileObj)
+        return context.response().setStatusCode(204).end()
+    }
+    fun removeStar(context: RoutingContext) {
+        val user = context.data()[config.eternityUserKey] as? DecodedJWT ?: return context.response().setStatusCode(401).end(JSONObject().put("error", "[Stars] No user provided"))
+        val id = context.pathParam("id")
+        val profile = File(profileDir, "${user.subject}.json")
+        if (!profile.exists())
+            return context.response().setStatusCode(204).end()
+
+        val profileObj = objMapper.readValue(profile, EternalProfile::class.java)
+        profileObj.starred.remove(id)
+        objMapper.writeValue(profile, profileObj)
+        context.response().setStatusCode(204).end()
+    }
+
     fun uploadAudio(context: RoutingContext) {
         if (context.fileUploads().isNotEmpty()) {
             val file = context.fileUploads().first()
@@ -278,6 +401,7 @@ object API {
         } else
             context.response().setStatusCode(400).end(JSONObject().put("error", "[Upload Audio] No file upload provided"))
     }
+
     fun uploadTrackInfo(context: RoutingContext) {
         if (context.fileUploads().isNotEmpty()) {
             val file = context.fileUploads().first()
@@ -300,7 +424,7 @@ object API {
         if (file.exists())
             return objMapper.readValue(file, EternalInfo::class.java) withHttpError null
         else {
-            if (!config.spotifyBase64.isPresent)
+            if (config.spotifyBase64 == null)
                 return ErroredResponse(null, 501 to "Missing Spotify Details")
 
             checkStorage()
@@ -448,7 +572,42 @@ object API {
         }
     }
 
-    fun setup(router: Router) {
+    var bearer = ""
+    var expires: Instant = Instant.now()
+
+    fun RoutingContext.gingerbreadMan(): DecodedJWT? {
+        val cookie = getCookie(config.eternityUserKey) ?: return null
+        return verifier.verifySafe(cookie.value)
+    }
+
+    fun JWTVerifier.verifySafe(token: String): DecodedJWT? {
+        try {
+            return verify(token)
+        } catch(invalid: InvalidClaimException) {
+            invalid.printStackTrace()
+        } catch(decode: JWTDecodeException) {
+            decode.printStackTrace()
+        }
+        return null
+    }
+
+    fun reloadSpotifyToken() {
+        if (config.spotifyBase64 != null) {
+            val token = Unirest
+                    .post("https://accounts.spotify.com/api/token")
+                    .header("Authorization", "Basic ${config.spotifyBase64}")
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .body("grant_type=client_credentials")
+                    .asJson()
+                    .body.`object`
+            bearer = token["access_token"] as String
+            expires = Instant.ofEpochMilli(System.currentTimeMillis() + (token["expires_in"] as Int).times(1000))
+        }
+    }
+
+    fun allowGoogleLogins(): Boolean = config.googleClient != null && config.googleSecret != null && mysqlEnabled()
+
+    fun setup(vertx: Vertx, router: Router) {
         if (config.csrf) {
             router.get().handler(csrfHandler)
             router.route("/api/profile/*").handler(API::handleCSRF)
@@ -474,6 +633,29 @@ object API {
             router.post("/api/upload/*").handler(bodyHandler)
             router.post("/api/upload/audio").blockingHandler(API::uploadAudio)
             //router.post("/api/upload/info").blockingHandler(API::uploadTrackInfo)
+        }
+
+        if (allowGoogleLogins()) {
+            router.route().handler(cookieHandler)
+            router.route().handler(SessionHandler
+                    .create(LocalSessionStore.create(vertx))
+                    .setCookieHttpOnlyFlag(config.httpOnlyCookies)
+                    .setCookieSecureFlag(config.secureCookies)
+            )
+
+            router.route().handler(API::authorise)
+
+            gauth = GoogleAuth.create(vertx, config.googleClient, config.googleSecret)
+
+            router.get("/google_callback").handler(API::googleCallback)
+
+            router.get("/profile.html").handler(API::profileWebpage)
+            router.get("/api/profile").handler(API::profile)
+            router.get("/api/profile/google").handler(API::googleProfile)
+
+            router.get("/api/profile/stars").handler(API::getStars)
+            router.put("/api/profile/stars/:id").handler(API::addStar)
+            router.delete("/api/profile/stars/:id").handler(API::removeStar)
         }
 
         config.redirects.forEach { from, to -> router.get(from).handler { ctxt -> ctxt.response().redirect(to) } }

@@ -2,26 +2,14 @@ package org.abimon.eternalJukebox
 
 import io.netty.handler.codec.http.HttpHeaderNames
 import io.vertx.core.http.HttpServerResponse
-import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import org.abimon.visi.security.sha512Hash
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
-import java.util.*
 
 fun HttpServerResponse.redirect(url: String) = putHeader("Location", url).setStatusCode(302).end()
-fun Router.htmlRoute(optionalEndpoint: Optional<String>, file: String) = optionalEndpoint.ifPresent { endpoint -> this.route(endpoint).handler { context -> context.ifFileNotCached(File(file)) { response().httpsOnly().htmlContent().sendCachedFile(it) } } }
-fun Router.popularHtmlRoute(optionalEndpoint: Optional<String>, file: String, jukebox: Boolean) = optionalEndpoint.ifPresent { endpoint ->
-    this.route(endpoint).handler { context ->
-        context.ifFileNotCached(File(file)) { response().httpsOnly().htmlContent().sendCachedFile(it) }
-        if (jukebox)
-            populariseJukebox(context)
-        else
-            populariseCanonizer(context)
-    }
-}
 
 fun HttpServerResponse.optionalHeader(headerName: CharSequence, headerValue: CharSequence, addHeader: Boolean): HttpServerResponse {
     if(addHeader)
@@ -43,6 +31,7 @@ fun HttpServerResponse.sendCachedData(data: String) {
 }
 
 fun HttpServerResponse.htmlContent(): HttpServerResponse = this.putHeader(HttpHeaderNames.CONTENT_TYPE, "text/html;charset=UTF-8")
+fun HttpServerResponse.textContent(): HttpServerResponse = this.putHeader(HttpHeaderNames.CONTENT_TYPE, "text/plain;charset=UTF-8")
 fun HttpServerResponse.jsonContent(): HttpServerResponse = this.putHeader(HttpHeaderNames.CONTENT_TYPE, "application/json;charset=UTF-8")
 fun HttpServerResponse.end(json: JSONArray) = this.jsonContent().end(json.toString())
 fun HttpServerResponse.end(json: JSONObject) = this.jsonContent().end(json.toString())

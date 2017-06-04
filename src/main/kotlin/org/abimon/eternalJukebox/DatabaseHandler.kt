@@ -29,7 +29,7 @@ fun getConnection(): Optional<PoolableObject<Connection>> = if (mysqlEnabled()) 
 fun createAccountsTable() = getConnection().ifPresent { it.use { connection -> connection.createStatement().executeAndClose("CREATE TABLE IF NOT EXISTS accounts (id VARCHAR(63) PRIMARY KEY, access_token VARCHAR(255), google_id VARCHAR(63), google_access_token VARCHAR(255), google_refresh_token VARCHAR(255), expires_at LONG);") } }
 fun createPopularJukeboxTable() = getConnection().ifPresent { it.use { connection -> connection.createStatement().executeAndClose("CREATE TABLE IF NOT EXISTS popular_jukebox (id VARCHAR(63) PRIMARY KEY, hits INT);") } }
 fun createPopularCanonizerTable() = getConnection().ifPresent { it.use { connection -> connection.createStatement().executeAndClose("CREATE TABLE IF NOT EXISTS popular_canonizer (id VARCHAR(63) PRIMARY KEY, hits INT);") } }
-fun createShortURLTable() = getConnection().ifPresent { it.use { connection -> connection.createStatement().executeAndClose("CREATE TABLE IF NOT EXISTS short_urls (id VARCHAR(16) PRIMARY KEY, params VARCHAR(4096));")} }
+fun createShortURLTable() = getConnection().ifPresent { it.use { connection -> connection.createStatement().executeAndClose("CREATE TABLE IF NOT EXISTS short_urls (id VARCHAR(16) PRIMARY KEY, params VARCHAR(4096));") } }
 fun createRequestsTable() = getConnection().ifPresent { it.use { connection -> connection.createStatement().executeAndClose("CREATE TABLE IF NOT EXISTS requests (id INT PRIMARY KEY AUTO_INCREMENT, time LONG, ip VARCHAR(255), request VARCHAR(255));") } }
 
 fun ResultSet.toIterable(): Iterable<ResultSet> {
@@ -146,8 +146,8 @@ fun getPopularJukeboxSongs(max: Int = 30): List<String> {
     return list
 }
 
-fun getUserByToken(token: DecodedJWT): Optional<EternalUser> {
-    var user = Optional.empty<EternalUser>()
+fun getUserByToken(token: DecodedJWT): EternalUser? {
+    var user: EternalUser? = null
 
     getConnection().ifPresent {
         it.use { connection ->
@@ -157,7 +157,7 @@ fun getUserByToken(token: DecodedJWT): Optional<EternalUser> {
             preparedSelect.execute()
             val results = preparedSelect.resultSet
             if (results.next()) {
-                user = EternalUser(results.getString("id"), results.getString("access_token"), results.getString("google_id"), results.getString("google_access_token"), results.getString("google_refresh_token"), results.getLong("expires_at")).asOptional()
+                user = EternalUser(results.getString("id"), results.getString("access_token"), results.getString("google_id"), results.getString("google_access_token"), results.getString("google_refresh_token"), results.getLong("expires_at"))
             }
         }
     }
@@ -170,55 +170,49 @@ fun createOrUpdateUser(googleToken: GoogleToken): String {
     var cookie = ""
     val googleUser = getGoogleUser(googleToken.access_token)
 
-    hmacSign.ifPresent { algorithm ->
-        getConnection().ifPresent {
-            it.use { connection ->
-                val preparedSelect = connection.prepareStatement("SELECT * FROM accounts WHERE google_id=?")
-                preparedSelect.setString(1, googleUser.id)
-                preparedSelect.execute()
-                val results = preparedSelect.resultSet
-                if (results.next()) {
-                    val user = EternalUser(results.getString("id"), results.getString("access_token"), results.getString("google_id"), results.getString("google_access_token"), results.getString("google_refresh_token"), results.getLong("expires_at"))
-                    val updateUser = connection.prepareStatement("UPDATE accounts SET google_access_token=?, google_refresh_token=?, expires_at=?,access_token=? WHERE id=? OR google_id=?")
-                    updateUser.setString(1, googleToken.access_token)
-                    updateUser.setString(2, googleToken.refresh_token.orElse(user.googleRefreshToken))
-                    updateUser.setLong(3, System.currentTimeMillis() + googleToken.expires_in)
-//                verifier.ifPresent { verify ->
-//                    if(verify.verifySafe(user.accessToken).isEmpty)
-//                        user.accessToken = genRandomToken()
-//                }
-                    updateUser.setString(4, user.accessToken)
-                    updateUser.setString(5, user.id)
-                    updateUser.setString(6, user.googleID)
-                    updateUser.execute()
-                    updateUser.close()
+    getConnection().ifPresent {
+        it.use { connection ->
+            val preparedSelect = connection.prepareStatement("SELECT * FROM accounts WHERE google_id=?")
+            preparedSelect.setString(1, googleUser.id)
+            preparedSelect.execute()
+            val results = preparedSelect.resultSet
+            if (results.next()) {
+                val user = EternalUser(results.getString("id"), results.getString("access_token"), results.getString("google_id"), results.getString("google_access_token"), results.getString("google_refresh_token"), results.getLong("expires_at"))
+                val updateUser = connection.prepareStatement("UPDATE accounts SET google_access_token=?, google_refresh_token=?, expires_at=?,access_token=? WHERE id=? OR google_id=?")
+                updateUser.setString(1, googleToken.access_token)
+                updateUser.setString(2, googleToken.refresh_token.orElse(user.googleRefreshToken))
+                updateUser.setLong(3, System.currentTimeMillis() + googleToken.expires_in)
+                updateUser.setString(4, user.accessToken)
+                updateUser.setString(5, user.id)
+                updateUser.setString(6, user.googleID)
+                updateUser.execute()
+                updateUser.close()
 
-                    cookie = JWT.create()
-                            .withIssuer(config.ip)
-                            .withSubject(user.id)
-                            .withClaim("access_token", user.accessToken)
-                            .sign(algorithm)
-                } else {
-                    val newUser = connection.prepareStatement("INSERT INTO accounts VALUES (?, ?, ?, ?, ?, ?)")
-                    val id = snowstorm.get()
-                    val token = genRandomToken()
-                    newUser.setString(1, id)
-                    newUser.setString(2, token)
-                    newUser.setString(3, googleUser.id)
-                    newUser.setString(4, googleToken.access_token)
-                    newUser.setString(5, googleToken.refresh_token.orElse(""))
-                    newUser.setLong(6, System.currentTimeMillis() + googleToken.expires_in)
-                    newUser.execute()
-                    newUser.close()
+                cookie = JWT.create()
+                        .withIssuer(config.ip)
+                        .withSubject(user.id)
+                        .withClaim("access_token", user.accessToken)
+                        .sign(API.hmacSign)
+            } else {
+                val newUser = connection.prepareStatement("INSERT INTO accounts VALUES (?, ?, ?, ?, ?, ?)")
+                val id = snowstorm.get()
+                val token = genRandomToken()
+                newUser.setString(1, id)
+                newUser.setString(2, token)
+                newUser.setString(3, googleUser.id)
+                newUser.setString(4, googleToken.access_token)
+                newUser.setString(5, googleToken.refresh_token.orElse(""))
+                newUser.setLong(6, System.currentTimeMillis() + googleToken.expires_in)
+                newUser.execute()
+                newUser.close()
 
-                    cookie = JWT.create()
-                            .withIssuer(config.ip)
-                            .withSubject(id)
-                            .withClaim("access_token", token)
-                            .sign(algorithm)
-                }
-                preparedSelect.close()
+                cookie = JWT.create()
+                        .withIssuer(config.ip)
+                        .withSubject(id)
+                        .withClaim("access_token", token)
+                        .sign(API.hmacSign)
             }
+            preparedSelect.close()
         }
     }
 
@@ -250,14 +244,14 @@ fun getPopularCanonizerSongs(max: Int = 30): List<String> {
 
 fun getOrShrinkParams(parameters: String): String {
     var paramString = parameters
-    while(paramString.length > 4096) {
-        if(paramString.indexOf('&') == -1)
+    while (paramString.length > 4096) {
+        if (paramString.indexOf('&') == -1)
             paramString = "id=4uLU6hMCjMI75M1A2tKUQC"
         else
             paramString = paramString.substringBeforeLast("&")
     }
 
-    if(paramString.indexOf('=') == -1)
+    if (paramString.indexOf('=') == -1)
         paramString = "id=4uLU6hMCjMI75M1A2tKUQC"
 
     println(paramString)

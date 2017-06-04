@@ -25,5 +25,5 @@ fun getGoogleUser(accessToken: String): GoogleUser {
 }
 
 fun refreshToken(eternalUser: EternalUser) {
-    createOrUpdateUser(Unirest.post("https://www.googleapis.com/oauth2/v4/token").field("refresh_token", eternalUser.googleRefreshToken).field("client_id", config.googleClient.get()).field("client_secret", config.googleSecret.get()).field("grant_type", "refresh_token").asObject(GoogleToken::class.java).body)
+    createOrUpdateUser(Unirest.post("https://www.googleapis.com/oauth2/v4/token").field("refresh_token", eternalUser.googleRefreshToken).field("client_id", config.googleClient).field("client_secret", config.googleSecret).field("grant_type", "refresh_token").asObject(GoogleToken::class.java).body)
 }
