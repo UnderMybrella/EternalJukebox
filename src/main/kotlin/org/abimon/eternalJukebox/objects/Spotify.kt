@@ -35,32 +35,12 @@ data class SpotifyAudioMeta(
 )
 
 data class SpotifyAudioTrack(
-        val num_samples: Long,
         val duration: Double,
-        val sample_md5: String,
-        val offset_seconds: Long,
-        val window_seconds: Long,
-        val analysis_sample_rate: Long,
-        val analysis_channels: Int,
-        val end_of_fade_in: Double,
-        val start_of_fade_out: Double,
         val loudness: Double,
         val tempo: Int,
-        val tempo_confidence: Double,
         val time_signature: Int,
-        val time_signature_confidence: Double,
         val key: Int,
-        val key_confidence: Double,
-        val mode: Int,
-        val mode_confidence: Double,
-        val codestring: String,
-        val code_version: Double,
-        val echoprintstring: String,
-        val echoprint_version: Double,
-        val synchstring: String,
-        val synch_version: Double,
-        val rhythmstring: String,
-        val rhythm_version: Double
+        val mode: Int
 )
 
 data class SpotifyAudioBar(

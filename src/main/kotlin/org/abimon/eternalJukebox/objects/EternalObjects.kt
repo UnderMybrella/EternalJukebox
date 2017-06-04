@@ -16,7 +16,7 @@ data class EternalAnalysis(
 )
 
 data class EternalMetadata(
-        val id: String,
+        var id: String,
         val name: String,
         val title: String,
         val artist: String,

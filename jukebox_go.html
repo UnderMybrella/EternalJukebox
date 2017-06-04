@@ -1774,7 +1774,7 @@
 
         $("#audio-url").keypress(function (event) {
             var keycode = event.keyCode || event.which;
-            if (keycode === '13') {
+            if (keycode === 13) {
                 jukeboxData.audioURL = event.target.value;
                 setTunedURL();
                 window.location.reload(true);

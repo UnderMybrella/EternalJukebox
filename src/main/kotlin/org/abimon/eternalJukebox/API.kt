@@ -137,7 +137,7 @@ object API {
                 context.response().setStatusCode(501).end(JSONObject().put("error", "[Track Info] Server not configured for new Spotify requests; bug the administrator"))
             else if (status != null) {
                 when (status.first) {
-                    404 -> context.response().setStatusCode(404).end(JSONObject().put("error", "[Track Info] No track could be found for ID $id"))
+                    400 -> context.response().setStatusCode(404).end(JSONObject().put("error", "[Track Info] No track could be found for ID $id"))
                     else -> context.response().setStatusCode(500).end(JSONObject().put("error", "[Track Info] Unknown error from Spotify for ID $id: ${status.first} ${status.second}"))
                 }
             } else
@@ -261,7 +261,7 @@ object API {
     fun uploadAudio(context: RoutingContext) {
         if (context.fileUploads().isNotEmpty()) {
             val file = context.fileUploads().first()
-            val id = "CSTM${b64Encoder.encodeToString(file.uploadedFileName().toByteArray(Charsets.UTF_8))}"
+            val id = "CSTM${b64Encoder.encodeToString(file.fileName().toByteArray(Charsets.UTF_8))}"
             val song = File(audioDir, "$id.${config.format}")
 
             val process = ProcessBuilder()
@@ -277,6 +277,22 @@ object API {
                 context.response().setStatusCode(404).end(JSONObject().put("error", "[Upload Audio] yt-dl didn't create a file"))
         } else
             context.response().setStatusCode(400).end(JSONObject().put("error", "[Upload Audio] No file upload provided"))
+    }
+    fun uploadTrackInfo(context: RoutingContext) {
+        if (context.fileUploads().isNotEmpty()) {
+            val file = context.fileUploads().first()
+            val id = "CSTM${b64Encoder.encodeToString(file.fileName().toByteArray(Charsets.UTF_8))}"
+            val infoFile = File(eternalDir, "$id.json")
+            val infoObject = File(file.uploadedFileName()).readText(Charsets.UTF_8) mapTo EternalInfo::class ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[Upload Track Info] Provided file is invalid"))
+            infoObject.info.id = id
+            objMapper.writeValue(infoFile, infoObject)
+
+            if (infoFile.exists())
+                context.response().end(id)
+            else
+                context.response().setStatusCode(404).end(JSONObject().put("error", "[Upload Track Info] $infoFile does not exist"))
+        } else
+            context.response().setStatusCode(400).end(JSONObject().put("error", "[Upload Track Info] No file upload provided"))
     }
 
     fun trackInfoForID(id: String): ErroredResponse<EternalInfo?, HttpStatus?> {
@@ -457,6 +473,7 @@ object API {
             }
             router.post("/api/upload/*").handler(bodyHandler)
             router.post("/api/upload/audio").blockingHandler(API::uploadAudio)
+            //router.post("/api/upload/info").blockingHandler(API::uploadTrackInfo)
         }
 
         config.redirects.forEach { from, to -> router.get(from).handler { ctxt -> ctxt.response().redirect(to) } }
