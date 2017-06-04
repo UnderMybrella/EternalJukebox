@@ -35,7 +35,7 @@ object StaticResources {
         router.get("/files/*").handler(StaticFileHandler("/files", File("files")))
 
         if(ourJar.extension == "jar")
-            router.get("/built.jar").handler { context -> context.response().putHeader("Content-Disposition", "attachment;filename='EternalJukebox.jar'").sendFile(ourJar.absolutePath) }
+            router.get("/built.jar").handler { context -> context.response().putHeader("Content-Disposition", "attachment;filename=EternalJukebox.jar").sendFile(ourJar.absolutePath) }
 
         router.get("/healthy").handler { context -> context.response().setStatusCode(200).end() }
 
