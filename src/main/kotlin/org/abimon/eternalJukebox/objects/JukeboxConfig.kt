@@ -14,7 +14,7 @@ data class JukeboxConfig(
         val storeSongs: Boolean = true,
         val storeAudio: Boolean = true,
 
-        val redirects: Map<String, String> = hashMapOf(Pair("index.html", "jukebox_index.html"), Pair("/", "jukebox_index.html")),
+        val redirects: Map<String, String> = hashMapOf("/index.html" to "/jukebox_index.html", "/" to "/jukebox_index.html"),
 
         var spotifyBase64: String? = null,
         var spotifyClient: String? = null,
