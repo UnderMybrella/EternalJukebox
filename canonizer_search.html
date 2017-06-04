@@ -78,7 +78,7 @@
         console.log(q);
 
         if (q.length > 0) {
-            var url = 'api/search'
+            var url = 'api/search';
             $.getJSON(url, {q: q, results: 30}, function (data) {
                 console.log(data);
 
@@ -158,7 +158,7 @@
             }
         });
 
-        $.getJSON('api/popular_canonizer', {count: 12}, function (data) {
+        $.getJSON('api/popular/canonizer', {count: 12}, function (data) {
             listTracks('#favourite-list', data);
         });
     }
