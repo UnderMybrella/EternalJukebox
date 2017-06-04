@@ -413,7 +413,7 @@
 
 
     function fetchAnalysis(id) {
-        var url = 'api/id?id=' + id;
+        var url = 'api/info/' + id;
         info('Fetching the analysis');
         $.getJSON(url, function (data) {
             gotTheAnalysis(data);

@@ -5,7 +5,7 @@ function createJRemixer(context, jquery) {
     var remixer = {
 
         remixTrackById: function(id, callback) {
-            $.getJSON("api/id", { id:id}, function(data) {
+            $.getJSON("api/info/" + id, function(data) {
                 remixer.remixTrack(data, callback)
             });
         },
