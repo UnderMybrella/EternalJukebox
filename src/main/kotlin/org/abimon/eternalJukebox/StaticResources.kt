@@ -35,7 +35,9 @@ object StaticResources {
         router.get("/files/*").handler(StaticFileHandler("/files", File("files")))
 
         if(ourJar.extension == "jar")
-            router.get("/built.jar").handler(serveStatic(ourJar))
+            router.get("/built.jar").handler { context -> context.response().putHeader("Content-Disposition", "attachment;filename='EternalJukebox.jar'").sendFile(ourJar.absolutePath) }
+
+        router.get("/healthy").handler { context -> context.response().setStatusCode(200).end() }
 
         router.get("/robots.txt").handler { context -> context.response().textContent().end("User-agent: *\nDisallow:") }
         router.get("/favicon.ico").handler(faviconHandler)
