@@ -8,14 +8,6 @@ data class JukeboxConfig(
         var ip: String = "http://\$ip:\$port", //The IP to listen on. Used for OAuth2 callback and song hosting.
         val ssl: Optional<SSLCertPair> = Optional.empty(), //Whether to use SSL/HTTPS
 
-        val searchEndpoint: Optional<String> = "/api/search".asOptional(), //The endpoint for searching (API)
-        val idEndpoint: Optional<String> = "/api/id".asOptional(), //The endpoint for ID data (API)
-        val audioEndpoint: Optional<String> = "/api/audio".asOptional(), //The endpoint for custom audio (API)
-        val songEndpoint: Optional<String> = "/api/song".asOptional(), //The endpoint for song audio (API)
-        val shrinkEndpoint: Optional<String> = "/api/shrink".asOptional(), //The endpoint for shrinking parameters (API)
-        val expandEndpoint: Optional<String> = "/api/expand/:id".asOptional(), //The endpoint for expanding a short ID into parameters
-        val popularJukeboxTracksEndpoint: Optional<String> = "/api/popular_jukebox".asOptional(),
-        val popularCanonizerTracksEndpoint: Optional<String> = "/api/popular_canonizer".asOptional(),
         val fileManager: Optional<Pair<String, String>> = Pair("/files/*", "files").asOptional(), //The file manager locations to use. First is the endpoint, second is the directory.
 
         val retroIndexEndpoint: Optional<String> = "/retro_index.html".asOptional(),

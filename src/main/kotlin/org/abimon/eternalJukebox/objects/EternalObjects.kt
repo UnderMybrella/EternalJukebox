@@ -1,7 +1,7 @@
 package org.abimon.eternalJukebox.objects
 
-data class EternalAudio(
-        val info: EternalInfo,
+data class EternalInfo(
+        val info: EternalMetadata,
         val analysis: EternalAnalysis,
         val audio_summary: SpotifyAudioTrack
 )
@@ -15,7 +15,7 @@ data class EternalAnalysis(
     var fsegments: ArrayList<SpotifyAudioSegment>? = null
 )
 
-data class EternalInfo(
+data class EternalMetadata(
         val id: String,
         val name: String,
         val title: String,
@@ -24,7 +24,7 @@ data class EternalInfo(
 )
 
 open class AnalysisType(open val start: Double, open val duration: Double, open val confidence: Double) {
-    var track: EternalAudio? = null
+    var track: EternalInfo? = null
     var which: Int? = null
     var prev: AnalysisType? = null
     var next: AnalysisType? = null

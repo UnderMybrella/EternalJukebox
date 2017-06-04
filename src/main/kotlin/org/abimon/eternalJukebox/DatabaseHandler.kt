@@ -288,8 +288,8 @@ fun getOrShrinkParams(parameters: String): String {
     return id
 }
 
-fun expand(shortID: String): Optional<String> {
-    var params = Optional.empty<String>()
+fun expand(shortID: String): String? {
+    var params: String? = null
 
     getConnection().ifPresent {
         it.use { connection ->
@@ -298,7 +298,7 @@ fun expand(shortID: String): Optional<String> {
             preparedSelect.execute()
             val results = preparedSelect.resultSet
             if (results.next())
-                params = Optional.of(results.getString("params"))
+                params = results.getString("params")
             results.close()
             preparedSelect.close()
         }
