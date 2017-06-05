@@ -1,5 +1,6 @@
 package org.abimon.eternalJukebox.objects
 
+import org.abimon.visi.lang.EnumOS
 import java.util.*
 
 data class JukeboxConfig(
@@ -54,6 +55,8 @@ data class JukeboxConfig(
         val format: String = "mp3",
 
         val vertxBlockingTime: Long = 5 * 60L * 1000 * 1000000,
+
+        val scriptCommand: List<String> = if(EnumOS.determineOS() == EnumOS.WINDOWS) listOf("yt.bat") else listOf("bash", "yt.sh"),
 
         val shortIDLength: Int = 4 //No greater than 16
 )

@@ -24,6 +24,7 @@ import org.abimon.eternalJukebox.objects.*
 import org.abimon.notifly.notification
 import org.abimon.visi.lang.ByteUnit
 import org.abimon.visi.lang.asOptional
+import org.abimon.visi.lang.make
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -188,7 +189,7 @@ object API {
 
         checkStorage()
         val process = ProcessBuilder()
-                .command("bash", "yt.sh", url, file.absolutePath, config.format)
+                .command(make<ArrayList<String>> { addAll(config.scriptCommand) ; addAll(listOf("\"$url\"", "\"${file.absolutePath}\"", config.format)) })
                 .redirectErrorStream(true)
                 .redirectOutput(File(logDir, "$b64.log"))
                 .start()
@@ -503,7 +504,7 @@ object API {
 
                     val closestResult = if (true) results[0].id else results.sortedWith(Comparator<YoutubeVideo> { (_, duration1), (_, duration2) -> Math.abs(duration - duration1.toMillis()).compareTo(Math.abs(duration - duration2.toMillis())) }).first().id
                     val process = ProcessBuilder()
-                            .command("bash", "yt.sh", "https://youtu.be/$closestResult", file.absolutePath, config.format)
+                            .command(make<ArrayList<String>> { addAll(config.scriptCommand) ; addAll(listOf("\"https://youtu.be/$closestResult\"", "\"${file.absolutePath}\"", config.format)) })
                             .redirectErrorStream(true)
                             .redirectOutput(File(logDir, "$id.log"))
                             .start()

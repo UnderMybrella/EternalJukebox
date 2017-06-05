@@ -487,14 +487,14 @@
     }
 
     function listPopularTracks() {
-        $.getJSON('api/popular/jukebox', {count: 12}, function (data) {
+        $.getJSON('/api/popular/jukebox', {count: 12}, function (data) {
             listTracks('#popular-list', data);
             ga_track('list', 'popular-tracks', '');
         });
     }
 
     function analyzeAudio(audio, tag, callback) {
-        var url = 'qanalyze'
+        var url = 'qanalyze';
         $.getJSON(url, {url: audio, tag: tag}, function (data) {
             if (data.status === 'done' || data.status === 'error') {
                 callback(data);
@@ -515,7 +515,7 @@
     }
 
     function fetchAnalysis(id) {
-        var url = 'api/info/' + id;
+        var url = '/api/info/' + id;
         info('Fetching the analysis');
         $.getJSON(url, function (data) {
             gotTheAnalysis(data);
@@ -1502,7 +1502,7 @@
         var q = document.URL.split('?')[1];
 
         $.ajax({
-            url: "api/shrink",
+            url: "/api/shrink",
             dataType: "json",
             type: "POST",
             data: q === undefined ? "type=jukebox" : "type=jukebox&" + q,
@@ -1519,7 +1519,7 @@
     function checkIfStarred() {
         getShareURL(function (id) {
             $.ajax({
-                url: "api/profile/stars",
+                url: "/api/profile/stars",
                 dataType: "json",
                 type: "GET",
                 success: function (data) {
@@ -1609,7 +1609,7 @@
             function () {
                 getShareURL(function (shortID) {
                     $.ajax({
-                        url: "api/profile/stars/" + shortID,
+                        url: "/api/profile/stars/" + shortID,
                         type: $("#star").text() === "Star" ? "PUT" : "DELETE",
                         headers: {
                             "X-XSRF-TOKEN": document.cookie.substring(document.cookie.indexOf("XSRF-TOKEN")).split(";")[0].split("=").slice(1).join("=")
@@ -1664,6 +1664,14 @@
             function () {
                 resetTuning();
                 ga_track('main', 'reset', '');
+            }
+        );
+
+        $("#close-tune").click(
+            function() {
+                var controls = $("#controls");
+                controls.dialog('close');
+                jukeboxData.tuningOpen = false;
             }
         );
 
@@ -1786,7 +1794,7 @@
             formData.append("file", document.getElementById('audio-upload').files[0])
 
             $.ajax({
-                url: "upload/song",
+                url: "/api/upload/audio",
                 type: "POST",
                 data: formData,
                 processData: false,
@@ -2354,7 +2362,7 @@
             info("analyzing audio");
             setDisplayMode(true);
             $("#select-track").hide();
-            analyzeAudio(url, 'tag',
+                analyzeAudio(url, 'tag',
                 function (data) {
                     if (data.status === 'done') {
                         showPlotPage(data.id);
@@ -2415,7 +2423,6 @@
     function ga_track(page, action, id) {
         _gaq.push(['_trackEvent', page, action, id]);
     }
-
 
     window.onload = init;
 
