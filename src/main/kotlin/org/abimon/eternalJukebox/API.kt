@@ -483,7 +483,13 @@ object API {
         if (file.exists())
             return file withHttpError null
         else {
+            if (config.spotifyBase64 == null)
+                return ErroredResponse(null, 501 to "Missing Spotify Details")
+
             checkStorage()
+            if (expires.isBefore(Instant.now()))
+                reloadSpotifyToken()
+
             for (i in 0 until 3) {
                 try {
                     val trackInfo = Unirest.get("https://api.spotify.com/v1/tracks/$id").header("Authorization", "Bearer $bearer").asJson()
