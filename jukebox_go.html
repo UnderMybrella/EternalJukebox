@@ -1637,7 +1637,7 @@
         $("#short-url").click(
             function () {
                 getShareURL(function (id) {
-                    prompt("Copy the URL below and press 'Enter' to automatically close this prompt", window.location.origin + "/expand/" + id)
+                    prompt("Copy the URL below and press 'Enter' to automatically close this prompt", window.location.origin + "/api/expand/" + id + "/redirect")
                 })
             }
         );
