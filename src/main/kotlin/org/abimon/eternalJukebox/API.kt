@@ -631,7 +631,7 @@ object API {
                 checkStorage()
                 it.next()
             }
-            router.post("/api/upload/*").handler(bodyHandler)
+            router.post("/api/upload/*").blockingHandler(bodyHandler)
             router.post("/api/upload/audio").blockingHandler(API::uploadAudio)
             //router.post("/api/upload/info").blockingHandler(API::uploadTrackInfo)
         }
