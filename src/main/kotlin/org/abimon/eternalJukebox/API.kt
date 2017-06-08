@@ -609,11 +609,6 @@ object API {
     fun allowGoogleLogins(): Boolean = config.googleClient != null && config.googleSecret != null && mysqlEnabled()
 
     fun setup(vertx: Vertx, router: Router) {
-        if (config.csrf) {
-            router.get().handler(csrfHandler)
-            router.route("/api/profile/*").handler(API::handleCSRF)
-        }
-
         router.get("/api/audio").handler(API::externalAudio)
         router.get("/api/search").handler(API::searchSpotify)
         router.get("/api/popular/:service").handler(API::popularTracksForService)
@@ -626,6 +621,21 @@ object API {
         router.post("/api/shrink").handler(bodyHandler)
         router.post("/api/shrink").handler(API::shrink)
 
+        if(allowGoogleLogins() || config.uploads) {
+            router.route().handler(cookieHandler)
+            router.route().handler(SessionHandler
+                    .create(LocalSessionStore.create(vertx))
+                    .setCookieHttpOnlyFlag(config.httpOnlyCookies)
+                    .setCookieSecureFlag(config.secureCookies)
+            )
+
+            if (config.csrf) {
+                router.get().handler(csrfHandler)
+                router.route("/api/profile/*").handler(API::handleCSRF)
+                router.route("/api/upload/*").handler(API::handleCSRF)
+            }
+        }
+
         if (config.uploads) {
             router.post("/api/upload/*").handler {
                 checkStorage()
@@ -637,13 +647,6 @@ object API {
         }
 
         if (allowGoogleLogins()) {
-            router.route().handler(cookieHandler)
-            router.route().handler(SessionHandler
-                    .create(LocalSessionStore.create(vertx))
-                    .setCookieHttpOnlyFlag(config.httpOnlyCookies)
-                    .setCookieSecureFlag(config.secureCookies)
-            )
-
             router.route().handler(API::authorise)
 
             gauth = GoogleAuth.create(vertx, config.googleClient, config.googleSecret)
