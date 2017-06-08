@@ -20,8 +20,6 @@ import io.vertx.core.net.PemKeyCertOptions
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.handler.CorsHandler
 import org.abimon.eternalJukebox.objects.JukeboxConfig
-import org.abimon.notifly.NotificationPayload
-import org.abimon.notifly.notification
 import org.abimon.visi.collections.PoolableObject
 import org.abimon.visi.io.errPrintln
 import org.abimon.visi.io.forceError
@@ -185,10 +183,6 @@ fun main(args: Array<String>) {
         router.route().handler { context ->
             context.response().setStatusCode(404).end()
             println("Request was sent from ${context.request().remoteAddress()} that didn't match any paths, sending a 404 for ${context.request().path()}")
-            sendFirebaseMessage(notification {
-                title("[EternalJukebox] Unknown Path")
-                body("${context.request().remoteAddress()} requested ${context.request().path()}, returning with 404")
-            }.asOptional())
         }
     }
 
@@ -200,18 +194,6 @@ fun <T : Any> JsonObject.mapTo(clazz: KClass<T>): T = objMapper.readValue(toStri
 
 fun makeConnection(): PoolableObject<Connection> = PoolableObject(DriverManager.getConnection("jdbc:mysql://localhost/${config.mysqlDatabase}?user=${config.mysqlUsername}&password=${config.mysqlPassword}&serverTimezone=GMT"))
 
-fun sendFirebaseMessage(notificationPayload: Optional<NotificationPayload> = Optional.empty(), dataPayload: Optional<JSONObject> = Optional.empty()) {
-    if(config.firebaseApp != null) {
-        if(config.firebaseDevice != null) {
-            val payload = JSONObject()
-            payload.put("to", config.firebaseDevice)
-            notificationPayload.ifPresent { notification -> payload.put("notification", JSONObject(objMapper.writeValueAsString(notification))) }
-            dataPayload.ifPresent { data -> payload.put("data", data) }
-            Unirest.post("https://fcm.googleapis.com/fcm/send").header("Authorization", "key=${config.firebaseApp}").jsonBody(payload).asJson().body.toJsonObject()
-        }
-    }
-}
-
 fun mysqlEnabled(): Boolean = config.mysqlDatabase != null && config.mysqlUsername != null && config.mysqlPassword != null
 
 fun <T : HttpRequestWithBody> T.jsonBody(json: JSONObject): T {
@@ -222,10 +204,6 @@ fun <T : HttpRequestWithBody> T.jsonBody(json: JSONObject): T {
 fun JsonNode.toJsonObject(): JSONObject = JSONObject(`object`.toString())
 fun error(msg: Any) {
     errPrintln(msg)
-    sendFirebaseMessage(notification {
-        title("[EternalJukebox] Error")
-        body(msg.toString())
-    }.asOptional())
 }
 
 fun isInsecure(): Boolean = API.allowGoogleLogins() && (!config.secureCookies || config.ssl == null)

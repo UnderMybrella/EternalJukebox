@@ -21,9 +21,6 @@ import io.vertx.ext.web.handler.CookieHandler
 import io.vertx.ext.web.handler.SessionHandler
 import io.vertx.ext.web.sstore.LocalSessionStore
 import org.abimon.eternalJukebox.objects.*
-import org.abimon.notifly.notification
-import org.abimon.visi.lang.ByteUnit
-import org.abimon.visi.lang.asOptional
 import org.abimon.visi.lang.make
 import org.json.JSONArray
 import org.json.JSONException
@@ -556,13 +553,6 @@ object API {
 
         allFiles.sortedWith(Comparator<File> { file1, file2 -> file1.lastModified().compareTo(file2.lastModified()) })
         allFiles.forEach { file -> totalUsed += file.length() }
-
-        if (totalUsed > config.storageEmergency) {
-            sendFirebaseMessage(notification {
-                title("[EternalJukebox] Emergency Storage Reached")
-                body("EternalJukebox has $totalUsed B used (${ByteUnit(totalUsed).toMegabytes()} MB)")
-            }.asOptional())
-        }
 
         if (totalUsed > config.storageSize) {
             allFiles.forEach { file ->

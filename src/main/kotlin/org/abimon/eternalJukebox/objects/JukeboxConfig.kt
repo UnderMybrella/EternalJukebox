@@ -43,9 +43,6 @@ data class JukeboxConfig(
 
         val uploads: Boolean = false,
 
-        val firebaseApp: String? = null,
-        val firebaseDevice: String? = null,
-
         val storageSize: Long = 10L * 1000 * 1000 * 1000, //How much storage space should be devoted to Spotify caches, YouTube caches, and uploaded files.
         val storageBuffer: Long = storageSize / 10 * 9,
         val storageEmergency: Long = storageSize / 10 * 11,
