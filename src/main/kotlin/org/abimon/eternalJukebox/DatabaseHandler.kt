@@ -5,11 +5,10 @@ import com.auth0.jwt.interfaces.DecodedJWT
 import io.vertx.ext.web.RoutingContext
 import org.abimon.eternalJukebox.objects.EternalUser
 import org.abimon.eternalJukebox.objects.GoogleToken
-import org.abimon.notifly.notification
 import org.abimon.visi.collections.Pool
 import org.abimon.visi.collections.PoolableObject
+import org.abimon.visi.io.errPrintln
 import org.abimon.visi.lang.Snowstorm
-import org.abimon.visi.lang.asOptional
 import org.abimon.visi.security.sha512Hash
 import java.security.SecureRandom
 import java.sql.Connection
@@ -316,10 +315,7 @@ fun obtainNewShortID(connection: Connection): String {
         println("Generated $id, no success")
     }
 
-    sendFirebaseMessage(notification {
-        title("Run out of ${config.shortIDLength} char IDs")
-        body("We've run out of new short IDs to send. This is bad.")
-    }.asOptional())
+    errPrintln("We've run out of new short IDs to send. This is bad.")
 
     throw IllegalStateException("Run out of IDs")
 }
