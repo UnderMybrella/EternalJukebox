@@ -267,6 +267,9 @@ object API {
     }
 
     private fun defaultSong(context: RoutingContext) {
+        if(!storage.shouldHandle(EnumDataType.AUDIO))
+            return context.response().setStatusCode(501).end(JSONObject().put("error", "[External Audio] The storage configured does not audio"))
+
         val id = context.pathParam("id").replace("[^A-Za-z0-9]".toRegex(), "")
         val (audioStream, status) = defaultSongForID(id)
         return useTmpStream(audioStream ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[Default Audio -> Storage] No storage could be found for $id"))) { inputStream, size ->
