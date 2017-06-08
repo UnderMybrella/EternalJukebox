@@ -32,7 +32,7 @@ object StaticResources {
         router.get("/retro_index.html").handler(serveStatic(File("retro_index.html")))
         router.get("/retro_faq.html").handler(serveStatic(File("retro_faq.html")))
 
-        router.get("/files/*").handler(StaticFileHandler("/files", File("files")))
+        router.get("/files/*").handler(StaticFileHandler("files", File("files")))
 
         if(ourJar.extension == "jar")
             router.get("/built.jar").handler { context -> context.response().putHeader("Content-Disposition", "attachment;filename=EternalJukebox.jar").sendFile(ourJar.absolutePath) }
