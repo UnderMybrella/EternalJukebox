@@ -34,7 +34,10 @@ class StaticFileHandler(val endpoint: String, val root: File) : Handler<RoutingC
                 else
                     return context.ifDataNotCached("<html><body><h1>Files in ${file.absolutePath.replace(root.absolutePath, "")}</h1><ul>${file.listFiles().filter { subFile -> !subFile.name.startsWith(".") }.joinToString("") { "<a href=\"$endpoint${it.absolutePath.replace(root.absolutePath, "").toLowerCase()}\"><li>${it.name}</li></a>" }}</ul></body></html>") { response().httpsOnly().htmlContent().sendCachedData(it) }
             } else {
-                context.ifFileNotCached(file) { response().httpsOnly().sendCachedFile(file) }
+                if(file.extension == "jar")
+                    context.response().httpsOnly().putHeader("Content-Disposition", "attachment;filename=EternalJukebox.jar").sendFile(file.absolutePath)
+                else
+                    context.ifFileNotCached(file) { response().httpsOnly().sendCachedFile(file) }
                 return
             }
         }
