@@ -17,6 +17,13 @@ interface IStorage {
     fun provide(name: String, type: EnumDataType): InputStream?
 
     /**
+     * Provide a URL that the data for the type and name can be retrieved from, or null if there isn't one.
+     * This should only be called in cases where the data is strictly read and then written, and therefore a redirection is possible
+     * @throws UnsupportedOperationException if this storage method should not deal with this data type
+     */
+    fun provideURL(name: String, type: EnumDataType): String? = null
+
+    /**
      * Store data in this storage location. Closes the input stream after.
      * @throws UnsupportedOperationException if this storage method should not deal with this data type
      */

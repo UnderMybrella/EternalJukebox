@@ -58,6 +58,7 @@ fun getIP(): String {
 
     return "localhost"
 }
+
 fun uploadGist(desc: String, content: String, name: String = "error.txt"): Optional<String> {
     val json = JSONObject()
     json.put("description", desc)

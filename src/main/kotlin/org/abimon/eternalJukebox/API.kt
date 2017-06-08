@@ -162,6 +162,10 @@ object API {
 
         val id = context.pathParam("id").replace("[^A-Za-z0-9]".toRegex(), "")
 
+        val redirect = if(storage.isStored("$id.json", EnumDataType.INFO)) storage.provideURL("$id.json", EnumDataType.INFO) else null
+        if(redirect != null)
+            return context.response().redirect(redirect)
+
         val (eternal, status) = trackInfoForID(id)
         if (eternal != null)
             context.ifDataNotCached(JSONObject(eternal).toString()) { response().jsonContent().sendCachedData(it) }
@@ -185,7 +189,12 @@ object API {
         if (url.matches(b64CustomID)) {
             if(!storage.shouldHandle(EnumDataType.UPLOADED_AUDIO)) {
                 if(storage.shouldHandle(EnumDataType.AUDIO)) {
-                    val (fallback, status) = defaultSongForID(request.getParam("fallback") ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] The storage configured does not support uploaded audio, and no fallback URL was provided")))
+                    val fallbackID = request.getParam("fallback") ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] The storage configured does not support uploaded audio, and no fallback ID was provided"))
+                    val redirect = if(storage.isStored("$fallbackID.${config.format}", EnumDataType.AUDIO)) storage.provideURL("$fallbackID.${config.format}", EnumDataType.AUDIO) else null
+                    if(redirect != null)
+                        return context.response().redirect(redirect)
+
+                    val (fallback, status) = defaultSongForID(fallbackID)
                     return useTmpStream(fallback ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] No storage could be found for ${request.getParam("fallback")}"))) { inputStream, size ->
                         val response = context.response().putHeader(HttpHeaderNames.CONTENT_LENGTH, "$size")
                         inputStream.readChunked { chunk -> response.write(Buffer.buffer(chunk)) }
@@ -196,6 +205,10 @@ object API {
                     return context.response().setStatusCode(501).end(JSONObject().put("error", "[External Audio] The storage configured does not support uploaded audio, and also does not support audio in general"))
             }
 
+            val redirect = if(storage.isStored("$url.${config.format}", EnumDataType.UPLOADED_AUDIO)) storage.provideURL("$url.${config.format}", EnumDataType.UPLOADED_AUDIO) else null
+            if(redirect != null)
+                return context.response().redirect(redirect)
+
             if (storage.isStored("$url.${config.format}", EnumDataType.UPLOADED_AUDIO))
                 return useTmpStream(storage.provide("$url.${config.format}", EnumDataType.EXT_AUDIO) ?: return context.response().setStatusCode(500).end(JSONObject().put("error", "[External Audio -> Storage] Null input stream?"))) { inputStream, size ->
                     val response = context.response().putHeader(HttpHeaderNames.CONTENT_LENGTH, "$size")
@@ -203,7 +216,12 @@ object API {
                     response.end()
                 }
             else {
-                val (fallback, status) = defaultSongForID(request.getParam("fallback") ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] No storage could be found for $url, and no fallback URL was provided")))
+                val fallbackID = request.getParam("fallback") ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] No storage could be found for $url, and no fallback ID was provided"))
+                val redirectURL = if(storage.isStored("$fallbackID.${config.format}", EnumDataType.AUDIO)) storage.provideURL("$fallbackID.${config.format}", EnumDataType.AUDIO) else null
+                if(redirectURL != null)
+                    return context.response().redirect(redirectURL)
+
+                val (fallback, status) = defaultSongForID(fallbackID)
                 return useTmpStream(fallback ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] No storage could be found for ${request.getParam("fallback")}"))) { inputStream, size ->
                     val response = context.response().putHeader(HttpHeaderNames.CONTENT_LENGTH, "$size")
                     inputStream.readChunked { chunk -> response.write(Buffer.buffer(chunk)) }
@@ -214,7 +232,12 @@ object API {
 
         if(!storage.shouldHandle(EnumDataType.EXT_AUDIO)) {
             if(storage.shouldHandle(EnumDataType.AUDIO)) {
-                val (fallback, status) = defaultSongForID(request.getParam("fallback") ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] The configured storage does not support external audio, and no fallback URL was provided")))
+                val fallbackID = request.getParam("fallback") ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] The configured storage does not support external audio, and no fallback ID was provided"))
+                val redirectURL = if(storage.isStored("$fallbackID.${config.format}", EnumDataType.AUDIO)) storage.provideURL("$fallbackID.${config.format}", EnumDataType.AUDIO) else null
+                if(redirectURL != null)
+                    return context.response().redirect(redirectURL)
+
+                val (fallback, status) = defaultSongForID(fallbackID)
                 return useTmpStream(fallback ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] No storage could be found for ${request.getParam("fallback")}"))) { inputStream, size ->
                     val response = context.response().putHeader(HttpHeaderNames.CONTENT_LENGTH, "$size")
                     inputStream.readChunked { chunk -> response.write(Buffer.buffer(chunk)) }
@@ -228,6 +251,10 @@ object API {
         val b64 = b64Encoder.encodeToString(url.toByteArray(Charsets.UTF_8))
 
         if (storage.isStored("$b64.${config.format}", EnumDataType.EXT_AUDIO)) {
+            val redirect = if(storage.isStored("$b64.${config.format}", EnumDataType.EXT_AUDIO)) storage.provideURL("$b64.${config.format}", EnumDataType.EXT_AUDIO) else null
+            if(redirect != null)
+                return context.response().redirect(redirect)
+
             return useTmpStream(storage.provide("$b64.${config.format}", EnumDataType.EXT_AUDIO) ?: return context.response().setStatusCode(500).end(JSONObject().put("error", "[External Audio -> Storage] Null input stream?"))) { inputStream, size ->
                 val response = context.response().putHeader(HttpHeaderNames.CONTENT_LENGTH, "$size")
                 inputStream.readChunked { chunk -> response.write(Buffer.buffer(chunk)) }
@@ -257,7 +284,12 @@ object API {
         else {
             tmpAudio.delete()
 
-            val (fallback, status) = defaultSongForID(request.getParam("fallback") ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] Could not download from $url, and no fallback URL was provided")))
+            val fallbackID = request.getParam("fallback") ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] Could not download from $url, and no fallback ID was provided"))
+            val redirectURL = if(storage.isStored("$fallbackID.${config.format}", EnumDataType.AUDIO)) storage.provideURL("$fallbackID.${config.format}", EnumDataType.AUDIO) else null
+            if(redirectURL != null)
+                return context.response().redirect(redirectURL)
+
+            val (fallback, status) = defaultSongForID(fallbackID)
             return useTmpStream(fallback ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] No storage could be found for ${request.getParam("fallback")}"))) { inputStream, size ->
                 val response = context.response().putHeader(HttpHeaderNames.CONTENT_LENGTH, "$size")
                 inputStream.readChunked { chunk -> response.write(Buffer.buffer(chunk)) }
@@ -271,6 +303,11 @@ object API {
             return context.response().setStatusCode(501).end(JSONObject().put("error", "[External Audio] The storage configured does not audio"))
 
         val id = context.pathParam("id").replace("[^A-Za-z0-9]".toRegex(), "")
+
+        val redirectURL = if(storage.isStored("$id.${config.format}", EnumDataType.AUDIO)) storage.provideURL("$id.${config.format}", EnumDataType.AUDIO) else null
+        if(redirectURL != null)
+            return context.response().redirect(redirectURL)
+
         val (audioStream, status) = defaultSongForID(id)
         return useTmpStream(audioStream ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[Default Audio -> Storage] No storage could be found for $id"))) { inputStream, size ->
             val response = context.response().putHeader(HttpHeaderNames.CONTENT_LENGTH, "$size")
@@ -575,6 +612,7 @@ object API {
                     return eternalInfo withHttpError null
                 } catch(th: Throwable) {
                     error("[Track Info] An unexpected error occurred: $th")
+                    th.printStackTrace()
                 }
             }
         }
