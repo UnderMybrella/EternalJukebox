@@ -253,8 +253,6 @@ fun getOrShrinkParams(parameters: String): String {
     if (paramString.indexOf('=') == -1)
         paramString = "id=4uLU6hMCjMI75M1A2tKUQC"
 
-    println(paramString)
-
     var id = ""
 
     getConnection().ifPresent {

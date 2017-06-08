@@ -2,6 +2,7 @@ package org.abimon.eternalJukebox.objects
 
 import org.abimon.visi.lang.EnumOS
 import java.util.*
+import kotlin.collections.HashMap
 
 data class JukeboxConfig(
         var ip: String = "http://\$ip:\$port", //The IP to listen on. Used for OAuth2 callback and song hosting.
@@ -43,10 +44,6 @@ data class JukeboxConfig(
 
         val uploads: Boolean = false,
 
-        val storageSize: Long = 10L * 1000 * 1000 * 1000, //How much storage space should be devoted to Spotify caches, YouTube caches, and uploaded files.
-        val storageBuffer: Long = storageSize / 10 * 9,
-        val storageEmergency: Long = storageSize / 10 * 11,
-
         val cacheFiles: Boolean = true,
         val enforceHttps: Boolean = ssl != null,
         val format: String = "mp3",
@@ -54,7 +51,8 @@ data class JukeboxConfig(
         val vertxBlockingTime: Long = 5 * 60L * 1000 * 1000000,
 
         val scriptCommand: List<String> = if(EnumOS.determineOS() == EnumOS.WINDOWS) listOf("yt.bat") else listOf("bash", "yt.sh"),
-
+        val storageType: String = "LocalStorage",
+        val storageOptions: Map<String, String> = HashMap(),
         val shortIDLength: Int = 4 //No greater than 16
 )
 
