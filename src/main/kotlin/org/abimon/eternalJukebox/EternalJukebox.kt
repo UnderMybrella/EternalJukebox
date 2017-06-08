@@ -178,8 +178,8 @@ fun main(args: Array<String>) {
     if (config.cors)
         router.route().handler(CorsHandler.create("*").allowCredentials(false).allowedMethod(HttpMethod.GET))
 
-    StaticResources.setup(router)
     API.setup(vertx, router)
+    StaticResources.setup(router)
 
     if (config.logMissingPaths) {
         router.route().handler { context ->
