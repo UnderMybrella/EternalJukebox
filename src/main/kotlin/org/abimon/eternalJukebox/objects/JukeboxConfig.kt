@@ -1,8 +1,8 @@
 package org.abimon.eternalJukebox.objects
 
 import org.abimon.visi.lang.EnumOS
-import org.json.JSONObject
 import java.util.*
+import kotlin.collections.HashMap
 
 data class JukeboxConfig(
         var ip: String = "http://\$ip:\$port", //The IP to listen on. Used for OAuth2 callback and song hosting.
@@ -52,7 +52,7 @@ data class JukeboxConfig(
 
         val scriptCommand: List<String> = if(EnumOS.determineOS() == EnumOS.WINDOWS) listOf("yt.bat") else listOf("bash", "yt.sh"),
         val storageType: String = "LocalStorage",
-        val storageOptions: JSONObject = JSONObject(),
+        val storageOptions: Map<String, String> = HashMap(),
         val shortIDLength: Int = 4 //No greater than 16
 )
 

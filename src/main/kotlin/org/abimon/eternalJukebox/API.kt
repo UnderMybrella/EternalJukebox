@@ -23,6 +23,7 @@ import io.vertx.ext.web.handler.CookieHandler
 import io.vertx.ext.web.handler.SessionHandler
 import io.vertx.ext.web.sstore.LocalSessionStore
 import org.abimon.eternalJukebox.objects.*
+import org.abimon.eternalJukebox.storage.GoogleStorage
 import org.abimon.eternalJukebox.storage.IStorage
 import org.abimon.eternalJukebox.storage.LocalStorage
 import org.abimon.eternalJukebox.storage.NoStorage
@@ -50,7 +51,6 @@ object API {
     val cookieHandler: CookieHandler by lazy { CookieHandler.create() }
     val bodyHandler: BodyHandler by lazy { BodyHandler.create(tmpUploadDir.name).setDeleteUploadedFilesOnEnd(true).setBodyLimit(if (config.uploads) 10 * 1000 * 1000 else 500 * 1000) }
 
-    val b64Decoder = Base64.getUrlEncoder()
     val b64Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
     val b64CustomID = "UPL-[$b64Alphabet]+".toRegex()
     val temporalComponents = arrayOf(ChronoUnit.SECONDS, ChronoUnit.MINUTES, ChronoUnit.HOURS, ChronoUnit.DAYS)
@@ -708,6 +708,7 @@ object API {
         when(config.storageType.toUpperCase()) {
             "LOCALSTORAGE" -> storage = LocalStorage
             "NOSTORAGE" -> storage = NoStorage
+            "GOOGLESTORAGE" -> storage = GoogleStorage
             else -> {
                 error("Invalid storage type ${config.storageType}, using LocalStorage")
                 storage = LocalStorage
