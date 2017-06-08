@@ -1683,17 +1683,17 @@
 		});
 		
 		$( "#audio-upload" ).change(function (){
-			var formData = new FormData();
-			formData.append("file", document.getElementById('audio-upload').files[0])
-
 			$.ajax({
-        		url: "upload/song",
+        		url: "/api/upload/song",
         		type: "POST",
-        		data: formData,
-        		processData: false,
-        		contentType: false,
+        		data: formData,data: new FormData($('#audio-upload-form')[0]),
+                processData: false,
+                contentType: false,
+                headers: {
+                    "X-XSRF-TOKEN": document.cookie.substring(document.cookie.indexOf("XSRF-TOKEN")).split(";")[0].split("=").slice(1).join("=")
+                },
         		success: function(data) {
-        			jukeboxData.audioURL = data
+        			jukeboxData.audioURL = data;
         			setTunedURL();
         			window.location.reload(true);
         		},
@@ -1701,7 +1701,7 @@
         			console.log("Error: " + error);
         		}
     		});
-		})
+		});
 
         watch(jukeboxData, 'addLastEdge',
             function() {
@@ -2340,7 +2340,7 @@
         <div class="l-cb" id="l-sequential-branch"> Remove sequential branches: <input id="sequential-branch" type="checkbox"> </div>
 		<div class="l-cb" id="l-audio-url">Audio URL: <input id="audio-url" type="url"> </div>
 		<br>
-		<div class="l-cb" id="l-audio-upload"><input id="audio-upload" type="file" name="song_upload" accept="audio/*"> </div>
+        <div class="l-cb" id="l-audio-upload"><form id="audio-upload-form"><input id="audio-upload" type="file" name="song_upload" accept="audio/*"></form></div>
 
        	<hr>
        	<div id="tune-info">

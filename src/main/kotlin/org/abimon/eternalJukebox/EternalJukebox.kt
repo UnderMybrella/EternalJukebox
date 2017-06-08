@@ -176,7 +176,7 @@ fun main(args: Array<String>) {
     }
 
     if (config.cors)
-        router.route().handler(CorsHandler.create("*").allowCredentials(false).allowedMethod(HttpMethod.GET))
+        router.get().handler(CorsHandler.create("*").allowCredentials(false).allowedMethod(HttpMethod.GET))
 
     API.setup(vertx, router)
     StaticResources.setup(router)

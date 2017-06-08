@@ -388,6 +388,9 @@ object API {
             val id = "CSTM${b64Encoder.encodeToString(file.fileName().toByteArray(Charsets.UTF_8))}"
             val song = File(audioDir, "$id.${config.format}")
 
+            if(song.exists())
+                return context.response().end(id)
+
             val process = ProcessBuilder()
                     .command("ffmpeg", "-i", file.uploadedFileName(), song.absolutePath)
                     .redirectErrorStream(true)
@@ -623,11 +626,6 @@ object API {
 
         if(allowGoogleLogins() || config.uploads) {
             router.route().handler(cookieHandler)
-            router.route().handler(SessionHandler
-                    .create(LocalSessionStore.create(vertx))
-                    .setCookieHttpOnlyFlag(config.httpOnlyCookies)
-                    .setCookieSecureFlag(config.secureCookies)
-            )
 
             if (config.csrf) {
                 router.get().handler(csrfHandler)
@@ -641,12 +639,18 @@ object API {
                 checkStorage()
                 it.next()
             }
-            router.post("/api/upload/*").blockingHandler(bodyHandler)
+            router.post("/api/upload/*").handler(bodyHandler)
             router.post("/api/upload/audio").blockingHandler(API::uploadAudio)
             //router.post("/api/upload/info").blockingHandler(API::uploadTrackInfo)
         }
 
         if (allowGoogleLogins()) {
+            router.route().handler(SessionHandler
+                    .create(LocalSessionStore.create(vertx))
+                    .setCookieHttpOnlyFlag(config.httpOnlyCookies)
+                    .setCookieSecureFlag(config.secureCookies)
+            )
+
             router.route().handler(API::authorise)
 
             gauth = GoogleAuth.create(vertx, config.googleClient, config.googleSecret)
