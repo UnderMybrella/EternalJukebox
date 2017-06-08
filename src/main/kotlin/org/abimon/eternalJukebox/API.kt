@@ -7,7 +7,9 @@ import com.auth0.jwt.exceptions.InvalidClaimException
 import com.auth0.jwt.exceptions.JWTDecodeException
 import com.auth0.jwt.interfaces.DecodedJWT
 import com.mashape.unirest.http.Unirest
+import io.netty.handler.codec.http.HttpHeaderNames
 import io.vertx.core.Vertx
+import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.oauth2.OAuth2Auth
@@ -21,19 +23,27 @@ import io.vertx.ext.web.handler.CookieHandler
 import io.vertx.ext.web.handler.SessionHandler
 import io.vertx.ext.web.sstore.LocalSessionStore
 import org.abimon.eternalJukebox.objects.*
+import org.abimon.eternalJukebox.storage.IStorage
+import org.abimon.eternalJukebox.storage.LocalStorage
+import org.abimon.eternalJukebox.storage.NoStorage
+import org.abimon.visi.io.readChunked
+import org.abimon.visi.io.writeTo
 import org.abimon.visi.lang.make
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import org.jsoup.Jsoup
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.InputStream
 import java.net.URLEncoder
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.collections.HashSet
 
 object API {
     val csrfHandler: CSRFHandler by lazy { CSRFHandler.create(config.csrfSecret) }
@@ -42,21 +52,22 @@ object API {
 
     val b64Decoder = Base64.getUrlEncoder()
     val b64Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
-    val b64CustomID = "CSTM[$b64Alphabet]+".toRegex()
+    val b64CustomID = "UPL-[$b64Alphabet]+".toRegex()
     val temporalComponents = arrayOf(ChronoUnit.SECONDS, ChronoUnit.MINUTES, ChronoUnit.HOURS, ChronoUnit.DAYS)
 
     val hmacSign: Algorithm by lazy { Algorithm.HMAC512(config.googleSecret) }
     val verifier: JWTVerifier by lazy { JWT.require(hmacSign).withIssuer(config.ip).build() }
+    lateinit var storage: IStorage
     lateinit var gauth: OAuth2Auth
 
-    fun handleCSRF(ctxt: RoutingContext) {
+    private fun handleCSRF(ctxt: RoutingContext) {
         if (!(ctxt.data()["${config.eternityUserKey}-Auth"] as? Boolean ?: false))
             csrfHandler.handle(ctxt)
         else
             ctxt.next()
     }
 
-    fun searchSpotify(context: RoutingContext) {
+    private fun searchSpotify(context: RoutingContext) {
         val request = context.request()
 
         //if(config.disableSearch)
@@ -115,7 +126,7 @@ object API {
                     track.put("artist", ((obj["artists"] as JSONArray)[0] as JSONObject)["name"])
                     track.put("url", "/api/song/${obj["id"]}")
 
-                    if (returnSummary) {
+                    if (returnSummary && storage.shouldHandle(EnumDataType.INFO)) {
                         val (eternalInfo, status) = trackInfoForID(obj["id"] as String)
                         if (eternalInfo != null)
                             track.put("audio_summary", JSONObject(eternalInfo.audio_summary))
@@ -145,7 +156,10 @@ object API {
         }
     }
 
-    fun trackInformation(context: RoutingContext) {
+    private fun trackInformation(context: RoutingContext) {
+        if(!storage.shouldHandle(EnumDataType.INFO))
+            return context.response().setStatusCode(501).end(JSONObject().put("error", "[Track Info] The storage configured does not support track information"))
+
         val id = context.pathParam("id").replace("[^A-Za-z0-9]".toRegex(), "")
 
         val (eternal, status) = trackInfoForID(id)
@@ -164,55 +178,104 @@ object API {
         }
     }
 
-    fun externalAudio(context: RoutingContext) {
+    private fun externalAudio(context: RoutingContext) {
         val request = context.request()
 
         val url = request.getParam("url") ?: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
         if (url.matches(b64CustomID)) {
-            val file = File(audioDir, "$url.${config.format}")
-            if (file.exists()) {
-                context.ifFileNotCached(file) { response().sendCachedFile(it) }
-                return
+            if(!storage.shouldHandle(EnumDataType.UPLOADED_AUDIO)) {
+                if(storage.shouldHandle(EnumDataType.AUDIO)) {
+                    val (fallback, status) = defaultSongForID(request.getParam("fallback") ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] The storage configured does not support uploaded audio, and no fallback URL was provided")))
+                    return useTmpStream(fallback ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] No storage could be found for ${request.getParam("fallback")}"))) { inputStream, size ->
+                        val response = context.response().putHeader(HttpHeaderNames.CONTENT_LENGTH, "$size")
+                        inputStream.readChunked { chunk -> response.write(Buffer.buffer(chunk)) }
+                        response.end()
+                    }
+                }
+                else
+                    return context.response().setStatusCode(501).end(JSONObject().put("error", "[External Audio] The storage configured does not support uploaded audio, and also does not support audio in general"))
+            }
+
+            if (storage.isStored("$url.${config.format}", EnumDataType.UPLOADED_AUDIO))
+                return useTmpStream(storage.provide("$url.${config.format}", EnumDataType.EXT_AUDIO) ?: return context.response().setStatusCode(500).end(JSONObject().put("error", "[External Audio -> Storage] Null input stream?"))) { inputStream, size ->
+                    val response = context.response().putHeader(HttpHeaderNames.CONTENT_LENGTH, "$size")
+                    inputStream.readChunked { chunk -> response.write(Buffer.buffer(chunk)) }
+                    response.end()
+                }
+            else {
+                val (fallback, status) = defaultSongForID(request.getParam("fallback") ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] No storage could be found for $url, and no fallback URL was provided")))
+                return useTmpStream(fallback ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] No storage could be found for ${request.getParam("fallback")}"))) { inputStream, size ->
+                    val response = context.response().putHeader(HttpHeaderNames.CONTENT_LENGTH, "$size")
+                    inputStream.readChunked { chunk -> response.write(Buffer.buffer(chunk)) }
+                    response.end()
+                }
             }
         }
 
-        val b64 = b64Encoder.encodeToString(url.toByteArray(Charsets.UTF_8))
-        val file = File(audioDir, "$b64.${config.format}")
-
-        if (file.exists()) {
-            context.ifFileNotCached(file) { response().sendCachedFile(it) }
-            return
+        if(!storage.shouldHandle(EnumDataType.EXT_AUDIO)) {
+            if(storage.shouldHandle(EnumDataType.AUDIO)) {
+                val (fallback, status) = defaultSongForID(request.getParam("fallback") ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] The configured storage does not support external audio, and no fallback URL was provided")))
+                return useTmpStream(fallback ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] No storage could be found for ${request.getParam("fallback")}"))) { inputStream, size ->
+                    val response = context.response().putHeader(HttpHeaderNames.CONTENT_LENGTH, "$size")
+                    inputStream.readChunked { chunk -> response.write(Buffer.buffer(chunk)) }
+                    response.end()
+                }
+            }
+            else
+                return context.response().setStatusCode(501).end(JSONObject().put("error", "[External Audio] The storage configured does not support external audio, and also does not support audio in general"))
         }
 
-        checkStorage()
+        val b64 = b64Encoder.encodeToString(url.toByteArray(Charsets.UTF_8))
+
+        if (storage.isStored("$b64.${config.format}", EnumDataType.EXT_AUDIO)) {
+            return useTmpStream(storage.provide("$b64.${config.format}", EnumDataType.EXT_AUDIO) ?: return context.response().setStatusCode(500).end(JSONObject().put("error", "[External Audio -> Storage] Null input stream?"))) { inputStream, size ->
+                val response = context.response().putHeader(HttpHeaderNames.CONTENT_LENGTH, "$size")
+                inputStream.readChunked { chunk -> response.write(Buffer.buffer(chunk)) }
+                response.end()
+            }
+        }
+
+        val tmpAudio = File("EXT-AUDIO-${UUID.randomUUID()}.${config.format}")
+        val tmpLog = File("LOG-${UUID.randomUUID()}.log")
+
         val process = ProcessBuilder()
-                .command(make<ArrayList<String>> { addAll(config.scriptCommand) ; addAll(listOf(url, file.absolutePath, config.format)) })
+                .command(make<ArrayList<String>> { addAll(config.scriptCommand) ; addAll(listOf(url, tmpAudio.absolutePath, config.format)) })
                 .redirectErrorStream(true)
-                .redirectOutput(File(logDir, "$b64.log"))
+                .redirectOutput(tmpLog)
                 .start()
 
         process.waitFor()
-        if (file.exists())
-            context.response().sendFile(file.absolutePath)
+
+        storage.store("EXT-$b64.log", EnumDataType.LOG, FileInputStream(tmpLog))
+        tmpLog.delete()
+
+        if (tmpAudio.exists()) {
+            context.response().sendFile(tmpAudio.absolutePath)
+            storage.store("EXT-$b64.${config.format}", EnumDataType.EXT_AUDIO, FileInputStream(tmpAudio))
+            tmpAudio.delete()
+        }
         else {
-            val (fallback, status) = defaultSongForID(request.getParam("fallback") ?: "")
-            if (fallback != null)
-                context.ifFileNotCached(fallback) { response().sendCachedFile(it) }
-            else
-                context.response().setStatusCode(404).end()
+            tmpAudio.delete()
+
+            val (fallback, status) = defaultSongForID(request.getParam("fallback") ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] Could not download from $url, and no fallback URL was provided")))
+            return useTmpStream(fallback ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[External Audio -> Storage] No storage could be found for ${request.getParam("fallback")}"))) { inputStream, size ->
+                val response = context.response().putHeader(HttpHeaderNames.CONTENT_LENGTH, "$size")
+                inputStream.readChunked { chunk -> response.write(Buffer.buffer(chunk)) }
+                response.end()
+            }
         }
     }
 
-    fun defaultSong(context: RoutingContext) {
+    private fun defaultSong(context: RoutingContext) {
         val id = context.pathParam("id").replace("[^A-Za-z0-9]".toRegex(), "")
-        val (songFile, status) = defaultSongForID(id)
-        if (songFile != null)
-            context.ifFileNotCached(songFile) { response().sendCachedFile(it) }
-        else
-            context.response().setStatusCode(404).end()
+        val (audioStream, status) = defaultSongForID(id)
+        return useTmpStream(audioStream ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[Default Audio -> Storage] No storage could be found for $id"))) { inputStream, size ->
+            val response = context.response().putHeader(HttpHeaderNames.CONTENT_LENGTH, "$size")
+            inputStream.readChunked { chunk -> response.write(Buffer.buffer(chunk)) }
+            response.end()
+        }
     }
-
-    fun popularTracksForService(context: RoutingContext) {
+    private fun popularTracksForService(context: RoutingContext) {
         val request = context.request()
         val service = context.pathParam("service")?.toLowerCase() ?: "jukebox"
         val popular = run {
@@ -241,7 +304,7 @@ object API {
         context.response().end(array)
     }
 
-    fun expand(context: RoutingContext) {
+    private fun expand(context: RoutingContext) {
         val id = context.pathParam("id") ?: "none"
         val params = expand(id)
         if (params != null) {
@@ -262,7 +325,7 @@ object API {
             context.response().setStatusCode(404).end(JSONObject().put("error", "No short ID found for $id"))
     }
 
-    fun expandAndRedirect(context: RoutingContext) {
+    private fun expandAndRedirect(context: RoutingContext) {
         val params = expand(context.pathParam("id") ?: "none")
         if (params != null) {
             val paramsMap = params.split("&").map { it.split("=") }.filter { it.size == 2 }.map { Pair(it[0], it[1]) }.toMap(HashMap())
@@ -276,9 +339,9 @@ object API {
             context.response().redirect("/jukebox_index.html")
     }
 
-    fun shrink(context: RoutingContext) = context.response().end(JSONObject().put("id", getOrShrinkParams(context.bodyAsString)))
+    private fun shrink(context: RoutingContext) = context.response().end(JSONObject().put("id", getOrShrinkParams(context.bodyAsString)))
 
-    fun authorise(context: RoutingContext) {
+    private fun authorise(context: RoutingContext) {
         val auth = context.request().getHeader(HttpHeaders.AUTHORIZATION)
         if (auth != null) {
             val token = verifier.verifySafe(auth)
@@ -297,7 +360,7 @@ object API {
         context.next()
     }
 
-    fun googleCallback(context: RoutingContext) {
+    private fun googleCallback(context: RoutingContext) {
         val params = context.request().params()
         if (params.contains("error")) {
             println("Fail!")
@@ -319,21 +382,26 @@ object API {
         }
     }
 
-    fun profileWebpage(context: RoutingContext) {
+    private fun profileWebpage(context: RoutingContext) {
         if (context.data()[config.eternityUserKey] == null || getUserByToken(context.data()[config.eternityUserKey] as DecodedJWT) == null)
             context.response().redirect("https://accounts.google.com/o/oauth2/v2/auth?client_id=${config.googleClient}&redirect_uri=${config.ip}/google_callback&response_type=code&scope=openid+profile&access_type=offline&prompt=consent")
         else
             context.response().sendFile("profile.html")
     }
-    fun profile(context: RoutingContext) {
-        val user = context.data()[config.eternityUserKey] as? DecodedJWT ?: return context.response().setStatusCode(401).end(JSONObject().put("error", "[Profile] No user provided"))
-        val profile = File(profileDir, "${user.subject}.json")
-        if (profile.exists())
-            context.response().sendFile(profile.absolutePath).end()
-        else
-            context.response().end(JSONObject().put("stars", JSONArray()))
+
+    private fun profileForUser(usr: String): EternalProfile? {
+        if(storage.isStored("$usr.json", EnumDataType.PROFILE))
+            (storage.provide("$usr.json", EnumDataType.PROFILE) ?: return null).use { inputStream -> return objMapper.readValue(inputStream, EternalProfile::class.java) }
+        return null
     }
-    fun googleProfile(context: RoutingContext) {
+
+    private fun profile(context: RoutingContext) {
+        if(!storage.shouldHandle(EnumDataType.PROFILE))
+            return context.response().setStatusCode(501).end(JSONObject().put("error", "[Profile] The storage configured does not support profiles"))
+        val user = (context.data()[config.eternityUserKey] as? DecodedJWT ?: return context.response().setStatusCode(401).end(JSONObject().put("error", "[Stars] No user provided"))).subject
+        context.response().end(objMapper.writeValueAsString(profileForUser(user) ?: JSONObject().put("stars", JSONArray())))
+    }
+    private fun googleProfile(context: RoutingContext) {
         val user = getUserByToken(context.data()[config.eternityUserKey] as? DecodedJWT ?: return context.response().setStatusCode(401).end(JSONObject().put("error", "[Profile] No user provided")))
         if (user != null)
             context.response().putHeader("Content-Type", "application/json").end(objMapper.writeValueAsString(getGoogleUser(user)))
@@ -341,108 +409,138 @@ object API {
             context.response().setStatusCode(401).end("No user provided")
     }
 
-    fun getStars(context: RoutingContext) {
-        val user = context.data()[config.eternityUserKey] as? DecodedJWT ?: return context.response().setStatusCode(401).end(JSONObject().put("error", "[Stars] No user provided"))
-        val profile = File(profileDir, "${user.subject}.json")
-        if (profile.exists())
-            context.response().end(JSONArray(objMapper.readValue(profile, EternalProfile::class.java).starred))
-        else
-            context.response().end(JSONArray())
+    private fun getStars(context: RoutingContext) {
+        if(!storage.shouldHandle(EnumDataType.PROFILE))
+            return context.response().setStatusCode(501).end(JSONObject().put("error", "[Get Stars] The storage configured does not support profiles"))
+        val user = (context.data()[config.eternityUserKey] as? DecodedJWT ?: return context.response().setStatusCode(401).end(JSONObject().put("error", "[Stars] No user provided"))).subject
+        context.response().end(JSONArray(profileForUser(user)?.starred ?: HashSet<String>()))
     }
-    fun addStar(context: RoutingContext) {
-        val user = context.data()[config.eternityUserKey] as? DecodedJWT ?: return context.response().setStatusCode(401).end(JSONObject().put("error", "[Stars] No user provided"))
+
+    private fun addStar(context: RoutingContext) {
+        if(!storage.shouldHandle(EnumDataType.PROFILE))
+            return context.response().setStatusCode(501).end(JSONObject().put("error", "[Add Star] The storage configured does not support profiles"))
+        val user = (context.data()[config.eternityUserKey] as? DecodedJWT ?: return context.response().setStatusCode(401).end(JSONObject().put("error", "[Stars] No user provided"))).subject
         val id = context.pathParam("id")
         if(expand(id) == null)
             return context.response().setStatusCode(400).end(JSONObject().put("error", "[Stars] Invalid short ID"))
 
-        val profile = File(profileDir, "${user.subject}.json")
-        if (!profile.exists()) {
-            objMapper.writeValue(profile, EternalProfile(hashSetOf(id)))
-            return context.response().setStatusCode(204).end()
-        }
+        val profile = profileForUser(user) ?: EternalProfile()
+        profile.starred.add(id)
+        val tmpProfile = File("PROFILE-${UUID.randomUUID()}.json")
+        objMapper.writeValue(tmpProfile, profile)
+        storage.store("$user.json", EnumDataType.PROFILE, FileInputStream(tmpProfile))
+        tmpProfile.delete()
 
-        val profileObj = objMapper.readValue(profile, EternalProfile::class.java)
-        profileObj.starred.add(id)
-        objMapper.writeValue(profile, profileObj)
-        return context.response().setStatusCode(204).end()
+        context.response().setStatusCode(204).end()
+
     }
-    fun removeStar(context: RoutingContext) {
-        val user = context.data()[config.eternityUserKey] as? DecodedJWT ?: return context.response().setStatusCode(401).end(JSONObject().put("error", "[Stars] No user provided"))
+    private fun removeStar(context: RoutingContext) {
+        if(!storage.shouldHandle(EnumDataType.PROFILE))
+            return context.response().setStatusCode(501).end(JSONObject().put("error", "[Remove Star] The storage configured does not support profiles"))
+        val user = (context.data()[config.eternityUserKey] as? DecodedJWT ?: return context.response().setStatusCode(401).end(JSONObject().put("error", "[Stars] No user provided"))).subject
         val id = context.pathParam("id")
-        val profile = File(profileDir, "${user.subject}.json")
-        if (!profile.exists())
-            return context.response().setStatusCode(204).end()
 
-        val profileObj = objMapper.readValue(profile, EternalProfile::class.java)
-        profileObj.starred.remove(id)
-        objMapper.writeValue(profile, profileObj)
+        if(expand(id) == null)
+            return context.response().setStatusCode(400).end(JSONObject().put("error", "[Stars] Invalid short ID"))
+
+        val profile = profileForUser(user) ?: return context.response().setStatusCode(204).end()
+
+        profile.starred.remove(id)
+        val tmpProfile = File("PROFILE-${UUID.randomUUID()}.json")
+        objMapper.writeValue(tmpProfile, profile)
+        storage.store("$user.json", EnumDataType.PROFILE, FileInputStream(tmpProfile))
+        tmpProfile.delete()
+
         context.response().setStatusCode(204).end()
     }
 
-    fun uploadAudio(context: RoutingContext) {
-        if (context.fileUploads().isNotEmpty()) {
+    private fun uploadAudio(context: RoutingContext) {
+        if(!storage.shouldHandle(EnumDataType.UPLOADED_AUDIO))
+            context.response().setStatusCode(501).end(JSONObject().put("error", "[Upload Audio] The storage configured does not support external audio"))
+        else if (context.fileUploads().isNotEmpty()) {
             val file = context.fileUploads().first()
-            val id = "CSTM${b64Encoder.encodeToString(file.fileName().toByteArray(Charsets.UTF_8))}"
-            val song = File(audioDir, "$id.${config.format}")
+            val id = "UPL-${b64Encoder.encodeToString(file.fileName().toByteArray(Charsets.UTF_8))}"
 
-            if(song.exists())
-                return context.response().end(id)
+            val tmpAudio = File("UPL-AUDIO-${UUID.randomUUID()}.${config.format}")
+            val tmpLog = File("LOG-${UUID.randomUUID()}.log")
 
             val process = ProcessBuilder()
-                    .command("ffmpeg", "-i", file.uploadedFileName(), song.absolutePath)
+                    .command("ffmpeg", "-i", file.uploadedFileName(), tmpAudio.absolutePath)
                     .redirectErrorStream(true)
-                    .redirectOutput(File(logDir, "$id.log"))
+                    .redirectOutput(tmpLog)
                     .start()
 
+            storage.store("$id.log", EnumDataType.LOG, FileInputStream(tmpLog))
+            tmpLog.delete()
+
             process.waitFor()
-            if (song.exists())
+            if (tmpAudio.exists()) {
                 context.response().end(id)
+                storage.store("$id.${config.format}", EnumDataType.EXT_AUDIO, FileInputStream(tmpAudio))
+            }
             else
-                context.response().setStatusCode(404).end(JSONObject().put("error", "[Upload Audio] yt-dl didn't create a file"))
+                context.response().setStatusCode(400).end(JSONObject().put("error", "[Upload Audio] yt-dl didn't create a file"))
+            tmpAudio.delete()
+
         } else
             context.response().setStatusCode(400).end(JSONObject().put("error", "[Upload Audio] No file upload provided"))
     }
 
-    fun uploadTrackInfo(context: RoutingContext) {
-        if (context.fileUploads().isNotEmpty()) {
-            val file = context.fileUploads().first()
-            val id = "CSTM${b64Encoder.encodeToString(file.fileName().toByteArray(Charsets.UTF_8))}"
-            val infoFile = File(eternalDir, "$id.json")
-            val infoObject = File(file.uploadedFileName()).readText(Charsets.UTF_8) mapTo EternalInfo::class ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[Upload Track Info] Provided file is invalid"))
-            infoObject.info.id = id
-            objMapper.writeValue(infoFile, infoObject)
+//    private fun uploadTrackInfo(context: RoutingContext) {
+//        if (context.fileUploads().isNotEmpty()) {
+//            val file = context.fileUploads().first()
+//            val id = "EXT-${b64Encoder.encodeToString(file.fileName().toByteArray(Charsets.UTF_8))}"
+//            val infoFile = File(eternalDir, "$id.json")
+//            val infoObject = File(file.uploadedFileName()).readText(Charsets.UTF_8) mapTo EternalInfo::class ?: return context.response().setStatusCode(400).end(JSONObject().put("error", "[Upload Track Info] Provided file is invalid"))
+//            infoObject.info.id = id
+//            objMapper.writeValue(infoFile, infoObject)
+//
+//            if (infoFile.exists())
+//                context.response().end(id)
+//            else
+//                context.response().setStatusCode(404).end(JSONObject().put("error", "[Upload Track Info] $infoFile does not exist"))
+//        } else
+//            context.response().setStatusCode(400).end(JSONObject().put("error", "[Upload Track Info] No file upload provided"))
+//    }
 
-            if (infoFile.exists())
-                context.response().end(id)
-            else
-                context.response().setStatusCode(404).end(JSONObject().put("error", "[Upload Track Info] $infoFile does not exist"))
-        } else
-            context.response().setStatusCode(400).end(JSONObject().put("error", "[Upload Track Info] No file upload provided"))
-    }
-
-    fun trackInfoForID(id: String): ErroredResponse<EternalInfo?, HttpStatus?> {
-        val file = File(eternalDir, "$id.json")
-        if (file.exists())
-            return objMapper.readValue(file, EternalInfo::class.java) withHttpError null
+    private fun trackInfoForID(id: String): ErroredResponse<EternalInfo?, HttpStatus?> {
+        if (storage.isStored("$id.json", EnumDataType.INFO))
+            return objMapper.readValue(storage.provide("$id.json", EnumDataType.INFO), EternalInfo::class.java) withHttpError null
         else {
             if (config.spotifyBase64 == null)
                 return ErroredResponse(null, 501 to "Missing Spotify Details")
 
-            checkStorage()
             if (expires.isBefore(Instant.now()))
                 reloadSpotifyToken()
 
-            for (i in 0 until 3) {
+            loop@for (i in 0 until 3) {
                 try {
                     val trackInfo = Unirest.get("https://api.spotify.com/v1/tracks/$id").header("Authorization", "Bearer $bearer").asJson()
                     if (trackInfo.status != 200) {
-                        println("[Track Info] Non 200 status code from Spotify for ID $id (Code: ${trackInfo.status}, error ${trackInfo.statusText}) for ID $id and iteration $i")
-                        return ErroredResponse(null, trackInfo.statusPair)
+                        try {
+                            when (trackInfo.body.`object`.getJSONObject("error")["message"] as String) {
+                                "Only valid bearer authentication supported" -> {
+                                    println("[Track Info] Received error \"Only valid bearer authentication supported\" from Spotify, reloading token")
+                                    reloadSpotifyToken()
+                                    continue@loop
+                                }
+                                else -> {
+                                    println("[Track Info] Non 200 status code from Spotify for ID $id (Code: ${trackInfo.status}, error ${trackInfo.statusText}) for ID $id and iteration $i")
+                                    println("[Track Info] Spotify Error: ${trackInfo.body}")
+                                    return ErroredResponse(null, trackInfo.statusPair)
+                                }
+                            }
+                        } catch(json: JSONException) {
+                            println("[Track Info] Non 200 status code from Spotify for ID $id (Code: ${trackInfo.status}, error ${trackInfo.statusText}) for ID $id and iteration $i")
+                            println("[Track Info] Spotify Error: ${trackInfo.body}")
+                            return ErroredResponse(null, trackInfo.statusPair)
+                        }
                     }
 
                     val acousticInfo = Unirest.get("https://api.spotify.com/v1/audio-analysis/$id").header("Authorization", "Bearer $bearer").asJson()
                     if (acousticInfo.status != 200) {
                         println("[Track Info -> Acoustic Info] Non 200 status code from Spotify (Code: ${acousticInfo.status}, error ${acousticInfo.statusText}) for ID $id and iteration $i")
+                        println("[Track Info -> Acoustic Info] Spotify Error: ${trackInfo.body}")
                         return ErroredResponse(null, trackInfo.statusPair)
                     }
 
@@ -467,7 +565,10 @@ object API {
                             track.track
                     )
 
-                    objMapper.writeValue(FileOutputStream(file), eternalInfo)
+                    val tmp = File("INFO-${UUID.randomUUID()}.json")
+                    objMapper.writeValue(tmp, eternalInfo)
+                    storage.store("$id.json", EnumDataType.INFO, FileInputStream(tmp))
+                    tmp.delete()
                     return eternalInfo withHttpError null
                 } catch(th: Throwable) {
                     error("[Track Info] An unexpected error occurred: $th")
@@ -477,19 +578,26 @@ object API {
 
         return ErroredResponse(null, null)
     }
-
-    fun defaultSongForID(id: String): ErroredResponse<File?, HttpStatus?> {
-        val file = File(songsDir, "$id.${config.format}")
-        if (file.exists())
-            return file withHttpError null
+    private fun defaultSongForID(id: String): ErroredResponse<InputStream?, HttpStatus?> {
+        if (storage.isStored("$id.${config.format}", EnumDataType.AUDIO))
+            return storage.provide("$id.${config.format}", EnumDataType.AUDIO) withHttpError null
         else {
-            checkStorage()
-            for (i in 0 until 3) {
+            loop@for (i in 0 until 3) {
                 try {
                     val trackInfo = Unirest.get("https://api.spotify.com/v1/tracks/$id").header("Authorization", "Bearer $bearer").asJson()
                     if (trackInfo.status != 200) {
-                        println("[Default Song For ID] Non 200 code for song for $id; iteration $i")
-                        continue
+                        when (trackInfo.body.`object`.getJSONObject("error")["message"] as String) {
+                            "Only valid bearer authentication supported" -> {
+                                println("[Default Song For ID] Received error \"Only valid bearer authentication supported\" from Spotify, reloading token")
+                                reloadSpotifyToken()
+                                continue@loop
+                            }
+                            else -> {
+                                println("[Default Song For ID] Non 200 code for song for $id; iteration $i")
+                                println("[Default Song For ID] Spotify Error: ${trackInfo.body}")
+                                continue@loop
+                            }
+                        }
                     }
                     val track = trackInfo.body mapTo SpotifyTrack::class ?: return ErroredResponse(null, trackInfo.statusPair)
 
@@ -502,20 +610,35 @@ object API {
                         return ErroredResponse(null, 404 to "No YT search results")
                     }
 
+                    val tmpAudio = File("AUDIO-${UUID.randomUUID()}.${config.format}")
+                    val tmpLog = File("LOG-${UUID.randomUUID()}.log")
+
                     val closestResult = if (true) results[0].id else results.sortedWith(Comparator<YoutubeVideo> { (_, duration1), (_, duration2) -> Math.abs(duration - duration1.toMillis()).compareTo(Math.abs(duration - duration2.toMillis())) }).first().id
                     val process = ProcessBuilder()
-                            .command(make<ArrayList<String>> { addAll(config.scriptCommand) ; addAll(listOf("https://youtu.be/$closestResult", file.absolutePath, config.format)) })
+                            .command(make<ArrayList<String>> { addAll(config.scriptCommand) ; addAll(listOf("https://youtu.be/$closestResult", tmpAudio.absolutePath, config.format)) })
                             .redirectErrorStream(true)
-                            .redirectOutput(File(logDir, "$id.log"))
+                            .redirectOutput(tmpLog)
                             .start()
 
+
                     if (process.waitFor(50, TimeUnit.SECONDS)) {
-                        if (file.exists())
-                            return file withHttpError null
+                        storage.store("$id.log", EnumDataType.LOG, FileInputStream(tmpLog))
+                        tmpLog.delete()
+
+                        if (tmpAudio.exists()) {
+                            storage.store("$id.${config.format}", EnumDataType.AUDIO, FileInputStream(tmpAudio))
+                            tmpAudio.delete()
+                            return storage.provide("$id.${config.format}", EnumDataType.AUDIO) withHttpError null
+                        }
                         else
                             return ErroredResponse(null, 500 to "File doesn't exist")
-                    } else
+                    } else {
+                        storage.store("$id.log", EnumDataType.LOG, FileInputStream(tmpLog))
+                        tmpLog.delete()
+                        tmpAudio.delete()
+
                         return ErroredResponse(null, 504 to "yt-dl timed out")
+                    }
                 } catch(json: JSONException) {
                     error("[Default Song For ID] An error occured while parsing JSON for song of id $id: $json")
                     continue
@@ -526,7 +649,7 @@ object API {
         return ErroredResponse(null, null)
     }
 
-    fun searchYoutube(search: String): Array<YoutubeVideo> {
+    private fun searchYoutube(search: String): Array<YoutubeVideo> {
         val html = Jsoup.parse(Unirest.get("https://www.youtube.com/results").queryString("search_query", URLEncoder.encode(search, "UTF-8")).asString().body)
         val listElements = html.select("ol.item-section").select("li").map { li -> li.select("div.yt-lockup-dismissable") }
         val videos = ArrayList<YoutubeVideo>(listElements.size)
@@ -541,29 +664,6 @@ object API {
             }
         }
         return videos.toTypedArray()
-    }
-
-    fun checkStorage() {
-        var totalUsed = 0L
-        val allFiles = ArrayList<File>()
-
-        allFiles.addAll(eternalDir.listFiles().filter(File::isFile))
-        allFiles.addAll(songsDir.listFiles().filter(File::isFile))
-        allFiles.addAll(audioDir.listFiles().filter(File::isFile))
-
-        allFiles.sortedWith(Comparator<File> { file1, file2 -> file1.lastModified().compareTo(file2.lastModified()) })
-        allFiles.forEach { file -> totalUsed += file.length() }
-
-        if (totalUsed > config.storageSize) {
-            allFiles.forEach { file ->
-                if (totalUsed > config.storageBuffer) {
-                    println("$totalUsed > ${config.storageBuffer}")
-                    totalUsed -= file.length()
-                    file.delete()
-                    println("Deleted $file")
-                }
-            }
-        }
     }
 
     var bearer = ""
@@ -602,6 +702,15 @@ object API {
     fun allowGoogleLogins(): Boolean = config.googleClient != null && config.googleSecret != null && mysqlEnabled()
 
     fun setup(vertx: Vertx, router: Router) {
+        when(config.storageType.toUpperCase()) {
+            "LOCALSTORAGE" -> storage = LocalStorage
+            "NOSTORAGE" -> storage = NoStorage
+            else -> {
+                error("Invalid storage type ${config.storageType}, using LocalStorage")
+                storage = LocalStorage
+            }
+        }
+
         router.get("/api/audio").handler(API::externalAudio)
         router.get("/api/search").handler(API::searchSpotify)
         router.get("/api/popular/:service").handler(API::popularTracksForService)
@@ -625,10 +734,6 @@ object API {
         }
 
         if (config.uploads) {
-            router.post("/api/upload/*").handler {
-                checkStorage()
-                it.next()
-            }
             router.post("/api/upload/*").handler(bodyHandler)
             router.post("/api/upload/audio").blockingHandler(API::uploadAudio)
             //router.post("/api/upload/info").blockingHandler(API::uploadTrackInfo)
@@ -657,5 +762,19 @@ object API {
         }
 
         config.redirects.forEach { from, to -> router.get(from).handler { ctxt -> ctxt.response().redirect(to) } }
+    }
+
+    private fun useTmpStream(inputStream: InputStream, action: (InputStream, Long) -> Unit) {
+        //Create tmp file
+        val tmp = File("TMP-STREAM-${UUID.randomUUID()}")
+
+        //Write to file
+        FileOutputStream(tmp).use { fos -> inputStream.writeTo(fos, closeAfter = true) }
+
+        //Call action
+        FileInputStream(tmp).use { fis -> action(fis, tmp.length()) }
+
+        //Delete tmp file
+        tmp.delete()
     }
 }

@@ -1,5 +1,5 @@
 package org.abimon.eternalJukebox.objects
 
 data class EternalProfile(
-        val starred: HashSet<String>
+        val starred: HashSet<String> = HashSet()
 )

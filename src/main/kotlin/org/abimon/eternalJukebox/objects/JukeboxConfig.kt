@@ -1,6 +1,7 @@
 package org.abimon.eternalJukebox.objects
 
 import org.abimon.visi.lang.EnumOS
+import org.json.JSONObject
 import java.util.*
 
 data class JukeboxConfig(
@@ -43,10 +44,6 @@ data class JukeboxConfig(
 
         val uploads: Boolean = false,
 
-        val storageSize: Long = 10L * 1000 * 1000 * 1000, //How much storage space should be devoted to Spotify caches, YouTube caches, and uploaded files.
-        val storageBuffer: Long = storageSize / 10 * 9,
-        val storageEmergency: Long = storageSize / 10 * 11,
-
         val cacheFiles: Boolean = true,
         val enforceHttps: Boolean = ssl != null,
         val format: String = "mp3",
@@ -54,7 +51,8 @@ data class JukeboxConfig(
         val vertxBlockingTime: Long = 5 * 60L * 1000 * 1000000,
 
         val scriptCommand: List<String> = if(EnumOS.determineOS() == EnumOS.WINDOWS) listOf("yt.bat") else listOf("bash", "yt.sh"),
-
+        val storageType: String = "LocalStorage",
+        val storageOptions: JSONObject = JSONObject(),
         val shortIDLength: Int = 4 //No greater than 16
 )
 
