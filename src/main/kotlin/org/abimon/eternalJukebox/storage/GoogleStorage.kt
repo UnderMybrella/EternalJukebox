@@ -7,6 +7,7 @@ import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientRequest
 import io.vertx.core.http.HttpClientResponse
+import io.vertx.core.http.impl.MimeMapping
 import org.abimon.eternalJukebox.config
 import org.abimon.eternalJukebox.objects.EnumDataType
 import org.abimon.visi.io.errPrintln
@@ -68,7 +69,7 @@ object GoogleStorage: IStorage {
 
     override fun provide(name: String, type: EnumDataType): InputStream? {
         if(isPublic(name, type))
-            return URL("https://www.googleapis.com/download/storage/v1/b/${getBucket(type)}/o/${URLEncoder.encode("$type/$name", "UTF-8")}?alt=media").openStream()
+            return URL("https://www.googleapis.com/download/storage/v1/b/${getBucket(type)}b${URLEncoder.encode("$type/$name", "UTF-8")}?alt=media").openStream()
 
         reloadIfExpired()
 
@@ -102,7 +103,7 @@ object GoogleStorage: IStorage {
         val bytes = data.use { data.readBytes() }
 
         for(i in 0 until 6) {
-            val request = Unirest.post("https://www.googleapis.com/upload/storage/v1/b/${getBucket(type)}/o").header("Authorization", "Bearer $bearer").queryString("uploadType", "media").queryString("name","$type/$name").body(bytes).asJson()
+            val request = Unirest.post("https://www.googleapis.com/upload/storage/v1/b/${getBucket(type)}/o").header("Authorization", "Bearer $bearer").queryString("uploadType", "media").queryString("name","$type/$name").header("Content-Type", MimeMapping.getMimeTypeForFilename(name)).body(bytes).asJson()
             if(request.status == 401) {
                 println("[GoogleStorage -> store($name, $type)] Google returned 401 with error ${request.body}; reloading and retrying")
                 reload()
@@ -197,7 +198,7 @@ object GoogleStorage: IStorage {
             errPrintln("[Google Storage] Error Code ${response.status}, with response ${response.body}")
         else {
             val body = response.body.`object`
-            expires = Instant.ofEpochSecond(Instant.now().epochSecond + body["expires_in"] as Int)
+            expires = Instant.ofEpochSecond(Instant.now().epochSecond + body["expires_in"] as Int - 60) //Reload a minute earlier
             bearer = body["access_token"] as String
         }
     }
