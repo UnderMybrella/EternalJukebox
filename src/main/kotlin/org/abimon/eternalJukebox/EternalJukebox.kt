@@ -34,13 +34,7 @@ import java.sql.DriverManager
 import java.util.*
 import kotlin.reflect.KClass
 
-val eternalDir = File("eternal")
-val songsDir = File("songs")
-val audioDir = File("audio")
-val logDir = File("logs")
 val tmpUploadDir = File("uploads")
-val profileDir = File("profiles")
-
 val configFile = File("config.json")
 val projectHosting = "https://github.com/UnderMybrella/EternalJukebox" //Just in case this changes or needs to be referenced
 
@@ -105,18 +99,8 @@ fun main(args: Array<String>) {
         override fun <T : Any?> readValue(value: String, valueType: Class<T>): T = objMapper.readValue(value, valueType)
     })
 
-    if (!eternalDir.exists())
-        eternalDir.mkdir()
-    if (!songsDir.exists())
-        songsDir.mkdir()
-    if (!audioDir.exists())
-        audioDir.mkdir()
-    if (!logDir.exists())
-        logDir.mkdir()
     if (!tmpUploadDir.exists())
         tmpUploadDir.mkdir()
-    if (!profileDir.exists())
-        profileDir.mkdir()
 
     if (configFile.exists()) {
         try {

@@ -219,7 +219,6 @@
             $("#running").show();
             $(".rotate").hide();
         } else {
-            listPopularTracks();
             $("#song-div").show();
             $("#select-track").show();
             $("#running").hide();
@@ -484,13 +483,6 @@
                 $('#song-list').append(listSong(s));
             }
         }
-    }
-
-    function listPopularTracks() {
-        $.getJSON('/api/popular/jukebox', {count: 12}, function (data) {
-            listTracks('#popular-list', data);
-            ga_track('list', 'popular-tracks', '');
-        });
     }
 
     function analyzeAudio(audio, tag, callback) {
@@ -1588,7 +1580,6 @@
                     driver.stop();
                 }
                 setDisplayMode(false);
-                listPopularTracks();
                 ga_track('main', 'new', '');
             }
         );
@@ -1934,8 +1925,6 @@
                 setTunedURL();
             }
         );
-
-        $("#popular-list").click(listPopularTracks);
 
         jukeboxData.minRandomBranchChance = defaultMinRandomBranchChance;
         jukeboxData.maxRandomBranchChance = defaultMaxRandomBranchChance;
