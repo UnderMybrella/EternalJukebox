@@ -266,7 +266,7 @@ object API {
         val tmpLog = File("LOG-${UUID.randomUUID()}.log")
 
         val process = ProcessBuilder()
-                .command(make<ArrayList<String>> { addAll(config.scriptCommand) ; addAll(listOf(url, tmpAudio.absolutePath, config.format)) })
+                .command(make<ArrayList<String>> { addAll(config.scriptCommand) ; addAll(listOf(url, tmpAudio.absolutePath.replace(".${config.format}", ".tmp"), config.format)) })
                 .redirectErrorStream(true)
                 .redirectOutput(tmpLog)
                 .start()
@@ -656,7 +656,7 @@ object API {
 
                     val closestResult = if (true) results[0].id else results.sortedWith(Comparator<YoutubeVideo> { (_, duration1), (_, duration2) -> Math.abs(duration - duration1.toMillis()).compareTo(Math.abs(duration - duration2.toMillis())) }).first().id
                     val process = ProcessBuilder()
-                            .command(make<ArrayList<String>> { addAll(config.scriptCommand) ; addAll(listOf("https://youtu.be/$closestResult", tmpAudio.absolutePath, config.format)) })
+                            .command(make<ArrayList<String>> { addAll(config.scriptCommand) ; addAll(listOf("https://youtu.be/$closestResult", tmpAudio.absolutePath.replace(".${config.format}", ".tmp"), config.format)) })
                             .redirectErrorStream(true)
                             .redirectOutput(tmpLog)
                             .start()
