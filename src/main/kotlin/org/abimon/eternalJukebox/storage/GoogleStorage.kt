@@ -65,11 +65,12 @@ object GoogleStorage: IStorage {
         return false
     }
 
-    override fun provideURL(name: String, type: EnumDataType): String? = if(isPublic(name, type)) "https://www.googleapis.com/download/storage/v1/b/${getBucket(type)}/o/${URLEncoder.encode("$type/$name", "UTF-8")}?alt=media" else null
+    //https://www.googleapis.com/download/storage/v1/b/${getBucket(type)}/o/${URLEncoder.encode("$type/$name", "UTF-8")}?alt=media
+    override fun provideURL(name: String, type: EnumDataType): String? = if(isPublic(name, type)) "https://storage.cloud.google.com/${getBucket(type)}/${URLEncoder.encode("$type/$name", "UTF-8")}" else null
 
     override fun provide(name: String, type: EnumDataType): InputStream? {
         if(isPublic(name, type))
-            return URL("https://www.googleapis.com/download/storage/v1/b/${getBucket(type)}b${URLEncoder.encode("$type/$name", "UTF-8")}?alt=media").openStream()
+            return URL("https://storage.cloud.google.com/${getBucket(type)}/${URLEncoder.encode("$type/$name", "UTF-8")}").openStream()
 
         reloadIfExpired()
 

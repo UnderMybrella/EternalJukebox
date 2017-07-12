@@ -543,7 +543,7 @@ object API {
 //            context.response().setStatusCode(400).end(JSONObject().put("error", "[Upload Track Info] No file upload provided"))
 //    }
 
-    private fun trackInfoForID(id: String): ErroredResponse<EternalInfo?, HttpStatus?> {
+    fun trackInfoForID(id: String): ErroredResponse<EternalInfo?, HttpStatus?> {
         if (storage.isStored("$id.json", EnumDataType.INFO))
             return objMapper.readValue(storage.provide("$id.json", EnumDataType.INFO), EternalInfo::class.java) withHttpError null
         else {
