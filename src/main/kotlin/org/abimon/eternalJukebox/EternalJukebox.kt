@@ -11,6 +11,8 @@ import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServer
 import io.vertx.ext.web.Router
+import org.abimon.eternalJukebox.data.storage.IStorage
+import org.abimon.eternalJukebox.data.storage.LocalStorage
 import org.abimon.eternalJukebox.handlers.StaticResources
 import org.abimon.eternalJukebox.objects.JukeboxConfig
 import java.io.File
@@ -34,6 +36,8 @@ object EternalJukebox {
     val config: JukeboxConfig
     val vertx: Vertx
     val webserver: HttpServer
+
+    val storage: IStorage
 
     fun start() {
         webserver.listen(config.port)
@@ -62,5 +66,12 @@ object EternalJukebox {
         StaticResources.setup(mainRouter)
 
         webserver.requestHandler(mainRouter::accept)
+
+        // Config Handling
+
+        when(config.storageType.toUpperCase()) {
+            "LOCAL" -> storage = LocalStorage
+            else -> storage = LocalStorage
+        }
     }
 }
