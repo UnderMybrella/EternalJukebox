@@ -295,7 +295,6 @@
             var y1 = y_padding + R + R * Math.sin(startAngle) + yoffset;
             var x1 = x_padding + R + R * Math.cos(startAngle) + xoffset;
 
-
             for (var j = 0; j < tile.q.neighbors.length; j++) {
                 var destAngle = alpha * tile.q.neighbors[j].dest.which + angleOffset;
                 var y2 = y_padding + R + R * Math.sin(destAngle) + yoffset;
@@ -525,7 +524,6 @@
         }
     }
 
-
     function fetchSignature() {
         var url = 'policy'
         $.getJSON(url, {}, function (data) {
@@ -536,7 +534,6 @@
             $('#f-key').val(data.key);
         });
     }
-
 
     function calculateDim(numTiles, totalWidth, totalHeight) {
         var area = totalWidth * totalHeight;
@@ -630,14 +627,12 @@
         }
     }
 
-
     function calculateNearestNeighbors(type, threshold) {
         precalculateNearestNeighbors(type, jukeboxData.maxBranches, jukeboxData.maxBranchThreshold);
         count = collectNearestNeighbors(type, threshold);
         postProcessNearestNeighbors(type, threshold);
         return count;
     }
-
 
     function resetTuning() {
         undeleteAllEdges();
@@ -660,7 +655,6 @@
         drawVisualization();
     }
 
-
     function undeleteAllEdges() {
         jukeboxData.deletedEdgeCount = 0;
         for (var i = 0; i < jukeboxData.allEdges.length; i++) {
@@ -670,7 +664,6 @@
             }
         }
     }
-
 
     function setTunedURL() {
         if (track) {
@@ -731,7 +724,6 @@
             tweetSetup(track);
         }
     }
-
 
     function now() {
         return new Date().getTime();
@@ -863,7 +855,6 @@
         // console.log('reachability map converged after ' + iter + ' iterations. total ' + quanta.length);
     }
 
-
     function map_percent_to_range(percent, min, max) {
         percent = clamp(percent, 0, 100);
         return (max - min) * percent / 100. + min;
@@ -877,7 +868,6 @@
     function clamp(val, min, max) {
         return val < min ? min : val > max ? max : val;
     }
-
 
     function findBestLastBeat(type) {
         var reachThreshold = 50;
@@ -1027,7 +1017,6 @@
         }
     }
 
-
     function precalculateNearestNeighbors(type, maxNeighbors, maxThreshold) {
         // skip if this is already done
         if ('all_neighbors' in track.analysis[type][0]) {
@@ -1051,7 +1040,6 @@
         }
         return branchingCount;
     }
-
 
     function extractNearestNeighbors(q, maxThreshold) {
         var neighbors = [];
@@ -1106,7 +1094,6 @@
         console.log(histogram);
         console.log('total branches', total);
     }
-
 
     function euclidean_distance(v1, v2) {
         var sum = 0;
@@ -1282,7 +1269,6 @@
         return q.oseg;
     }
 
-
     function isSegment(q) {
         return 'timbre' in q;
     }
@@ -1318,7 +1304,6 @@
         tile.normal();
         return tile;
     }
-
 
     function createTilePanel(which) {
         removeAllTiles();
@@ -1479,7 +1464,7 @@
         console.log(q);
 
         if (q.length > 0) {
-            var url = 'search'
+            var url = 'search';
             $.getJSON(url, {q: q, results: 30}, function (data) {
                 console.log(data);
                 for (var i = 0; i < data.length; i++) {
@@ -2189,7 +2174,7 @@
         }
 
         var startTime = 0;
-        var interface = {
+        return {
             start: function () {
                 jukeboxData.beatsPlayed = 0;
                 nextTime = 0;
@@ -2237,9 +2222,8 @@
 
             setNextTile: function (tile) {
                 nextTile = tile;
-            },
-        }
-        return interface;
+            }
+        };
     }
 
     function secondsToTime(secs) {
