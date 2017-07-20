@@ -8,7 +8,7 @@ interface IStorage {
     /**
      * Should we store this type of storage?
      */
-    fun shouldStore(type: EnumStorageType)
+    fun shouldStore(type: EnumStorageType): Boolean
 
     /**
      * Store [data] under [name], as type [type]
@@ -27,4 +27,6 @@ interface IStorage {
      * Returns true if handled; false otherwise. If false, [provide] is called.
      */
     fun provide(name: String, type: EnumStorageType, context: RoutingContext): Boolean
+
+    fun isStored(name: String, type: EnumStorageType): Boolean
 }
