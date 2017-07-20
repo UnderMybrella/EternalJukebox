@@ -1,0 +1,418 @@
+body {
+    background: #594f4f;
+    background: #000000;
+    width:900px;
+    color: #45ada8;
+    font-family: 'Questrial', sans-serif;
+    margin:0 auto;
+}
+
+
+
+h2 {
+    margin-left:auto;
+    margin-right:auto;
+    font-size:28px;
+    width:900px;
+}
+
+#faq {
+    margin-top:20px;
+    margin-left:auto;
+    margin-right:auto;
+    width:600px;
+    color:#aaa;
+}
+
+#song-title {
+    font-size:20px;
+    overflow:hidden;
+    width:600px;
+    height:12px;
+}
+
+#faq h1 {
+    text-align:center;
+}
+
+hr {
+    width: 90%;
+}
+
+#new {
+}
+
+#go {
+}
+
+#load {
+    text-align:center;
+    margin-left:32px;
+    width:320px;
+    height:30px;
+    -moz-border-radius:15px;
+    -webkit-border-radius:10px;
+     border: 1px solid #ccc;
+     background: #45ada8;
+     border:1px solid #2a7ecd;
+     padding:3px 10px;
+     font-size: 18px;
+     margin-bottom: 10px;
+     color: #594f4f;
+}
+
+#details {
+    margin-bottom:10px;
+    margin-right:10px;
+    margin-left:10px;
+}
+
+#stats {
+    width: 900px;
+    margin-bottom:4px;
+}
+
+#sbeats {
+    position:relative;
+    wdith: 150px;
+    left:10px;
+}
+
+
+#stime {
+    position:relative;
+    float:right;
+    
+}
+
+#file {
+    width:200px;
+}
+
+
+
+#info {
+    margin-left: 20px;
+    margin-top: 10px;
+    margin-bottom:10px;
+    min-height:28px;
+    font-size:24px;
+}
+
+#info2 {
+    margin-left: 20px;
+    margin-top: 10px;
+    margin-bottom:10px;
+    height:20px;
+    font-size:24px;
+}
+
+#error {
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 10px;
+
+    font-size:24px;
+    height:60px;
+    margin-bottom:10px;
+    width: 700px;
+    text-align:center;
+    color:red;
+}
+
+
+
+#title {
+    width:900px;
+    margin-top:20px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align:center;
+    margin-bottom: 10px;
+    font-size: 32px;
+    font-weight: bold;
+}
+
+#title a {}
+
+#select-track {
+    margin-top:20px;
+    font-size:20px;
+}
+
+#file {
+    margin-left:20px;
+}
+
+#main {
+    width:900px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 10px;
+    text-align:center;
+}
+
+#song-div {
+    width:500px;
+    text-align:center;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#song-list {
+    width:500px;
+    text-align:left;
+}
+
+.song-link:hover {
+    cursor:pointer;
+}
+
+a {
+    color: #9de0ad;
+    font-weight:bold;
+}
+
+a:link {text-decoration: none; }
+
+#footer {
+    width:900px;
+    margin-top:6px;
+    margin-left:10px;
+    margin-bottom:20px;
+    text-align:center;
+    font-size:12px;
+    border-top:ridge;
+    border-color: #45ada8;
+    padding-top:6px;
+}
+
+#footer-list {
+    text-align:left;
+    margin-left:auto;
+    margin-right:auto;
+    width:450px;
+}
+
+.cbut {
+    background:-webkit-gradient( linear, left top, left bottom, color-stop(0.05, #ededed), color-stop(1, #dfdfdf) );
+    background-color:#ededed;
+    -webkit-border-radius:6px;
+    border-radius:6px;
+    border:1px solid #dcdcdc;
+    display:inline-block;
+    font-size:10px;
+    font-weight:bold;
+    padding:3px 13px;
+    text-decoration:none;
+}
+
+.cbut:hover {
+    background-color:#dfdfdf;
+}
+
+.cbut:active {
+    position:relative;
+    top:1px;
+}
+
+#button-panel {
+    margin-left:10px;
+    top:6px;
+    float:right;
+}
+
+#control-instructions {
+    font-style:italic;
+    font-size:12px;
+    margin:20px;
+    text-align:left;
+}
+
+#tweet-span {
+    top:6px;
+    float:right;
+}
+
+#open-img-left {
+    width:200px;
+    float:left;
+    margin-bottom:20px;
+}
+
+#open-img-right {
+    width:200px;
+    float:right;
+    margin-bottom:20px;
+
+    -webkit-animation-name:             rotate; 
+    -webkit-animation-duration:         0.5s; 
+    -webkit-animation-iteration-count:  infinite;
+    -webkit-animation-timing-function: linear;
+}
+
+
+/* gratuitous eye-candy */
+.rotate{
+    -webkit-transition-duration: 0.8s;
+    -moz-transition-duration: 0.8s;
+    -o-transition-duration: 0.8s;
+    transition-duration: 0.8s;
+    
+    -webkit-transition-property: -webkit-transform;
+    -moz-transition-property: -moz-transform;
+    -o-transition-property: -o-transform;
+    transition-property: transform;
+    overflow:hidden;
+}   
+
+.sel-list {
+    font-weight:bold;
+    color: #9de0ad;
+}
+
+#sel-text {
+    text-align:left;
+    margin-left:20px;
+}
+
+.sel-list:hover {
+    cursor:pointer;
+}
+
+.activated {
+    text-decoration:underline;
+}
+
+#controls {
+    display:none;
+    font-size:12px;
+    text-align:center;
+}
+
+#l-counts {
+    margin-left:auto;
+    margin-right:auto;
+    height:18px;
+}
+
+#tune-info {
+    margin-top:10px;
+
+    width: 170px;
+
+    margin-left:auto;
+    margin-right:auto;
+    text-align:left;
+}
+
+
+#l-last-branch {
+    margin-top:10px;
+    font-weight: bold;
+    text-align: center;
+}
+
+#l-reverse-branch {
+    font-weight: bold;
+    text-align: center;
+}
+
+#l-long-branch {
+    font-weight: bold;
+    text-align: center;
+}
+
+#l-sequential-branch {
+    font-weight: bold;
+    text-align: center;
+    margin-bottom:10px;
+}
+
+.ti-val {
+    font-weight:bold;
+    float:right;
+}
+
+#sthreshold {
+    text-align:left;
+    font-weight:bold;
+    margin-bottom:10px;
+}
+
+#probability-div {
+    margin-top: 20px;
+}
+
+#sprobability {
+    text-align:left;
+    font-weight:bold;
+    margin-bottom:10px;
+}
+
+
+.slider {
+    width:300px;
+    float:left;
+    margin-right:20px;
+    margin-bottom:4px;
+}
+
+#slider-labels {
+    font-size:12px;
+    width:300px;
+    margin-left:0px;
+    margin-right:0px;
+    margin-bottom:25px;
+}
+
+#reset-edges {
+    margin-left:auto;
+    margin-right:auto;
+    width:80%;
+    text-align:center;
+    margin-bottom:20px;
+}
+
+#submit-edges {
+    margin-top:18px;
+    margin-left:auto;
+    margin-right:auto;
+    width:80%;
+    text-align:center;
+    margin-bottom:2px;
+}
+
+.left-label {
+    position:relative;
+    float:left;
+    font-size:10px;
+}
+
+.right-label {
+    position:relative;
+    float:right;
+    margin-right:0px;
+    font-size:10px;
+    text-align:right;
+}
+
+#faq ul li {
+    margin-top:20px;
+}
+
+#vote {
+}
+
+#search-form {
+    margin-bottom:30px;
+}
+
+/*
+.rotate:hover   
+{ 
+    -webkit-transform:rotate(360deg);
+    -moz-transform:rotate(360deg); 
+    -o-transform:rotate(360deg);
+}
+*/
