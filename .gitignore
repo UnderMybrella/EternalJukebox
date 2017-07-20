@@ -42,7 +42,6 @@ fabric.properties
 EternalJukebox.iml
 audio/
 config.json
-eternal/
 logs/
 musicmachinery/
 selfSigned.cert
