@@ -9,6 +9,9 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
 import io.vertx.core.Vertx
+import io.vertx.core.http.HttpServer
+import io.vertx.ext.web.Router
+import org.abimon.eternalJukebox.handlers.StaticResources
 import org.abimon.eternalJukebox.objects.JukeboxConfig
 import java.io.File
 
@@ -30,8 +33,12 @@ object EternalJukebox {
 
     val config: JukeboxConfig
     val vertx: Vertx
+    val webserver: HttpServer
 
-    fun start() {}
+    fun start() {
+        webserver.listen(config.port)
+        println("Now listening on port ${config.port}")
+    }
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -49,6 +56,11 @@ object EternalJukebox {
         println("Loaded config: $config")
 
         vertx = Vertx.vertx()
+        webserver = vertx.createHttpServer()
 
+        val mainRouter = Router.router(vertx)
+        StaticResources.setup(mainRouter)
+
+        webserver.requestHandler(mainRouter::accept)
     }
 }
