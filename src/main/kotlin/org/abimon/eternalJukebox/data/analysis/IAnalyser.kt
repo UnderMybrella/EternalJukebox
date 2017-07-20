@@ -1,5 +1,4 @@
 package org.abimon.eternalJukebox.data.analysis
 
-interface IAnalyser {
-
-}
+/** One day */
+interface IAnalyser

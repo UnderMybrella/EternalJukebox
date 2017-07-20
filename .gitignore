@@ -41,6 +41,7 @@ fabric.properties
 .vertx/
 EternalJukebox.iml
 audio/
+info/
 config.json
 logs/
 musicmachinery/
@@ -52,3 +53,4 @@ target/
 trid/
 trid_audio/
 working/
+!/src/main/kotlin/org/abimon/eternalJukebox/data/audio
