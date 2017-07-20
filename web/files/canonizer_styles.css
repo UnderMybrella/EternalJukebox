@@ -1,0 +1,113 @@
+li a, .dropbtn {
+    display: inline-block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+}
+
+li.dropdown {
+    display: inline-block;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1;
+}
+
+.dropdown-content a {
+    color: #7a8288;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    text-align: left;
+    background-image: linear-gradient(280deg, #202328, #1c1f23)
+}
+
+.dropdown-content a:hover {background-image: linear-gradient(280deg, #202328, #272b30)}
+
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+#tiles {
+    padding-left:20px;
+}
+
+#footer {
+    margin-top:60px;
+}
+
+
+#file {
+    margin-top:10px;
+    width:auto;
+}
+
+#select-track {
+    margin-top:20px;
+    margin-bottom:20px;
+}
+
+#numbers {
+    margin-left:30px;
+    width:300px;
+    height:20px;
+}
+
+#stats {
+    margin-top:30px;
+    margin-left:40px;
+}
+
+#play {
+    width:80px;
+}
+
+
+#info-div {
+    margin-left:40px;
+    width: 90%;
+    margin-bottom:10px;
+}
+
+#info {
+    margin-right: 20px;
+    font-size:28px;
+    line-height:38px;
+    width: 90%;
+}
+
+#error {
+    margin-left:10px;
+    margin-bottom:8px;
+    margin-top: 10px;
+
+    font-size:22px;
+    height:60px;
+    margin-bottom:10px;
+    color:red;
+}
+
+
+
+.nval {
+    margin-right:20px;
+    width:60px;
+}
+
+
+#tweet-span {
+    position:relative;
+    top:2px;
+    margin-left:20px;
+    float:right;
+}
+
+#song-list {
+    cursor:pointer;
+}
