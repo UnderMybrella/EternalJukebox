@@ -9,5 +9,8 @@ data class JukeboxConfig(
         val disabledAPIs: Array<String> = emptyArray(),
 
         val storageType: String = "LOCAL",
-        val storageOptions: Map<String, Any?> = emptyMap()
+        val storageOptions: Map<String, Any?> = emptyMap(),
+
+        val audioSourceType: String = "YOUTUBE",
+        val audioSourceOptions: Map<String, Any?> = emptyMap()
 )

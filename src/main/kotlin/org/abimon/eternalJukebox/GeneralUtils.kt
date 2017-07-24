@@ -2,6 +2,7 @@ package org.abimon.eternalJukebox
 
 import io.vertx.core.json.JsonObject
 import org.abimon.visi.collections.copyFrom
+import java.io.File
 import java.util.*
 
 fun log(msg: String, error: Boolean = false) {
@@ -24,6 +25,11 @@ fun log(msg: String, error: Boolean = false) {
         System.err.println("[$className -> ${there.methodName}] $msg")
     else
         println("[$className -> ${there.methodName}] $msg")
+}
+
+fun <T> logNull(msg: String, error: Boolean = false): T? {
+    log(msg, error)
+    return null
 }
 
 /**
@@ -54,3 +60,19 @@ fun jsonObject(init: JsonObject.() -> Unit): JsonObject {
 }
 
 fun jsonObjectOf(vararg pairs: Pair<String, Any>): JsonObject = JsonObject(pairs.toMap())
+
+/**
+ * Perform an action with this file if it exists, and then delete it.
+ * Returns null if the file does not exist
+ */
+fun <T> File.useThenDelete(action: (File) -> T): T? {
+    try {
+        if(exists())
+            return action(this)
+        else
+            return null
+    }
+    finally {
+        delete()
+    }
+}

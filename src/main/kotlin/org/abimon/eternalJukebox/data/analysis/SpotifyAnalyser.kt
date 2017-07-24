@@ -29,7 +29,7 @@ object SpotifyAnalyser : IAnalyser {
                 200 -> {
                     ((mapResponse["tracks"] as Map<*, *>)["items"] as List<*>).filter { it is Map<*, *> && it.containsKey("id") }.map {
                         val track = it as Map<*, *>
-                        array.add(JukeboxInfo("SPOTIFY", track["id"] as String, track["name"] as String, track["name"] as String, ((track["artists"] as List<*>).first() as Map<*, *>)["name"] as String, "https://open.spotify.com/track/${track["id"] as String}"))
+                        array.add(JukeboxInfo("SPOTIFY", track["id"] as String, track["name"] as String, track["name"] as String, ((track["artists"] as List<*>).first() as Map<*, *>)["name"] as String, "https://open.spotify.com/track/${track["id"] as String}", track["duration_ms"] as Int))
                     }
                     return@exponentiallyBackoff false
                 }
@@ -137,7 +137,7 @@ object SpotifyAnalyser : IAnalyser {
 
             when (response.httpStatusCode) {
                 200 -> {
-                    track = JukeboxInfo("SPOTIFY", mapResponse["id"] as String, mapResponse["name"] as String, mapResponse["name"] as String, ((mapResponse["artists"] as List<*>).first() as Map<*, *>)["name"] as String, "https://open.spotify.com/mapResponse/${mapResponse["id"] as String}")
+                    track = JukeboxInfo("SPOTIFY", mapResponse["id"] as String, mapResponse["name"] as String, mapResponse["name"] as String, ((mapResponse["artists"] as List<*>).first() as Map<*, *>)["name"] as String, "https://open.spotify.com/mapResponse/${mapResponse["id"] as String}", mapResponse["duration_ms"] as Int)
                     return@exponentiallyBackoff false
                 }
                 400 -> {
