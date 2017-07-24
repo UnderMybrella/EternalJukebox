@@ -46,3 +46,11 @@ fun exponentiallyBackoff(maximumBackoff: Long, maximumTries: Long, task: () -> B
 }
 
 fun Any.toJsonObject(): JsonObject = JsonObject(EternalJukebox.jsonMapper.writeValueAsString(this))
+
+fun jsonObject(init: JsonObject.() -> Unit): JsonObject {
+    val json = JsonObject()
+    json.init()
+    return json
+}
+
+fun jsonObjectOf(vararg pairs: Pair<String, Any>): JsonObject = JsonObject(pairs.toMap())

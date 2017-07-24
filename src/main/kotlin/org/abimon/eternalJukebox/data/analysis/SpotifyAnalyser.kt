@@ -6,9 +6,7 @@ import org.abimon.eternalJukebox.EternalJukebox
 import org.abimon.eternalJukebox.bearer
 import org.abimon.eternalJukebox.exponentiallyBackoff
 import org.abimon.eternalJukebox.log
-import org.abimon.eternalJukebox.objects.JukeboxInfo
-import org.abimon.eternalJukebox.objects.JukeboxTrack
-import org.abimon.eternalJukebox.objects.SpotifyError
+import org.abimon.eternalJukebox.objects.*
 import java.util.*
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.scheduleAtFixedRate
@@ -58,7 +56,7 @@ object SpotifyAnalyser : IAnalyser {
             }
         } && error == null
 
-        if(success)
+        if (success)
             log("Successfully searched for \"$query\"")
         else
             log("Failed to search for \"query\". Error: $error")
@@ -66,8 +64,111 @@ object SpotifyAnalyser : IAnalyser {
         return array.toTypedArray()
     }
 
-    override fun analyse(id: String): JukeboxTrack {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun analyse(id: String): JukeboxTrack? {
+        var error: SpotifyError? = null
+        var track: JukeboxTrack? = null
+        val info = getInfo(id)
+
+        if (info == null) {
+            log("Failed to analyse $id on Spotify; track info was null")
+            return null
+        }
+
+        val success = exponentiallyBackoff(16000, 8) {
+            log("Attempting to analyse $id on Spotify")
+            val (request, response, r) = tokenLock.withLock { Fuel.get("https://api.spotify.com/v1/audio-analysis/$id").bearer(token).responseString() }
+            val mapResponse = EternalJukebox.jsonMapper.readValue(response.data, Map::class.java)
+
+            when (response.httpStatusCode) {
+                200 -> {
+                    val obj = JsonObject(mapResponse.mapKeys { (key) -> "$key" })
+                    track = JukeboxTrack(
+                            info,
+                            JukeboxAnalysis(
+                                    EternalJukebox.jsonMapper.readValue(obj.getJsonArray("sections").toString(), Array<SpotifyAudioSection>::class.java),
+                                    EternalJukebox.jsonMapper.readValue(obj.getJsonArray("bars").toString(), Array<SpotifyAudioBar>::class.java),
+                                    EternalJukebox.jsonMapper.readValue(obj.getJsonArray("beats").toString(), Array<SpotifyAudioBeat>::class.java),
+                                    EternalJukebox.jsonMapper.readValue(obj.getJsonArray("tatums").toString(), Array<SpotifyAudioTatum>::class.java),
+                                    EternalJukebox.jsonMapper.readValue(obj.getJsonArray("segments").toString(), Array<SpotifyAudioSegment>::class.java)
+                            ), JukeboxSummary((mapResponse["track"] as Map<*, *>)["duration"] as Double)
+                    )
+
+                    return@exponentiallyBackoff false
+                }
+                400 -> {
+                    if (((mapResponse["error"] as Map<*, *>)["message"] as String) == "Only valid bearer authentication supported") {
+                        log("Got back response code 400  with error \"Only valid bearer authentication supported\"; reloading token, backing off, and trying again")
+                        reload()
+                        return@exponentiallyBackoff true
+                    } else {
+                        log("Got back response code 400 with data ${String(response.data)}; returning INVALID_SEARCH_DATA")
+                        error = SpotifyError.INVALID_SEARCH_DATA
+                        return@exponentiallyBackoff false
+                    }
+                }
+                401 -> {
+                    log("Got back response code 401  with data ${String(response.data)}; reloading token, backing off, and trying again")
+                    reload()
+                    return@exponentiallyBackoff true
+                }
+                else -> {
+                    log("Got back response code ${response.httpStatusCode} with data ${String(response.data)}; backing off and trying again")
+                    return@exponentiallyBackoff true
+                }
+            }
+        } && error == null
+
+        if (success)
+            log("Successfully analysed $id from Spotify")
+        else
+            log("Failed to analyse $id. Error: $error")
+
+        return track
+    }
+
+    override fun getInfo(id: String): JukeboxInfo? {
+        var error: SpotifyError? = null
+        var track: JukeboxInfo? = null
+
+        val success = exponentiallyBackoff(16000, 8) {
+            log("Attempting to get info for $id on Spotify")
+            val (request, response, r) = tokenLock.withLock { Fuel.get("https://api.spotify.com/v1/tracks/$id").bearer(token).responseString() }
+            val mapResponse = EternalJukebox.jsonMapper.readValue(response.data, Map::class.java)
+
+            when (response.httpStatusCode) {
+                200 -> {
+                    track = JukeboxInfo("SPOTIFY", mapResponse["id"] as String, mapResponse["name"] as String, mapResponse["name"] as String, ((mapResponse["artists"] as List<*>).first() as Map<*, *>)["name"] as String, "https://open.spotify.com/mapResponse/${mapResponse["id"] as String}")
+                    return@exponentiallyBackoff false
+                }
+                400 -> {
+                    if (((mapResponse["error"] as Map<*, *>)["message"] as String) == "Only valid bearer authentication supported") {
+                        log("Got back response code 400  with error \"Only valid bearer authentication supported\"; reloading token, backing off, and trying again")
+                        reload()
+                        return@exponentiallyBackoff true
+                    } else {
+                        log("Got back response code 400 with data ${String(response.data)}; returning INVALID_SEARCH_DATA")
+                        error = SpotifyError.INVALID_SEARCH_DATA
+                        return@exponentiallyBackoff false
+                    }
+                }
+                401 -> {
+                    log("Got back response code 401  with data ${String(response.data)}; reloading token, backing off, and trying again")
+                    reload()
+                    return@exponentiallyBackoff true
+                }
+                else -> {
+                    log("Got back response code ${response.httpStatusCode} with data ${String(response.data)}; backing off and trying again")
+                    return@exponentiallyBackoff true
+                }
+            }
+        } && error == null
+
+        if (success)
+            log("Successfully obtained info for $id off of Spotify")
+        else
+            log("Failed to obtain info for $id. Error: $error")
+
+        return track
     }
 
     fun reload(): SpotifyError? {
@@ -106,7 +207,7 @@ object SpotifyAnalyser : IAnalyser {
                 }
             } && error == null
 
-            if(!success)
+            if (!success)
                 log("Failed to reload the Spotify token. Error: $error")
             else
                 log("Successfully reloaded the Spotify token")
