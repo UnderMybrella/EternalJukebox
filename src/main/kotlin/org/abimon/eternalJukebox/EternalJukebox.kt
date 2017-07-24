@@ -13,10 +13,13 @@ import io.vertx.core.http.HttpServer
 import io.vertx.ext.web.Router
 import org.abimon.eternalJukebox.data.analysis.IAnalyser
 import org.abimon.eternalJukebox.data.analysis.SpotifyAnalyser
+import org.abimon.eternalJukebox.data.audio.IAudioSource
+import org.abimon.eternalJukebox.data.audio.YoutubeAudioSource
 import org.abimon.eternalJukebox.data.storage.IStorage
 import org.abimon.eternalJukebox.data.storage.LocalStorage
 import org.abimon.eternalJukebox.handlers.StaticResources
 import org.abimon.eternalJukebox.handlers.api.AnalysisAPI
+import org.abimon.eternalJukebox.handlers.api.AudioAPI
 import org.abimon.eternalJukebox.handlers.api.IAPI
 import org.abimon.eternalJukebox.objects.JukeboxConfig
 import java.io.File
@@ -44,17 +47,20 @@ object EternalJukebox {
     val webserver: HttpServer
 
     val storage: IStorage
-    //val audio: IAudioSource
+    val audio: IAudioSource
 
     val spotify: IAnalyser = SpotifyAnalyser
 
     val apis: Array<IAPI> = arrayOf(
-        AnalysisAPI
+            AnalysisAPI,
+            AudioAPI
     )
 
     fun start() {
         webserver.listen(config.port)
         println("Now listening on port ${config.port}")
+
+        audio.provide(spotify.search("Never Gonna Give You Up").first())
     }
 
     @JvmStatic
@@ -63,9 +69,9 @@ object EternalJukebox {
     }
 
     init {
-        if(jsonConfig.exists())
+        if (jsonConfig.exists())
             config = jsonMapper.readValue(jsonConfig, JukeboxConfig::class.java)
-        else if(yamlConfig.exists())
+        else if (yamlConfig.exists())
             config = yamlMapper.readValue(yamlConfig, JukeboxConfig::class.java)
         else
             config = JukeboxConfig()
@@ -91,13 +97,18 @@ object EternalJukebox {
 
         // Config Handling
 
-        when(config.storageType.toUpperCase()) {
+        when (config.storageType.toUpperCase()) {
             "LOCAL" -> storage = LocalStorage
             else -> storage = LocalStorage
         }
+
+        when (config.audioSourceType.toUpperCase()) {
+            "YOUTUBE" -> audio = YoutubeAudioSource
+            else -> audio = YoutubeAudioSource
+        }
     }
 
-    fun <T: Any> KFunction<*>.bind(param: Any): Consumer<in T> {
+    fun <T : Any> KFunction<*>.bind(param: Any): Consumer<in T> {
         return Consumer { this.call(it, param) }
     }
 }

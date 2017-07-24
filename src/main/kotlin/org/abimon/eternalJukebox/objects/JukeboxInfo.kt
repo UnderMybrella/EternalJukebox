@@ -12,7 +12,8 @@ data class JukeboxInfo(
         val name: String,
         val title: String,
         val artist: String,
-        val url: String
+        val url: String,
+        val duration: Int
 )
 
 data class JukeboxAnalysis(

@@ -193,7 +193,7 @@ function createJRemixer(context, jquery) {
             }
 
             preprocessTrack(track);
-            fetchAudio(jukeboxData.audioURL === null ? track.info.url : ("api/audio?fallback=" + track.info.id + "&url=" + encodeURIComponent(jukeboxData.audioURL)));
+            fetchAudio(jukeboxData.audioURL === null ? "api/audio/jukebox/" + track.info.id : ("api/audio?fallback=" + track.info.id + "&url=" + encodeURIComponent(jukeboxData.audioURL)));
         },
 
         getPlayer : function() {
