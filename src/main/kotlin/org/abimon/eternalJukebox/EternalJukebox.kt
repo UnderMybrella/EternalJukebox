@@ -44,6 +44,7 @@ object EternalJukebox {
     val webserver: HttpServer
 
     val storage: IStorage
+    //val audio: IAudioSource
 
     val spotify: IAnalyser = SpotifyAnalyser
 
