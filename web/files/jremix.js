@@ -326,7 +326,7 @@ function createJRemixer(context, jquery) {
                 callback(false, null);
             };
             request.send();
-        },
+        }
     };
 
     function isQuantum(a) {

@@ -20,10 +20,13 @@ import org.abimon.eternalJukebox.data.storage.LocalStorage
 import org.abimon.eternalJukebox.handlers.StaticResources
 import org.abimon.eternalJukebox.handlers.api.AnalysisAPI
 import org.abimon.eternalJukebox.handlers.api.AudioAPI
-import org.abimon.eternalJukebox.handlers.api.IAPI
+import org.abimon.eternalJukebox.handlers.api.SiteAPI
 import org.abimon.eternalJukebox.objects.JukeboxConfig
 import java.io.File
+import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
+import kotlin.concurrent.scheduleAtFixedRate
 import kotlin.reflect.KFunction
 
 object EternalJukebox {
@@ -51,10 +54,10 @@ object EternalJukebox {
 
     val spotify: IAnalyser = SpotifyAnalyser
 
-    val apis: Array<IAPI> = arrayOf(
-            AnalysisAPI,
-            AudioAPI
-    )
+    val requests: AtomicInteger = AtomicInteger(0)
+    val hourlyRequests: AtomicInteger = AtomicInteger(0)
+
+    val timer: Timer = Timer()
 
     fun start() {
         webserver.listen(config.port)
@@ -78,23 +81,6 @@ object EternalJukebox {
 
         println("Loaded config: $config")
 
-        vertx = Vertx.vertx()
-        webserver = vertx.createHttpServer()
-
-        val mainRouter = Router.router(vertx)
-
-        val apiRouter = Router.router(vertx)
-        apis.filter { it.name !in config.disabledAPIs }.forEach { api ->
-            val sub = Router.router(vertx)
-            api.setup(sub)
-            apiRouter.mountSubRouter(api.mountPath, sub)
-        }
-        mainRouter.mountSubRouter("/api", apiRouter)
-
-        StaticResources.setup(mainRouter)
-
-        webserver.requestHandler(mainRouter::accept)
-
         // Config Handling
 
         when (config.storageType.toUpperCase()) {
@@ -106,6 +92,31 @@ object EternalJukebox {
             "YOUTUBE" -> audio = YoutubeAudioSource
             else -> audio = YoutubeAudioSource
         }
+
+        vertx = Vertx.vertx()
+        webserver = vertx.createHttpServer()
+
+        val mainRouter = Router.router(vertx)
+
+        mainRouter.route().handler {
+            requests.incrementAndGet()
+            hourlyRequests.incrementAndGet()
+            it.next()
+        }
+
+        val apiRouter = Router.router(vertx)
+        arrayOf(AnalysisAPI, AudioAPI, SiteAPI).filter { it.name !in config.disabledAPIs }.forEach { api ->
+            val sub = Router.router(vertx)
+            api.setup(sub)
+            apiRouter.mountSubRouter(api.mountPath, sub)
+        }
+        mainRouter.mountSubRouter("/api", apiRouter)
+
+        StaticResources.setup(mainRouter)
+
+        webserver.requestHandler(mainRouter::accept)
+
+        timer.scheduleAtFixedRate(0, 1000 * 60 * 60) { hourlyRequests.set(0) }
     }
 
     fun <T : Any> KFunction<*>.bind(param: Any): Consumer<in T> {
