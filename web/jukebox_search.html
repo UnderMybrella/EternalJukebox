@@ -77,8 +77,8 @@ function searchForTrack() {
     console.log(q);
 
     if (q.length > 0) {
-        var url = 'api/search';
-        $.getJSON(url, { q:q, results:30}, function(data) {
+        var url = 'api/analysis/search';
+        $.getJSON(url, { query:q, results:30}, function(data) {
             console.log(data);
 
             $("#pick").hide();
