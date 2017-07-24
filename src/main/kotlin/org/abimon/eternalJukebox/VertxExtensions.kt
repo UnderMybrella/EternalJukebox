@@ -12,6 +12,7 @@ fun HttpServerResponse.end(json: JsonObject) = putHeader("Content-Type", "applic
 
 fun HttpServerResponse.end(data: DataSource, contentType: String = "application/octet-stream") {
     putHeader("Content-Type", contentType)
+    putHeader("Content-Length", "${data.size}")
     data.use { stream -> stream.readChunked { chunk -> write(Buffer.buffer(chunk)) } }
     end()
 }
