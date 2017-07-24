@@ -1,9 +1,12 @@
 <html>
 <head>
     <script src="files/raphael-min.js" type="text/javascript" charset="utf-8"></script>
-    <link href="files/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
     <link rel="stylesheet" href="files/canonizer_styles.css" type="text/css" media="screen">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.7/superhero/bootstrap.min.css" rel="stylesheet" integrity="sha384-Xqcy5ttufkC3rBa8EdiAyA1VgOGrmel2Y+wxm4K3kI3fcjTWlDWrlnxyD6hOi3PF" crossorigin="anonymous">
     <link rel="stylesheet" href="files/jquery-ui.css" type="text/css" media="screen">
     <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.9.1/jquery-ui.min.js"></script>
     <script src="files/underscore-min.js" type="text/javascript" charset="utf-8"></script>
@@ -17,38 +20,42 @@
     <meta property="og:image" content="https://eternal.abimon.org/files/ss.png"/>
 </head>
 
-<body>
-<div id="wrap" class="navbar navbar-inverse">
-    <div class="navbar-inner">
-        <div class="container">
-            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </a>
-            <div class="nav-collapse collapse">
-                <ul class="nav">
-                    <li class="dropdown">
-                        <a id='show-search' class="brand">The Autocanonizer</a>
-                        <div class="dropdown-content">
-                            <a href="canonizer_index.html">The Autocanonizer</a>
-                            <a href="jukebox_index.html">The Eternal Jukebox</a>
-                            <a href="retro_index.html">The Eternal Jukebox (Retro)</a>
-                        </div>
-                    </li>
-                    <li class="active"><a id='show-main' href="canonizer_index.html">Main</a></li>
-                    <li><a id='show-loader' href="canonizer_search.html">Pick a song</a></li>
-                    <li><a id='show-about' href="http://musicmachinery.com/2014/03/13/the-autocanonizer/">About</a></li>
-                    <li><a id='show-profile' href="profile.html">Profile</a></li>
-                    <li><a id='show-reddit' href="https://www.reddit.com/r/infinitejukebox/">Check out the Infinite
-                        Jukebox Reddit</a></li>
-                    <li><a id='show-discord' href="https://discord.gg/KWN5BfD">Check out the Eternal Jukebox Discord</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
+<body style="padding-top:50px;">
+<nav class="navbar navbar-fixed-top">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
     </div>
-</div>
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav">
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle navbar-brand" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" style="">The Autocanonizer<span class="caret"></span></a>
+          <ul class="dropdown-menu">
+              <li><a href="canonizer_index.html">The Autocanonizer</a></li>
+              <li><a href="jukebox_index.html">The Eternal Jukebox</a></li>
+              <li><a href="retro_index.html">The Eternal Jukebox (Retro)</a></li>
+          </ul>
+        </li>
+        <li class="active"><a id='show-main' href="canonizer_index.html">Main</a></li>
+        <li><a id='show-loader' href="canonizer_search.html">Pick a song</a></li>
+        <li><a id='show-about' href="http://musicmachinery.com/2014/03/13/the-autocanonizer/">About</a></li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" style="">Social <span class="caret"></span></a>
+            <ul class="dropdown-menu">
+              <li><a id="show-reddit" href="https://www.reddit.com/r/infinitejukebox/">Infinite Jukebox Reddit</a></li>
+              <li><a id="show-discord" href="https://discord.gg/KWN5BfD">Eternal Jukebox Discord</a></li>
+            </ul>
+          </li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right"><li><a id="show-profile" href="profile.html">Profile</a></li></ul>
+    </div>
+  </div>
+</nav>
 
 <div id='info-div'>
     <span id='info'> </span>
@@ -71,11 +78,11 @@
 <div id='error'></div>
 <div id="hero">
     <div id="stats">
-        <button class="btn btn-small" id='play'>Play</button>
-        <button class="btn btn-small" id="tune">Tune</button>
-        <button class="btn btn-small" id="star">Star</button>
-        <button class="btn btn-small" id="short-url">Short URL</button>
-        <button class="btn btn-small" id="jukebox">Eternal Jukebox Version</button>
+        <button class="btn btn-small btn-default" id='play'>Play</button>
+        <button class="btn btn-small btn-default" id="tune">Tune</button>
+        <button class="btn btn-small btn-default" id="star">Star</button>
+        <button class="btn btn-small btn-default" id="short-url">Short URL</button>
+        <button class="btn btn-small btn-default" id="jukebox">Eternal Jukebox Version</button>
         <span id="numbers">
             <span class='nval' id='mtime'> 00:00:00 </span> 
         </span>
