@@ -13,5 +13,10 @@ interface IAnalyser {
     /**
      * Analyse the given ID
      */
-    fun analyse(id: String): JukeboxTrack
+    fun analyse(id: String): JukeboxTrack?
+
+    /**
+     * Get track information from an ID
+     */
+    fun getInfo(id: String): JukeboxInfo?
 }

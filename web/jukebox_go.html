@@ -506,7 +506,7 @@
     }
 
     function fetchAnalysis(id) {
-        var url = '/api/info/' + id;
+        var url = '/api/analysis/analyse/' + id;
         info('Fetching the analysis');
         $.getJSON(url, function (data) {
             gotTheAnalysis(data);
