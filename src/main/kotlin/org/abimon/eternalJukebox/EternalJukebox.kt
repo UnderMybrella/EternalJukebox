@@ -19,7 +19,6 @@ import org.abimon.eternalJukebox.handlers.StaticResources
 import org.abimon.eternalJukebox.handlers.api.AnalysisAPI
 import org.abimon.eternalJukebox.handlers.api.IAPI
 import org.abimon.eternalJukebox.objects.JukeboxConfig
-import org.abimon.visi.io.println
 import java.io.File
 import java.util.function.Consumer
 import kotlin.reflect.KFunction
@@ -55,8 +54,6 @@ object EternalJukebox {
     fun start() {
         webserver.listen(config.port)
         println("Now listening on port ${config.port}")
-
-        spotify.search("Never Gonna Give You Up").first().url.println()
     }
 
     @JvmStatic
