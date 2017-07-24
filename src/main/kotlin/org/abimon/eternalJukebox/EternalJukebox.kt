@@ -11,11 +11,18 @@ import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServer
 import io.vertx.ext.web.Router
+import org.abimon.eternalJukebox.data.analysis.IAnalyser
+import org.abimon.eternalJukebox.data.analysis.SpotifyAnalyser
 import org.abimon.eternalJukebox.data.storage.IStorage
 import org.abimon.eternalJukebox.data.storage.LocalStorage
 import org.abimon.eternalJukebox.handlers.StaticResources
+import org.abimon.eternalJukebox.handlers.api.AnalysisAPI
+import org.abimon.eternalJukebox.handlers.api.IAPI
 import org.abimon.eternalJukebox.objects.JukeboxConfig
+import org.abimon.visi.io.println
 import java.io.File
+import java.util.function.Consumer
+import kotlin.reflect.KFunction
 
 object EternalJukebox {
     val jsonMapper: ObjectMapper = ObjectMapper()
@@ -39,9 +46,17 @@ object EternalJukebox {
 
     val storage: IStorage
 
+    val spotify: IAnalyser = SpotifyAnalyser
+
+    val apis: Array<IAPI> = arrayOf(
+        AnalysisAPI
+    )
+
     fun start() {
         webserver.listen(config.port)
         println("Now listening on port ${config.port}")
+
+        spotify.search("Never Gonna Give You Up").first().url.println()
     }
 
     @JvmStatic
@@ -63,6 +78,15 @@ object EternalJukebox {
         webserver = vertx.createHttpServer()
 
         val mainRouter = Router.router(vertx)
+
+        val apiRouter = Router.router(vertx)
+        apis.filter { it.name !in config.disabledAPIs }.forEach { api ->
+            val sub = Router.router(vertx)
+            api.setup(sub)
+            apiRouter.mountSubRouter(api.mountPath, sub)
+        }
+        mainRouter.mountSubRouter("/api", apiRouter)
+
         StaticResources.setup(mainRouter)
 
         webserver.requestHandler(mainRouter::accept)
@@ -73,5 +97,9 @@ object EternalJukebox {
             "LOCAL" -> storage = LocalStorage
             else -> storage = LocalStorage
         }
+    }
+
+    fun <T: Any> KFunction<*>.bind(param: Any): Consumer<in T> {
+        return Consumer { this.call(it, param) }
     }
 }

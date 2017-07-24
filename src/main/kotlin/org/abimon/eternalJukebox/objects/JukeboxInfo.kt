@@ -7,8 +7,8 @@ data class JukeboxTrack(
 )
 
 data class JukeboxInfo(
+        val service: String,
         val id: String,
-        val idService: String,
         val name: String,
         val title: String,
         val artist: String,
