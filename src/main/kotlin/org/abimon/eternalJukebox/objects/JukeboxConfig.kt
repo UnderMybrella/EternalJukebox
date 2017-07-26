@@ -3,6 +3,8 @@ package org.abimon.eternalJukebox.objects
 data class JukeboxConfig(
         val port: Int = 8080,
 
+        val webRoot: String = "web",
+
         val spotifyClient: String? = null,
         val spotifySecret: String? = null,
 

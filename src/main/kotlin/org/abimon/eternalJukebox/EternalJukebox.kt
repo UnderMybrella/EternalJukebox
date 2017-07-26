@@ -17,6 +17,7 @@ import org.abimon.eternalJukebox.data.audio.IAudioSource
 import org.abimon.eternalJukebox.data.audio.YoutubeAudioSource
 import org.abimon.eternalJukebox.data.storage.IStorage
 import org.abimon.eternalJukebox.data.storage.LocalStorage
+import org.abimon.eternalJukebox.handlers.OpenGraphHandler
 import org.abimon.eternalJukebox.handlers.StaticResources
 import org.abimon.eternalJukebox.handlers.api.AnalysisAPI
 import org.abimon.eternalJukebox.handlers.api.AudioAPI
@@ -112,6 +113,7 @@ object EternalJukebox {
         }
         mainRouter.mountSubRouter("/api", apiRouter)
 
+        OpenGraphHandler.setup(mainRouter)
         StaticResources.setup(mainRouter)
 
         webserver.requestHandler(mainRouter::accept)
