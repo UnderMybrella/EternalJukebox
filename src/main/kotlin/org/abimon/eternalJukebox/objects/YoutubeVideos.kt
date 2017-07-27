@@ -6,7 +6,7 @@ import java.time.ZonedDateTime
 data class YoutubeSearchResults(
         val kind: String,
         val etag: String,
-        val nextPageToken: String,
+        val nextPageToken: String?,
         val regionCode: String,
         val pageInfo: YoutubePageInfo,
         val items: List<YoutubeSearchItem>

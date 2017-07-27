@@ -46,8 +46,8 @@ object YoutubeAudioSource: IAudioSource {
         log("Settled on ${closest.snippet.title} (https://youtu.be/${closest.id})")
 
         val tmpFile = File("$uuid.tmp")
-        val tmpLog = File("$uuid.log")
-        val ffmpegLog = File("$uuid.log")
+        val tmpLog = File("${info.id}-$uuid.log")
+        val ffmpegLog = File("${info.id}-$uuid.log")
         val endGoalTmp = File(tmpFile.absolutePath.replace(".tmp", ".$format"))
 
         try {
@@ -90,7 +90,7 @@ object YoutubeAudioSource: IAudioSource {
     }
 
     fun getContentDetailsWithKey(id: String): YoutubeContentItem? {
-        val (request, response, r) = Fuel.get("https://www.googleapis.com/youtube/v3/videos", listOf("part" to "contentDetails,snippet", "id" to id, "key" to (apiKey ?: return null)))
+        val (_, _, r) = Fuel.get("https://www.googleapis.com/youtube/v3/videos", listOf("part" to "contentDetails,snippet", "id" to id, "key" to (apiKey ?: return null)))
                 .header("User-Agent" to "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0")
                 .responseString()
 
@@ -103,7 +103,7 @@ object YoutubeAudioSource: IAudioSource {
     }
 
     fun getMultiContentDetailsWithKey(ids: List<String>): List<YoutubeContentItem> {
-        val (request, response, r) = Fuel.get("https://www.googleapis.com/youtube/v3/videos", listOf("part" to "contentDetails,snippet", "id" to ids.joinToString(), "key" to (apiKey ?: return emptyList())))
+        val (_, _, r) = Fuel.get("https://www.googleapis.com/youtube/v3/videos", listOf("part" to "contentDetails,snippet", "id" to ids.joinToString(), "key" to (apiKey ?: return emptyList())))
                 .header("User-Agent" to "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0")
                 .responseString()
 
@@ -116,7 +116,7 @@ object YoutubeAudioSource: IAudioSource {
     }
 
     fun searchYoutubeWithKey(query: String, maxResults: Int = 5): List<YoutubeSearchItem> {
-        val (request, response, r) = Fuel.get("https://www.googleapis.com/youtube/v3/search", listOf("part" to "snippet", "q" to query, "maxResults" to "$maxResults", "key" to (apiKey ?: return emptyList()), "type" to "video"))
+        val (_, _, r) = Fuel.get("https://www.googleapis.com/youtube/v3/search", listOf("part" to "snippet", "q" to query, "maxResults" to "$maxResults", "key" to (apiKey ?: return emptyList()), "type" to "video"))
                 .header("User-Agent" to "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0")
                 .responseString()
 
