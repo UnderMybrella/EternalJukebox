@@ -18,30 +18,36 @@ object AnalysisAPI: IAPI {
     }
 
     fun analyseSpotify(context: RoutingContext) {
-        val id = context.pathParam("id")
-        val update = context.request().getParam("update")?.toBoolean() ?: false
-        if(EternalJukebox.storage.isStored("$id.json", EnumStorageType.ANALYSIS) && !update) {
-            if(EternalJukebox.storage.provide("$id.json", EnumStorageType.ANALYSIS, context))
-                return
+        if(EternalJukebox.storage.shouldStore(EnumStorageType.ANALYSIS)) {
+            val id = context.pathParam("id")
+            val update = context.request().getParam("update")?.toBoolean() ?: false
+            if (EternalJukebox.storage.isStored("$id.json", EnumStorageType.ANALYSIS) && !update) {
+                if (EternalJukebox.storage.provide("$id.json", EnumStorageType.ANALYSIS, context))
+                    return
 
-            val data = EternalJukebox.storage.provide("$id.json", EnumStorageType.ANALYSIS)
-            if(data != null)
-                return context.response().end(data, "application/json")
-        }
+                val data = EternalJukebox.storage.provide("$id.json", EnumStorageType.ANALYSIS)
+                if (data != null)
+                    return context.response().end(data, "application/json")
+            }
 
-        if(update)
-            log("${context.request().connection().remoteAddress()} is requesting an update for $id")
+            if (update)
+                log("${context.request().connection().remoteAddress()} is requesting an update for $id")
 
-        val track = EternalJukebox.spotify.analyse(id)
+            val track = EternalJukebox.spotify.analyse(id)
 
-        if(track == null)
-            context.response().setStatusCode(400).end(jsonObject {
-                put("error", "Track object is null")
-            })
-        else {
-            context.response().end(track.toJsonObject())
+            if (track == null)
+                context.response().setStatusCode(400).end(jsonObject {
+                    put("error", "Track object is null")
+                })
+            else {
+                context.response().end(track.toJsonObject())
 
-            EternalJukebox.storage.store("$id.json", EnumStorageType.ANALYSIS, ByteArrayDataSource(track.toJsonObject().toString().toByteArray(Charsets.UTF_8)))
+                EternalJukebox.storage.store("$id.json", EnumStorageType.ANALYSIS, ByteArrayDataSource(track.toJsonObject().toString().toByteArray(Charsets.UTF_8)))
+            }
+        } else {
+            context.response().setStatusCode(501).end(jsonObjectOf(
+                    "error" to "Configured storage method does not support storing ANALYSIS"
+            ))
         }
     }
 
@@ -50,5 +56,13 @@ object AnalysisAPI: IAPI {
         val results = EternalJukebox.spotify.search(query)
 
         context.response().end(JsonArray(results.map(JukeboxInfo::toJsonObject)))
+    }
+
+    init {
+        log("Initialised Analysis API")
+    }
+
+    override fun test(): Boolean {
+        return EternalJukebox.spotify.analyse(EternalJukebox.spotify.search("Never Gonna Give You Up").firstOrNull()?.id ?: return false) != null
     }
 }

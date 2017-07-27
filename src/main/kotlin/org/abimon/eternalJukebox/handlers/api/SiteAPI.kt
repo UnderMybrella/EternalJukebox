@@ -5,6 +5,7 @@ import com.sun.management.OperatingSystemMXBean
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import org.abimon.eternalJukebox.EternalJukebox
+import org.abimon.eternalJukebox.log
 import org.abimon.eternalJukebox.objects.EnumStorageType
 import org.abimon.eternalJukebox.useThenDelete
 import org.abimon.visi.io.FileDataSource
@@ -36,11 +37,15 @@ object SiteAPI: IAPI {
     val currentCPU = File("current-cpu-usage.txt")
     val globalRequests = File("global-request-count.txt")
     val hourlyRequests = File("hourly-request-count.txt")
+    val globalUniqueVisitors = File("global-unique-visitor-count.txt")
+    val hourlyUniqueVisitors = File("hourly-unique-visitor-count.txt")
 
     val memoryUsageOut: PrintStream
     val cpuUsageOut: PrintStream
     val globalRequestsOut: PrintStream
     val hourlyRequestsOut: PrintStream
+    val globalUniqueVisitorsOut: PrintStream
+    val hourlyUniqueVisitorsOut: PrintStream
 
     override fun setup(router: Router) {
         router.get("/healthy").handler { it.response().end("Up for ${startupTime.timeDifference()}") }
@@ -57,7 +62,10 @@ object SiteAPI: IAPI {
                 "CPU Load (Process)" to "${cpuFormat.format(osBean.processCpuLoad)}%",
                 "CPU Load (System)" to "${cpuFormat.format(osBean.systemCpuLoad)}%",
                 "Requests this session" to "${EternalJukebox.requests.get()}",
-                "Requests this hour" to "${EternalJukebox.hourlyRequests.get()}"
+                "Requests this hour" to "${EternalJukebox.hourlyRequests.get()}",
+                "Unique Visitors this session" to "${EternalJukebox.uniqueVisitors.get()}",
+                "Unique Visitors this hour" to "${EternalJukebox.hourlyUniqueVisitors.get()}",
+                "Temporary Cookies" to "${EternalJukebox.tmpCookies.size}"
         )
 
         context.response().end(FlipTable.of(arrayOf("Key", "Value"), rows.map { (one, two) -> arrayOf(one, two) }.toTypedArray()))
@@ -103,22 +111,34 @@ object SiteAPI: IAPI {
 
         if(currentCPU.exists())
             currentCPU.useThenDelete { EternalJukebox.storage.store("CPU-Usage-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it)) }
-        cpuUsageOut = PrintStream(currentMemory)
+        cpuUsageOut = PrintStream(currentCPU)
 
         if(globalRequests.exists())
             globalRequests.useThenDelete { EternalJukebox.storage.store("Global-Request-Count-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it)) }
-        globalRequestsOut = PrintStream(currentMemory)
+        globalRequestsOut = PrintStream(globalRequests)
 
         if(hourlyRequests.exists())
             hourlyRequests.useThenDelete { EternalJukebox.storage.store("Hourly-Request-Count-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it)) }
-        hourlyRequestsOut = PrintStream(currentMemory)
+        hourlyRequestsOut = PrintStream(hourlyRequests)
 
-        usageTimer.scheduleAtFixedRate(0, 1000 * 5) {
+        if(globalUniqueVisitors.exists())
+            globalUniqueVisitors.useThenDelete { EternalJukebox.storage.store("Global-Unique-Visitor-Count-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it)) }
+        globalUniqueVisitorsOut = PrintStream(globalUniqueVisitors)
+
+        if(hourlyUniqueVisitors.exists())
+            hourlyUniqueVisitors.useThenDelete { EternalJukebox.storage.store("Hourly-Unique-Visitor-Count-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it)) }
+        hourlyUniqueVisitorsOut = PrintStream(hourlyUniqueVisitors)
+
+        usageTimer.scheduleAtFixedRate(0, EternalJukebox.config.usageWritePeriod) {
             val current = System.currentTimeMillis()
             memoryUsageOut.println("$current|${memoryFormat.format(ByteUnit(Runtime.getRuntime().usedMemory()).toMegabytes().megabytes)}")
             cpuUsageOut.println("$current|${cpuFormat.format(osBean.processCpuLoad)}")
             globalRequestsOut.println("$current|${EternalJukebox.requests.get()}")
             hourlyRequestsOut.println("$current|${EternalJukebox.hourlyRequests.get()}")
+            globalUniqueVisitorsOut.println("$current|${EternalJukebox.uniqueVisitors.get()}")
+            hourlyUniqueVisitorsOut.println("$current|${EternalJukebox.hourlyUniqueVisitors.get()}")
         }
+
+        log("Initialised Site API")
     }
 }

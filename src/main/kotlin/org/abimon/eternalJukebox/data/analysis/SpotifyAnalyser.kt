@@ -22,7 +22,7 @@ object SpotifyAnalyser : IAnalyser {
         val array: ArrayList<JukeboxInfo> = arrayListOf()
         val success = exponentiallyBackoff(16000, 8) {
             log("Attempting to search Spotify for \"$query\"")
-            val (request, response, r) = tokenLock.withLock { Fuel.get("https://api.spotify.com/v1/search", listOf("q" to query, "type" to "track")).bearer(token).responseString() }
+            val (_, response, _) = tokenLock.withLock { Fuel.get("https://api.spotify.com/v1/search", listOf("q" to query, "type" to "track")).bearer(token).responseString() }
             val mapResponse = EternalJukebox.jsonMapper.readValue(response.data, Map::class.java)
 
             when (response.httpStatusCode) {
@@ -76,7 +76,7 @@ object SpotifyAnalyser : IAnalyser {
 
         val success = exponentiallyBackoff(16000, 8) {
             log("Attempting to analyse $id on Spotify")
-            val (request, response, r) = tokenLock.withLock { Fuel.get("https://api.spotify.com/v1/audio-analysis/$id").bearer(token).responseString() }
+            val (_, response, _) = tokenLock.withLock { Fuel.get("https://api.spotify.com/v1/audio-analysis/$id").bearer(token).responseString() }
             val mapResponse = EternalJukebox.jsonMapper.readValue(response.data, Map::class.java)
 
             when (response.httpStatusCode) {
@@ -132,7 +132,7 @@ object SpotifyAnalyser : IAnalyser {
 
         val success = exponentiallyBackoff(16000, 8) {
             log("Attempting to get info for $id on Spotify")
-            val (request, response, r) = tokenLock.withLock { Fuel.get("https://api.spotify.com/v1/tracks/$id").bearer(token).responseString() }
+            val (_, response, _) = tokenLock.withLock { Fuel.get("https://api.spotify.com/v1/tracks/$id").bearer(token).responseString() }
             val mapResponse = EternalJukebox.jsonMapper.readValue(response.data, Map::class.java)
 
             when (response.httpStatusCode) {
@@ -176,7 +176,7 @@ object SpotifyAnalyser : IAnalyser {
             var error: SpotifyError? = null
             val success = exponentiallyBackoff(64000, 8) {
                 log("Attempting to reload Spotify Token")
-                val (request, response, r) =
+                val (_, response, _) =
                         Fuel.post("https://accounts.spotify.com/api/token").body("grant_type=client_credentials").authenticate(EternalJukebox.config.spotifyClient ?: run {
                             error = SpotifyError.NO_AUTH_DETAILS
                             return@exponentiallyBackoff false
@@ -187,7 +187,7 @@ object SpotifyAnalyser : IAnalyser {
 
                 when (response.httpStatusCode) {
                     200 -> {
-                        token = JsonObject(r.component1()).getString("access_token")
+                        token = JsonObject(String(response.data, Charsets.UTF_8)).getString("access_token")
                         return@exponentiallyBackoff false
                     }
                     400 -> {

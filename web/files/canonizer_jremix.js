@@ -195,7 +195,7 @@ function createJRemixer(context, jquery) {
             }
 
             preprocessTrack(track);
-            fetchAudio(canonizerData.audioURL === null ? track.info.url : ("api/audio?fallback=" + track.info.id + "&url=" + encodeURIComponent(canonizerData.audioURL)));
+            fetchAudio(canonizerData.audioURL === null ? "api/audio/jukebox/" + track.info.id : ("api/audio/external?fallbackID=" + track.info.id + "&url=" + encodeURIComponent(canonizerData.audioURL)));
         },
 
         getPlayer : function() {
@@ -336,7 +336,7 @@ function createJRemixer(context, jquery) {
                 callback(false, null);
             }
             request.send();
-        },
+        }
     };
 
     function isQuantum(a) {
