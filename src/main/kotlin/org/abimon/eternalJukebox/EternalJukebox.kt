@@ -13,7 +13,6 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServer
-import io.vertx.ext.web.Cookie
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.handler.CookieHandler
 import org.abimon.eternalJukebox.data.analysis.IAnalyser
@@ -34,7 +33,6 @@ import org.abimon.eternalJukebox.objects.JukeboxConfig
 import java.io.File
 import java.security.SecureRandom
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import java.util.*
 import java.util.concurrent.ConcurrentSkipListSet
 import java.util.concurrent.atomic.AtomicInteger
@@ -89,7 +87,7 @@ object EternalJukebox {
     val timer: Timer = Timer()
     val apis = ArrayList<IAPI>()
 
-    val tmpCookies: ConcurrentSkipListSet<String> = ConcurrentSkipListSet()
+    val hourlyVisitorsAddress: ConcurrentSkipListSet<String> = ConcurrentSkipListSet()
 
     fun start() {
         webserver.listen(config.port)
@@ -129,38 +127,29 @@ object EternalJukebox {
         //Something something check for cookies
         mainRouter.route().handler(CookieHandler.create())
         mainRouter.route().handler {
-            val visitorCookie = it.getCookie(ConstantValues.VISITOR_COOKIE)
-            if(visitorCookie == null) { //New visitor. Don't increment, but set an old cookie value
-                it.addCookie(Cookie.cookie(ConstantValues.VISITOR_COOKIE, oldVisitorToken).setPath("/"))
-            } else if(visitorCookie.value !in tmpCookies){ //Prevent duplicate cookies
-                tmpCookies.add(visitorCookie.value)
+            val ip = it.request().remoteAddress().host()
 
-                val decoded = visitorVerifier.verifySafely(visitorCookie.value)
-                if(decoded == null || decoded.issuedAt.toInstant() == Instant.EPOCH) { //Invalid cookie, therefore new visitor and/or old visitor but newly wed
-                    it[ConstantValues.UNIQUE_VISITOR] = true
-                    it[ConstantValues.HOURLY_UNIQUE_VISITOR] = true
+//            if(ip !in uniqueVisitorsAddress) {
+//                it.data()[ConstantValues.UNIQUE_VISITOR]
+//                uniqueVisitorsAddress.add(ip)
+//            }
 
-                    it.addCookie(Cookie.cookie(ConstantValues.VISITOR_COOKIE, newVisitorToken).setPath("/"))
-                } else if(decoded.issuedAt.toInstant().plus(1, ChronoUnit.HOURS).isBefore(Instant.now())) { //Old cookie
-                    it.data()[ConstantValues.HOURLY_UNIQUE_VISITOR] = true
-
-                    it.addCookie(Cookie.cookie(ConstantValues.VISITOR_COOKIE, newVisitorToken).setPath("/"))
-                }
-            } else {
-                it.addCookie(Cookie.cookie(ConstantValues.VISITOR_COOKIE, newVisitorToken).setPath("/")) //Take another goddamn cookie
+            if(ip !in hourlyVisitorsAddress) {
+                it.data()[ConstantValues.HOURLY_UNIQUE_VISITOR]
+                hourlyVisitorsAddress.add(ip)
             }
 
             it.next()
         }
 
-        val runSiteAPI = !(config.disable["siteAPI"] ?: false)
+        val runSiteAPI = config.disable["siteAPI"] != true
 
         if (runSiteAPI) {
             mainRouter.route().handler {
                 requests.incrementAndGet()
                 hourlyRequests.incrementAndGet()
 
-                if(it[ConstantValues.UNIQUE_VISITOR, false, Boolean::class]) {
+                if(it[ConstantValues.HOURLY_UNIQUE_VISITOR, false, Boolean::class]) {
                     uniqueVisitors.incrementAndGet()
                     log("Unique visitor")
                 }
@@ -175,17 +164,17 @@ object EternalJukebox {
 
         val apiRouter = Router.router(vertx)
 
-        if (!(config.disable["analysisAPI"] ?: false)) {
+        if (config.disable["analysisAPI"] != true) {
             apis.add(AnalysisAPI)
             spotify = SpotifyAnalyser
         }
         else
             spotify = EmptyDataAPI
 
-        if (!(config.disable["siteAPI"] ?: false))
+        if (config.disable["siteAPI"] != true)
             apis.add(SiteAPI)
 
-        if (!(config.disable["audioAPI"] ?: false)) {
+        if (config.disable["audioAPI"] != true) {
             apis.add(AudioAPI)
 
             when (config.audioSourceType.toUpperCase()) {
@@ -203,16 +192,16 @@ object EternalJukebox {
         }
         mainRouter.mountSubRouter("/api", apiRouter)
 
-        if (!(config.disable["openGraph"] ?: false))
+        if (config.disable["openGraph"] != true)
             OpenGraphHandler.setup(mainRouter)
-        if (!(config.disable["staticResources"] ?: false))
+        if (config.disable["staticResources"] != true)
             StaticResources.setup(mainRouter)
 
         webserver.requestHandler(mainRouter::accept)
 
-        if(!(config.disable["siteAPI"] ?: false))
-            timer.scheduleAtFixedRate(0, 1000 * 60 * 60) { hourlyRequests.set(0); hourlyUniqueVisitors.set(0); tmpCookies.clear() }
+        if(config.disable["siteAPI"] != true)
+            timer.scheduleAtFixedRate(0, 1000 * 60 * 60) { hourlyRequests.set(0); hourlyUniqueVisitors.set(0); hourlyVisitorsAddress.clear() }
         else
-            timer.scheduleAtFixedRate(0, 1000 * 60 * 60) { tmpCookies.clear() }
+            timer.scheduleAtFixedRate(0, 1000 * 60 * 60) { hourlyVisitorsAddress.clear() }
     }
 }
