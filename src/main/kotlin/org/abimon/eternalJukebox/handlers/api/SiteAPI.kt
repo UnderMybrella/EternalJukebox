@@ -8,8 +8,8 @@ import org.abimon.eternalJukebox.EternalJukebox
 import org.abimon.eternalJukebox.log
 import org.abimon.eternalJukebox.objects.EnumStorageType
 import org.abimon.eternalJukebox.useThenDelete
+import org.abimon.units.data.ByteUnit
 import org.abimon.visi.io.FileDataSource
-import org.abimon.visi.lang.ByteUnit
 import org.abimon.visi.lang.usedMemory
 import org.abimon.visi.time.timeDifference
 import java.io.File
@@ -63,9 +63,7 @@ object SiteAPI: IAPI {
                 "CPU Load (System)" to "${cpuFormat.format(osBean.systemCpuLoad)}%",
                 "Requests this session" to "${EternalJukebox.requests.get()}",
                 "Requests this hour" to "${EternalJukebox.hourlyRequests.get()}",
-                "Unique Visitors this session" to "${EternalJukebox.uniqueVisitors.get()}",
-                "Unique Visitors this hour" to "${EternalJukebox.hourlyUniqueVisitors.get()}",
-                "Temporary Cookies" to "${EternalJukebox.tmpCookies.size}"
+                "Unique Visitors this hour" to "${EternalJukebox.hourlyUniqueVisitors.get()}"
         )
 
         context.response().end(FlipTable.of(arrayOf("Key", "Value"), rows.map { (one, two) -> arrayOf(one, two) }.toTypedArray()))
