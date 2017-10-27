@@ -17,11 +17,11 @@ object SpotifyAnalyser : IAnalyser {
     var token: String = ""
     val tokenLock = ReentrantLock()
 
-    override fun search(query: String): Array<JukeboxInfo> {
+    override fun search(query: String, clientInfo: ClientInfo?): Array<JukeboxInfo> {
         var error: SpotifyError? = null
         val array: ArrayList<JukeboxInfo> = arrayListOf()
         val success = exponentiallyBackoff(16000, 8) {
-            log("Attempting to search Spotify for \"$query\"")
+            log("[${clientInfo?.userUID}] Attempting to search Spotify for \"$query\"")
             val (_, response, _) = tokenLock.withLock { Fuel.get("https://api.spotify.com/v1/search", listOf("q" to query, "type" to "track")).bearer(token).responseString() }
             val mapResponse = EternalJukebox.jsonMapper.readValue(response.data, Map::class.java)
 
@@ -35,47 +35,47 @@ object SpotifyAnalyser : IAnalyser {
                 }
                 400 -> {
                     if (((mapResponse["error"] as Map<*, *>)["message"] as String) == "Only valid bearer authentication supported") {
-                        log("Got back response code 400  with error \"Only valid bearer authentication supported\"; reloading token, backing off, and trying again")
+                        log("[${clientInfo?.userUID}] Got back response code 400  with error \"Only valid bearer authentication supported\"; reloading token, backing off, and trying again")
                         reload()
                         return@exponentiallyBackoff true
                     } else {
-                        log("Got back response code 400 with data ${String(response.data)}; returning INVALID_SEARCH_DATA")
+                        log("[${clientInfo?.userUID}] Got back response code 400 with data ${String(response.data)}; returning INVALID_SEARCH_DATA")
                         error = SpotifyError.INVALID_SEARCH_DATA
                         return@exponentiallyBackoff false
                     }
                 }
                 401 -> {
-                    log("Got back response code 401  with data ${String(response.data)}; reloading token, backing off, and trying again")
+                    log("[${clientInfo?.userUID}] Got back response code 401  with data ${String(response.data)}; reloading token, backing off, and trying again")
                     reload()
                     return@exponentiallyBackoff true
                 }
                 else -> {
-                    log("Got back response code ${response.httpStatusCode} with data ${String(response.data)}; backing off and trying again")
+                    log("[${clientInfo?.userUID}] Got back response code ${response.httpStatusCode} with data ${String(response.data)}; backing off and trying again")
                     return@exponentiallyBackoff true
                 }
             }
         } && error == null
 
         if (success)
-            log("Successfully searched for \"$query\"")
+            log("[${clientInfo?.userUID}] Successfully searched for \"$query\"")
         else
-            log("Failed to search for \"query\". Error: $error")
+            log("[${clientInfo?.userUID}] Failed to search for \"query\". Error: $error")
 
         return array.toTypedArray()
     }
 
-    override fun analyse(id: String): JukeboxTrack? {
+    override fun analyse(id: String, clientInfo: ClientInfo?): JukeboxTrack? {
         var error: SpotifyError? = null
         var track: JukeboxTrack? = null
-        val info = getInfo(id)
+        val info = getInfo(id, clientInfo)
 
         if (info == null) {
-            log("Failed to analyse $id on Spotify; track info was null")
+            log("[${clientInfo?.userUID}] Failed to analyse $id on Spotify; track info was null")
             return null
         }
 
         val success = exponentiallyBackoff(16000, 8) {
-            log("Attempting to analyse $id on Spotify")
+            log("[${clientInfo?.userUID}] Attempting to analyse $id on Spotify")
             val (_, response, _) = tokenLock.withLock { Fuel.get("https://api.spotify.com/v1/audio-analysis/$id").bearer(token).responseString() }
             val mapResponse = EternalJukebox.jsonMapper.readValue(response.data, Map::class.java)
 
@@ -97,41 +97,41 @@ object SpotifyAnalyser : IAnalyser {
                 }
                 400 -> {
                     if (((mapResponse["error"] as Map<*, *>)["message"] as String) == "Only valid bearer authentication supported") {
-                        log("Got back response code 400  with error \"Only valid bearer authentication supported\"; reloading token, backing off, and trying again")
+                        log("[${clientInfo?.userUID}] Got back response code 400  with error \"Only valid bearer authentication supported\"; reloading token, backing off, and trying again")
                         reload()
                         return@exponentiallyBackoff true
                     } else {
-                        log("Got back response code 400 with data ${String(response.data)}; returning INVALID_SEARCH_DATA")
+                        log("[${clientInfo?.userUID}] Got back response code 400 with data ${String(response.data)}; returning INVALID_SEARCH_DATA")
                         error = SpotifyError.INVALID_SEARCH_DATA
                         return@exponentiallyBackoff false
                     }
                 }
                 401 -> {
-                    log("Got back response code 401  with data ${String(response.data)}; reloading token, backing off, and trying again")
+                    log("[${clientInfo?.userUID}] Got back response code 401  with data ${String(response.data)}; reloading token, backing off, and trying again")
                     reload()
                     return@exponentiallyBackoff true
                 }
                 else -> {
-                    log("Got back response code ${response.httpStatusCode} with data ${String(response.data)}; backing off and trying again")
+                    log("[${clientInfo?.userUID}] Got back response code ${response.httpStatusCode} with data ${String(response.data)}; backing off and trying again")
                     return@exponentiallyBackoff true
                 }
             }
         } && error == null
 
         if (success)
-            log("Successfully analysed $id from Spotify")
+            log("[${clientInfo?.userUID}] Successfully analysed $id from Spotify")
         else
-            log("Failed to analyse $id. Error: $error")
+            log("[${clientInfo?.userUID}] Failed to analyse $id. Error: $error")
 
         return track
     }
 
-    override fun getInfo(id: String): JukeboxInfo? {
+    override fun getInfo(id: String, clientInfo: ClientInfo?): JukeboxInfo? {
         var error: SpotifyError? = null
         var track: JukeboxInfo? = null
 
         val success = exponentiallyBackoff(16000, 8) {
-            log("Attempting to get info for $id on Spotify")
+            log("[${clientInfo?.userUID}] Attempting to get info for $id on Spotify")
             val (_, response, _) = tokenLock.withLock { Fuel.get("https://api.spotify.com/v1/tracks/$id").bearer(token).responseString() }
             val mapResponse = EternalJukebox.jsonMapper.readValue(response.data, Map::class.java)
 
@@ -142,31 +142,31 @@ object SpotifyAnalyser : IAnalyser {
                 }
                 400 -> {
                     if (((mapResponse["error"] as Map<*, *>)["message"] as String) == "Only valid bearer authentication supported") {
-                        log("Got back response code 400  with error \"Only valid bearer authentication supported\"; reloading token, backing off, and trying again")
+                        log("[${clientInfo?.userUID}] Got back response code 400  with error \"Only valid bearer authentication supported\"; reloading token, backing off, and trying again")
                         reload()
                         return@exponentiallyBackoff true
                     } else {
-                        log("Got back response code 400 with data ${String(response.data)}; returning INVALID_SEARCH_DATA")
+                        log("[${clientInfo?.userUID}] Got back response code 400 with data ${String(response.data)}; returning INVALID_SEARCH_DATA")
                         error = SpotifyError.INVALID_SEARCH_DATA
                         return@exponentiallyBackoff false
                     }
                 }
                 401 -> {
-                    log("Got back response code 401  with data ${String(response.data)}; reloading token, backing off, and trying again")
+                    log("[${clientInfo?.userUID}] Got back response code 401  with data ${String(response.data)}; reloading token, backing off, and trying again")
                     reload()
                     return@exponentiallyBackoff true
                 }
                 else -> {
-                    log("Got back response code ${response.httpStatusCode} with data ${String(response.data)}; backing off and trying again")
+                    log("[${clientInfo?.userUID}] Got back response code ${response.httpStatusCode} with data ${String(response.data)}; backing off and trying again")
                     return@exponentiallyBackoff true
                 }
             }
         } && error == null
 
         if (success)
-            log("Successfully obtained info for $id off of Spotify")
+            log("[${clientInfo?.userUID}] Successfully obtained info for $id off of Spotify")
         else
-            log("Failed to obtain info for $id. Error: $error")
+            log("[${clientInfo?.userUID}] Failed to obtain info for $id. Error: $error")
 
         return track
     }

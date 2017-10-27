@@ -91,7 +91,7 @@ object EternalJukebox {
 
     fun start() {
         webserver.listen(config.port)
-        println("Now listening on port ${config.port}")
+        log("Now listening on port ${config.port}")
     }
 
     @JvmStatic
@@ -107,7 +107,7 @@ object EternalJukebox {
         else
             config = JukeboxConfig()
 
-        println("Loaded config: $config")
+        log("Loaded config: $config")
 
         // Config Handling
 
@@ -135,25 +135,27 @@ object EternalJukebox {
 //            }
 
             if(ip !in hourlyVisitorsAddress) {
-                it.data()[ConstantValues.HOURLY_UNIQUE_VISITOR]
+                it.data()[ConstantValues.HOURLY_UNIQUE_VISITOR] = true
                 hourlyVisitorsAddress.add(ip)
             }
+
+            it.data()[ConstantValues.USER_UID] = UUID.randomUUID().toString()
 
             it.next()
         }
 
-        val runSiteAPI = config.disable["siteAPI"] != true
+        val runSiteAPI = isEnabled("siteAPI")
 
         if (runSiteAPI) {
             mainRouter.route().handler {
                 requests.incrementAndGet()
                 hourlyRequests.incrementAndGet()
 
-                if(it[ConstantValues.HOURLY_UNIQUE_VISITOR, false, Boolean::class]) {
+                if(it[ConstantValues.HOURLY_UNIQUE_VISITOR, false]) {
                     uniqueVisitors.incrementAndGet()
                     log("Unique visitor")
                 }
-                if(it[ConstantValues.HOURLY_UNIQUE_VISITOR, false, Boolean::class]) {
+                if(it[ConstantValues.HOURLY_UNIQUE_VISITOR, false]) {
                     hourlyUniqueVisitors.incrementAndGet()
                     log("Unique hourly visitor")
                 }
@@ -164,17 +166,17 @@ object EternalJukebox {
 
         val apiRouter = Router.router(vertx)
 
-        if (config.disable["analysisAPI"] != true) {
+        if (isEnabled("analysisAPI")) {
             apis.add(AnalysisAPI)
             spotify = SpotifyAnalyser
         }
         else
             spotify = EmptyDataAPI
 
-        if (config.disable["siteAPI"] != true)
+        if (isEnabled("siteAPI"))
             apis.add(SiteAPI)
 
-        if (config.disable["audioAPI"] != true) {
+        if (isEnabled("audioAPI")) {
             apis.add(AudioAPI)
 
             when (config.audioSourceType.toUpperCase()) {
@@ -192,16 +194,18 @@ object EternalJukebox {
         }
         mainRouter.mountSubRouter("/api", apiRouter)
 
-        if (config.disable["openGraph"] != true)
+        if (isEnabled("openGraph"))
             OpenGraphHandler.setup(mainRouter)
-        if (config.disable["staticResources"] != true)
+        if (isEnabled("staticResources"))
             StaticResources.setup(mainRouter)
 
         webserver.requestHandler(mainRouter::accept)
 
-        if(config.disable["siteAPI"] != true)
+        if(isEnabled("siteAPI"))
             timer.scheduleAtFixedRate(0, 1000 * 60 * 60) { hourlyRequests.set(0); hourlyUniqueVisitors.set(0); hourlyVisitorsAddress.clear() }
         else
             timer.scheduleAtFixedRate(0, 1000 * 60 * 60) { hourlyVisitorsAddress.clear() }
     }
+
+    fun isEnabled(function: String): Boolean = config.disable[function] != true
 }
