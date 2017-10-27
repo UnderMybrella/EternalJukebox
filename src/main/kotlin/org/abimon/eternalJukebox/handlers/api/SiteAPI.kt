@@ -5,6 +5,7 @@ import com.sun.management.OperatingSystemMXBean
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import org.abimon.eternalJukebox.EternalJukebox
+import org.abimon.eternalJukebox.clientInfo
 import org.abimon.eternalJukebox.log
 import org.abimon.eternalJukebox.objects.EnumStorageType
 import org.abimon.eternalJukebox.useThenDelete
@@ -66,7 +67,7 @@ object SiteAPI: IAPI {
                 "Unique Visitors this hour" to "${EternalJukebox.hourlyUniqueVisitors.get()}"
         )
 
-        context.response().end(FlipTable.of(arrayOf("Key", "Value"), rows.map { (one, two) -> arrayOf(one, two) }.toTypedArray()))
+        context.response().putHeader("X-Client-UID", context.clientInfo.userUID).end(FlipTable.of(arrayOf("Key", "Value"), rows.map { (one, two) -> arrayOf(one, two) }.toTypedArray()))
     }
 
     fun graphMemory(context: RoutingContext) {
@@ -104,27 +105,27 @@ object SiteAPI: IAPI {
 
     init {
         if(currentMemory.exists())
-            currentMemory.useThenDelete { EternalJukebox.storage.store("Memory-Usage-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it)) }
+            currentMemory.useThenDelete { EternalJukebox.storage.store("Memory-Usage-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it), null) }
         memoryUsageOut = PrintStream(currentMemory)
 
         if(currentCPU.exists())
-            currentCPU.useThenDelete { EternalJukebox.storage.store("CPU-Usage-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it)) }
+            currentCPU.useThenDelete { EternalJukebox.storage.store("CPU-Usage-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it), null) }
         cpuUsageOut = PrintStream(currentCPU)
 
         if(globalRequests.exists())
-            globalRequests.useThenDelete { EternalJukebox.storage.store("Global-Request-Count-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it)) }
+            globalRequests.useThenDelete { EternalJukebox.storage.store("Global-Request-Count-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it), null) }
         globalRequestsOut = PrintStream(globalRequests)
 
         if(hourlyRequests.exists())
-            hourlyRequests.useThenDelete { EternalJukebox.storage.store("Hourly-Request-Count-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it)) }
+            hourlyRequests.useThenDelete { EternalJukebox.storage.store("Hourly-Request-Count-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it), null) }
         hourlyRequestsOut = PrintStream(hourlyRequests)
 
         if(globalUniqueVisitors.exists())
-            globalUniqueVisitors.useThenDelete { EternalJukebox.storage.store("Global-Unique-Visitor-Count-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it)) }
+            globalUniqueVisitors.useThenDelete { EternalJukebox.storage.store("Global-Unique-Visitor-Count-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it), null) }
         globalUniqueVisitorsOut = PrintStream(globalUniqueVisitors)
 
         if(hourlyUniqueVisitors.exists())
-            hourlyUniqueVisitors.useThenDelete { EternalJukebox.storage.store("Hourly-Unique-Visitor-Count-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it)) }
+            hourlyUniqueVisitors.useThenDelete { EternalJukebox.storage.store("Hourly-Unique-Visitor-Count-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it), null) }
         hourlyUniqueVisitorsOut = PrintStream(hourlyUniqueVisitors)
 
         usageTimer.scheduleAtFixedRate(0, EternalJukebox.config.usageWritePeriod) {

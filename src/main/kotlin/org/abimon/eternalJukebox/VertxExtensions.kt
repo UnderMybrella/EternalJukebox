@@ -5,6 +5,8 @@ import io.vertx.core.http.HttpServerResponse
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.RoutingContext
+import org.abimon.eternalJukebox.objects.ClientInfo
+import org.abimon.eternalJukebox.objects.ConstantValues
 import org.abimon.visi.io.DataSource
 import org.abimon.visi.io.readChunked
 import kotlin.reflect.KClass
@@ -22,5 +24,18 @@ fun HttpServerResponse.end(data: DataSource, contentType: String = "application/
 fun HttpServerResponse.redirect(url: String): Unit = putHeader("Location", url).setStatusCode(302).end()
 
 operator fun RoutingContext.set(key: String, value: Any) = put(key, value)
-operator fun <T: Any> RoutingContext.get(key: String, klass: KClass<T>): T? = get<T>(key)
-operator fun <T: Any> RoutingContext.get(key: String, default: T, klass: KClass<T>): T = get<T>(key) ?: default
+operator fun <T: Any> RoutingContext.get(key: String, @Suppress("UNUSED_PARAMETER") klass: KClass<T>): T? = get<T>(key)
+operator fun <T: Any> RoutingContext.get(key: String, default: T): T = get<T>(key) ?: default
+operator fun <T: Any> RoutingContext.get(key: String, default: T, @Suppress("UNUSED_PARAMETER") klass: KClass<T>): T = get<T>(key) ?: default
+
+val RoutingContext.clientInfo: ClientInfo
+    get() {
+        if(ConstantValues.CLIENT_INFO in data() && data()[ConstantValues.CLIENT_INFO] is ClientInfo)
+            return data()[ConstantValues.CLIENT_INFO] as ClientInfo
+
+        val info = ClientInfo(this)
+
+        data()[ConstantValues.CLIENT_INFO] = info
+
+        return info
+    }

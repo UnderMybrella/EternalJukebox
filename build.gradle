@@ -1,7 +1,7 @@
 buildscript {
-    ext.kotlin_version = '1.2-M2'
-    ext.vertx_version = '3.4.1'
-    ext.jackson_version = '2.8.8'
+    ext.kotlin_version = '1.2.0-beta-88'
+    ext.vertx_version = '3.5.0'
+    ext.jackson_version = '2.9.2'
 
     repositories {
         mavenCentral()
@@ -42,7 +42,7 @@ dependencies {
     compile "io.vertx:vertx-web:$vertx_version"
     compile "io.vertx:vertx-auth-oauth2:$vertx_version"
 
-    compile "mysql:mysql-connector-java:8.0.7-dmr"
+    compile "mysql:mysql-connector-java:5.1.38"
     compile "com.zaxxer:HikariCP:2.6.2"
 
     compile 'org.jsoup:jsoup:1.10.2'
@@ -58,7 +58,7 @@ dependencies {
     compile "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
     compile "com.fasterxml.jackson.module:jackson-module-parameter-names:$jackson_version"
 
-    compile 'org.abimon:Visi:23'
+    compile 'org.abimon:Visi:27'
     compile 'org.abimon:UnitsKeptSimple:1'
     compile "com.jakewharton.fliptables:fliptables:1.0.2"
 
