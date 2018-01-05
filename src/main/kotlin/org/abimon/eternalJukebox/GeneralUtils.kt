@@ -3,6 +3,7 @@ package org.abimon.eternalJukebox
 import io.vertx.core.json.JsonObject
 import org.abimon.visi.collections.copyFrom
 import java.io.File
+import java.io.Reader
 import java.util.*
 
 fun log(msg: String, error: Boolean = false) {
@@ -76,3 +77,7 @@ fun <T> File.useThenDelete(action: (File) -> T): T? {
         delete()
     }
 }
+
+fun Reader.useAndFilterLine(predicate: (String) -> Boolean): String? = this.use { reader -> reader.readLines().firstOrNull(predicate) }
+
+fun Reader.useLineByLine(op: (String) -> Unit) = this.use { reader -> reader.readLines().forEach(op) }

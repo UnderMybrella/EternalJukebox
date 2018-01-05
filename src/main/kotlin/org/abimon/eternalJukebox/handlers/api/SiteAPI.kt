@@ -19,7 +19,9 @@ import java.lang.management.ManagementFactory
 import java.text.DecimalFormat
 import java.time.LocalDateTime
 import java.util.*
-import kotlin.concurrent.scheduleAtFixedRate
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 
 
 object SiteAPI: IAPI {
@@ -32,7 +34,7 @@ object SiteAPI: IAPI {
 
     val osBean = ManagementFactory.getOperatingSystemMXBean() as OperatingSystemMXBean
 
-    val usageTimer: Timer = Timer()
+    val usageTimer: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
 
     val currentMemory = File("current-memory-usage.txt")
     val currentCPU = File("current-cpu-usage.txt")
@@ -51,7 +53,6 @@ object SiteAPI: IAPI {
     override fun setup(router: Router) {
         router.get("/healthy").handler { it.response().end("Up for ${startupTime.timeDifference()}") }
         router.get("/usage").handler(SiteAPI::usage)
-        router.get("/mem_graph").blockingHandler(SiteAPI::graphMemory)
     }
 
     fun usage(context: RoutingContext) {
@@ -59,7 +60,7 @@ object SiteAPI: IAPI {
                 "Uptime" to startupTime.timeDifference().format(),
                 "Total Memory" to ByteUnit(Runtime.getRuntime().totalMemory()).toMegabytes().format(memoryFormat),
                 "Free Memory" to ByteUnit(Runtime.getRuntime().freeMemory()).toMegabytes().format(memoryFormat),
-                 "Used Memory" to ByteUnit(Runtime.getRuntime().usedMemory()).toMegabytes().format(memoryFormat),
+                "Used Memory" to ByteUnit(Runtime.getRuntime().usedMemory()).toMegabytes().format(memoryFormat),
                 "CPU Load (Process)" to "${cpuFormat.format(osBean.processCpuLoad)}%",
                 "CPU Load (System)" to "${cpuFormat.format(osBean.systemCpuLoad)}%",
                 "Requests this session" to "${EternalJukebox.requests.get()}",
@@ -68,39 +69,6 @@ object SiteAPI: IAPI {
         )
 
         context.response().putHeader("X-Client-UID", context.clientInfo.userUID).end(FlipTable.of(arrayOf("Key", "Value"), rows.map { (one, two) -> arrayOf(one, two) }.toTypedArray()))
-    }
-
-    fun graphMemory(context: RoutingContext) {
-//        val graphMx = mxGraph()
-//        val parent = graphMx.defaultParent
-//        graphMx.model.beginUpdate()
-//
-//        var prev: Any? = null
-//        var first: Long? = null
-//
-//        currentMemory.forEachLine { line ->
-//            val (time, used) = line.split('|')
-//            if(first == null)
-//                first = time.toLong()
-//
-//            val offset = (time.toLong() - first!!) / 50
-//
-//            val curr = graphMx.insertVertex(parent, null, null, offset.toDouble(), used.toDouble(), 10.0, 10.0)
-//            if(prev != null)
-//                graphMx.insertEdge(parent, null, null, prev, curr)
-//            prev = curr
-//        }
-//
-//        graphMx.model.endUpdate()
-//
-//        val image = mxCellRenderer.createBufferedImage(graphMx, null, 1.0, Color.WHITE, true, null)
-//
-//        val baos = ByteArrayOutputStream()
-//        ImageIO.write(image, "PNG", baos)
-//
-//        context.response().end(ByteArrayDataSource(baos.toByteArray()), "image/png")
-
-        context.response().setStatusCode(501).end("Not Implemented Yet™")
     }
 
     init {
@@ -140,4 +108,6 @@ object SiteAPI: IAPI {
 
         log("Initialised Site API")
     }
+
+    fun ScheduledExecutorService.scheduleAtFixedRate(initialDelay: Long, every: Long, unit: TimeUnit = TimeUnit.MILLISECONDS, op: () -> Unit) = this.scheduleAtFixedRate(op, initialDelay, every, unit)
 }

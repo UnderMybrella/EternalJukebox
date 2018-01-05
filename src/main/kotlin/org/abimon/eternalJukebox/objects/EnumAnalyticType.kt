@@ -1,0 +1,16 @@
+package org.abimon.eternalJukebox.objects
+
+enum class EnumAnalyticType {
+    UPTIME,
+    TOTAL_MEMORY,
+    FREE_MEMORY,
+    USED_MEMORY,
+    PROCESS_CPU_LOAD,
+    SYSTEM_CPU_LOAD,
+    SESSION_REQUESTS,
+    HOURLY_REQUESTS,
+    UNIQUE_SESSION_VISITORS,
+    UNIQUE_HOURLY_VISITORS,
+    NEW_ANALYSIS_REQUESTS,
+    NEW_AUDIO_REQUESTS
+}
