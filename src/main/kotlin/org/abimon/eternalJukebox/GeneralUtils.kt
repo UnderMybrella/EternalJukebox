@@ -5,6 +5,10 @@ import org.abimon.visi.collections.copyFrom
 import java.io.File
 import java.io.Reader
 import java.util.*
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
+import kotlin.reflect.KClass
+import kotlin.reflect.jvm.jvmName
 
 fun log(msg: String, error: Boolean = false) {
     val there = Thread.currentThread().stackTrace.copyFrom(1).firstOrNull { it.className != "org.abimon.eternalJukebox.GeneralUtilsKt" && !it.className.contains('$') } ?: run {
@@ -81,3 +85,8 @@ fun <T> File.useThenDelete(action: (File) -> T): T? {
 fun Reader.useAndFilterLine(predicate: (String) -> Boolean): String? = this.use { reader -> reader.readLines().firstOrNull(predicate) }
 
 fun Reader.useLineByLine(op: (String) -> Unit) = this.use { reader -> reader.readLines().forEach(op) }
+
+val KClass<*>.simpleClassName: String
+    get() = simpleName ?: jvmName.substringAfterLast('.')
+
+fun ScheduledExecutorService.scheduleAtFixedRate(initialDelay: Long, every: Long, unit: TimeUnit = TimeUnit.MILLISECONDS, op: () -> Unit) = this.scheduleAtFixedRate(op, initialDelay, every, unit)

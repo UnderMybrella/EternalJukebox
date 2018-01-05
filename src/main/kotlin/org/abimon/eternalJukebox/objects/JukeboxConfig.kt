@@ -12,11 +12,16 @@ data class JukeboxConfig(
 
         val disable: Map<String, Boolean> = emptyMap(),
 
-        val storageType: String = "LOCAL",
+        val storageType: EnumStorageSystem = EnumStorageSystem.LOCAL,
         val storageOptions: Map<String, Any?> = emptyMap(),
 
-        val audioSourceType: String = "YOUTUBE",
+        val audioSourceType: EnumAudioSystem = EnumAudioSystem.YOUTUBE,
         val audioSourceOptions: Map<String, Any?> = emptyMap(),
+
+        val analyticsStorageType: EnumAnalyticsStorage = EnumAnalyticsStorage.LOCAL,
+        val analyticsStorageOptions: Map<String, Any?> = emptyMap(),
+
+        val analyticsProviders: Map<EnumAnalyticsProvider, Map<String, Any?>> = emptyMap(),
 
         val usageWritePeriod: Long = 1000 * 60
 )

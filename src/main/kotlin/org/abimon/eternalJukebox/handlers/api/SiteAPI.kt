@@ -7,22 +7,16 @@ import io.vertx.ext.web.RoutingContext
 import org.abimon.eternalJukebox.EternalJukebox
 import org.abimon.eternalJukebox.clientInfo
 import org.abimon.eternalJukebox.log
-import org.abimon.eternalJukebox.objects.EnumStorageType
-import org.abimon.eternalJukebox.useThenDelete
+import org.abimon.eternalJukebox.objects.EnumAnalyticType
+import org.abimon.eternalJukebox.scheduleAtFixedRate
 import org.abimon.units.data.ByteUnit
-import org.abimon.visi.io.FileDataSource
 import org.abimon.visi.lang.usedMemory
 import org.abimon.visi.time.timeDifference
-import java.io.File
-import java.io.PrintStream
 import java.lang.management.ManagementFactory
 import java.text.DecimalFormat
 import java.time.LocalDateTime
-import java.util.*
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.TimeUnit
-
 
 object SiteAPI: IAPI {
     override val mountPath: String = "/site"
@@ -35,20 +29,6 @@ object SiteAPI: IAPI {
     val osBean = ManagementFactory.getOperatingSystemMXBean() as OperatingSystemMXBean
 
     val usageTimer: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
-
-    val currentMemory = File("current-memory-usage.txt")
-    val currentCPU = File("current-cpu-usage.txt")
-    val globalRequests = File("global-request-count.txt")
-    val hourlyRequests = File("hourly-request-count.txt")
-    val globalUniqueVisitors = File("global-unique-visitor-count.txt")
-    val hourlyUniqueVisitors = File("hourly-unique-visitor-count.txt")
-
-    val memoryUsageOut: PrintStream
-    val cpuUsageOut: PrintStream
-    val globalRequestsOut: PrintStream
-    val hourlyRequestsOut: PrintStream
-    val globalUniqueVisitorsOut: PrintStream
-    val hourlyUniqueVisitorsOut: PrintStream
 
     override fun setup(router: Router) {
         router.get("/healthy").handler { it.response().end("Up for ${startupTime.timeDifference()}") }
@@ -72,42 +52,20 @@ object SiteAPI: IAPI {
     }
 
     init {
-        if(currentMemory.exists())
-            currentMemory.useThenDelete { EternalJukebox.storage.store("Memory-Usage-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it), null) }
-        memoryUsageOut = PrintStream(currentMemory)
+        usageTimer.scheduleAtFixedRate(EternalJukebox.config.usageWritePeriod, EternalJukebox.config.usageWritePeriod) {
+            val time = System.currentTimeMillis()
 
-        if(currentCPU.exists())
-            currentCPU.useThenDelete { EternalJukebox.storage.store("CPU-Usage-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it), null) }
-        cpuUsageOut = PrintStream(currentCPU)
-
-        if(globalRequests.exists())
-            globalRequests.useThenDelete { EternalJukebox.storage.store("Global-Request-Count-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it), null) }
-        globalRequestsOut = PrintStream(globalRequests)
-
-        if(hourlyRequests.exists())
-            hourlyRequests.useThenDelete { EternalJukebox.storage.store("Hourly-Request-Count-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it), null) }
-        hourlyRequestsOut = PrintStream(hourlyRequests)
-
-        if(globalUniqueVisitors.exists())
-            globalUniqueVisitors.useThenDelete { EternalJukebox.storage.store("Global-Unique-Visitor-Count-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it), null) }
-        globalUniqueVisitorsOut = PrintStream(globalUniqueVisitors)
-
-        if(hourlyUniqueVisitors.exists())
-            hourlyUniqueVisitors.useThenDelete { EternalJukebox.storage.store("Hourly-Unique-Visitor-Count-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(it), null) }
-        hourlyUniqueVisitorsOut = PrintStream(hourlyUniqueVisitors)
-
-        usageTimer.scheduleAtFixedRate(0, EternalJukebox.config.usageWritePeriod) {
-            val current = System.currentTimeMillis()
-            memoryUsageOut.println("$current|${memoryFormat.format(ByteUnit(Runtime.getRuntime().usedMemory()).toMegabytes().megabytes)}")
-            cpuUsageOut.println("$current|${cpuFormat.format(osBean.processCpuLoad)}")
-            globalRequestsOut.println("$current|${EternalJukebox.requests.get()}")
-            hourlyRequestsOut.println("$current|${EternalJukebox.hourlyRequests.get()}")
-            globalUniqueVisitorsOut.println("$current|${EternalJukebox.uniqueVisitors.get()}")
-            hourlyUniqueVisitorsOut.println("$current|${EternalJukebox.hourlyUniqueVisitors.get()}")
+            try {
+                EternalJukebox.analyticsProviders.forEach { provider ->
+                    provider.provideMultiple(time, *EnumAnalyticType.VALUES.filter { type -> provider.shouldProvide(type) }.toTypedArray()).forEach { type, data ->
+                        EternalJukebox.analytics.storeGeneric(time, data, type)
+                    }
+                }
+            } catch (th: Throwable) {
+                th.printStackTrace()
+            }
         }
 
         log("Initialised Site API")
     }
-
-    fun ScheduledExecutorService.scheduleAtFixedRate(initialDelay: Long, every: Long, unit: TimeUnit = TimeUnit.MILLISECONDS, op: () -> Unit) = this.scheduleAtFixedRate(op, initialDelay, every, unit)
 }

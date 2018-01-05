@@ -6,7 +6,6 @@ import org.abimon.eternalJukebox.objects.ClientInfo
 import org.abimon.eternalJukebox.objects.EnumStorageType
 import org.abimon.visi.io.DataSource
 import org.abimon.visi.io.FileDataSource
-import org.abimon.visi.io.writeTo
 import java.io.File
 import java.io.FileOutputStream
 
@@ -16,7 +15,7 @@ object LocalStorage : IStorage {
     override fun shouldStore(type: EnumStorageType): Boolean = true
 
     override fun store(name: String, type: EnumStorageType, data: DataSource, clientInfo: ClientInfo?): Boolean {
-        FileOutputStream(File(storageLocations[type]!!, name)).use { fos -> data.use { inputStream -> inputStream.writeTo(fos) } }
+        FileOutputStream(File(storageLocations[type]!!, name)).use { fos -> data.use { inputStream -> inputStream.copyTo(fos) } }
         return true
     }
 

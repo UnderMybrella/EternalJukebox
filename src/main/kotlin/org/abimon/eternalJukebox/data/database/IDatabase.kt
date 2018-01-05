@@ -7,8 +7,8 @@ import org.abimon.eternalJukebox.objects.JukeboxInfo
 interface IDatabase {
     fun provideAudioTrackOverride(id: String, clientInfo: ClientInfo?): String?
     fun storeAudioTrackOverride(id: String, newURL: String, clientInfo: ClientInfo?)
-    fun provideAccountForID(accountID: String, clientInfo: ClientInfo?): JukeboxAccount
-    fun provideAccountForGoogleID(googleID: String, clientInfo: ClientInfo?): JukeboxAccount
+    fun provideAccountForID(accountID: String, clientInfo: ClientInfo?): JukeboxAccount?
+    fun provideAccountForGoogleID(googleID: String, clientInfo: ClientInfo?): JukeboxAccount?
     fun storeAccount(clientInfo: ClientInfo?, account: JukeboxAccount)
     fun providePopularSongs(service: String, count: Int, clientInfo: ClientInfo?): List<JukeboxInfo>
     fun makeSongPopular(service: String, id: String, clientInfo: ClientInfo?)

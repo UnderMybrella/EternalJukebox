@@ -17,10 +17,10 @@ import io.vertx.ext.web.Router
 import io.vertx.ext.web.handler.CookieHandler
 import org.abimon.eternalJukebox.data.analysis.IAnalyser
 import org.abimon.eternalJukebox.data.analysis.SpotifyAnalyser
+import org.abimon.eternalJukebox.data.analytics.IAnalyticsProvider
+import org.abimon.eternalJukebox.data.analytics.IAnalyticsStorage
 import org.abimon.eternalJukebox.data.audio.IAudioSource
-import org.abimon.eternalJukebox.data.audio.YoutubeAudioSource
 import org.abimon.eternalJukebox.data.storage.IStorage
-import org.abimon.eternalJukebox.data.storage.LocalStorage
 import org.abimon.eternalJukebox.handlers.OpenGraphHandler
 import org.abimon.eternalJukebox.handlers.StaticResources
 import org.abimon.eternalJukebox.handlers.api.AnalysisAPI
@@ -35,9 +35,10 @@ import java.security.SecureRandom
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentSkipListSet
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.collections.ArrayList
-import kotlin.concurrent.scheduleAtFixedRate
 
 object EternalJukebox {
     val jsonMapper: ObjectMapper = ObjectMapper()
@@ -66,6 +67,9 @@ object EternalJukebox {
 
     val spotify: IAnalyser
 
+    val analytics: IAnalyticsStorage
+    val analyticsProviders: List<IAnalyticsProvider>
+
     val requests: AtomicInteger = AtomicInteger(0)
     val hourlyRequests: AtomicInteger = AtomicInteger(0)
 
@@ -84,7 +88,7 @@ object EternalJukebox {
                 .withIssuedAt(Date.from(Instant.now()))
                 .sign(visitorAlgorithm)
 
-    val timer: Timer = Timer()
+    val schedule: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     val apis = ArrayList<IAPI>()
 
     val hourlyVisitorsAddress: ConcurrentSkipListSet<String> = ConcurrentSkipListSet()
@@ -114,10 +118,7 @@ object EternalJukebox {
         visitorAlgorithm = Algorithm.HMAC512(ByteArray(config.visitorSecretSize).apply { secureRandom.nextBytes(this) })
         visitorVerifier = JWT.require(visitorAlgorithm).build()
 
-        when (config.storageType.toUpperCase()) {
-            "LOCAL" -> storage = LocalStorage
-            else -> storage = LocalStorage
-        }
+        storage = config.storageType.storage
 
         vertx = Vertx.vertx()
         webserver = vertx.createHttpServer()
@@ -173,16 +174,20 @@ object EternalJukebox {
         else
             spotify = EmptyDataAPI
 
-        if (isEnabled("siteAPI"))
+        if (runSiteAPI) {
             apis.add(SiteAPI)
+
+            analytics = config.analyticsStorageType.analytics
+            analyticsProviders = config.analyticsProviders.map { (type) -> type.provider }
+        } else {
+            analytics = EmptyDataAPI
+            analyticsProviders = emptyList()
+        }
 
         if (isEnabled("audioAPI")) {
             apis.add(AudioAPI)
 
-            when (config.audioSourceType.toUpperCase()) {
-                "YOUTUBE" -> audio = YoutubeAudioSource
-                else -> audio = YoutubeAudioSource
-            }
+            audio = config.audioSourceType.audio.objectInstance!!
         } else {
             audio = EmptyDataAPI
         }
@@ -201,10 +206,10 @@ object EternalJukebox {
 
         webserver.requestHandler(mainRouter::accept)
 
-        if(isEnabled("siteAPI"))
-            timer.scheduleAtFixedRate(0, 1000 * 60 * 60) { hourlyRequests.set(0); hourlyUniqueVisitors.set(0); hourlyVisitorsAddress.clear() }
+        if(runSiteAPI)
+            schedule.scheduleAtFixedRate(0, 1000 * 60 * 60) { hourlyRequests.set(0); hourlyUniqueVisitors.set(0); hourlyVisitorsAddress.clear() }
         else
-            timer.scheduleAtFixedRate(0, 1000 * 60 * 60) { hourlyVisitorsAddress.clear() }
+            schedule.scheduleAtFixedRate(0, 1000 * 60 * 60) { hourlyVisitorsAddress.clear() }
     }
 
     fun isEnabled(function: String): Boolean = config.disable[function] != true
