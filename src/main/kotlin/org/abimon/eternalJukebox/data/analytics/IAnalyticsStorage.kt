@@ -15,5 +15,8 @@ interface IAnalyticsStorage {
     fun <T: Any> store(now: Long, data: T, type: EnumAnalyticType<T>): Boolean
 
     @Suppress("UNCHECKED_CAST")
+    fun storeMultiple(now: Long, data: List<Pair<EnumAnalyticType<*>, Any>>) = data.forEach { (type, data) -> store(now, data, type as EnumAnalyticType<Any>) }
+
+    @Suppress("UNCHECKED_CAST")
     fun storeGeneric(now: Long, data: Any, type: EnumAnalyticType<*>): Boolean = store(now, data, type as EnumAnalyticType<Any>)
 }

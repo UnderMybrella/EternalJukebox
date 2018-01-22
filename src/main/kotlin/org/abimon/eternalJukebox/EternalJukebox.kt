@@ -12,6 +12,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
 import io.vertx.core.Vertx
+import io.vertx.core.VertxOptions
 import io.vertx.core.http.HttpServer
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.handler.CookieHandler
@@ -37,7 +38,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentSkipListSet
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.collections.ArrayList
 
 object EternalJukebox {
@@ -69,12 +69,6 @@ object EternalJukebox {
 
     val analytics: IAnalyticsStorage
     val analyticsProviders: List<IAnalyticsProvider>
-
-    val requests: AtomicInteger = AtomicInteger(0)
-    val hourlyRequests: AtomicInteger = AtomicInteger(0)
-
-    val uniqueVisitors: AtomicInteger = AtomicInteger(0)
-    val hourlyUniqueVisitors: AtomicInteger = AtomicInteger(0)
 
     val visitorAlgorithm: Algorithm
     val visitorVerifier: JWTVerifier
@@ -120,7 +114,7 @@ object EternalJukebox {
 
         storage = config.storageType.storage
 
-        vertx = Vertx.vertx()
+        vertx = Vertx.vertx(VertxOptions().setMaxWorkerExecuteTime(90000000000))
         webserver = vertx.createHttpServer()
 
         val mainRouter = Router.router(vertx)
@@ -149,17 +143,17 @@ object EternalJukebox {
 
         if (runSiteAPI) {
             mainRouter.route().handler {
-                requests.incrementAndGet()
-                hourlyRequests.incrementAndGet()
-
-                if(it[ConstantValues.HOURLY_UNIQUE_VISITOR, false]) {
-                    uniqueVisitors.incrementAndGet()
-                    log("Unique visitor")
-                }
-                if(it[ConstantValues.HOURLY_UNIQUE_VISITOR, false]) {
-                    hourlyUniqueVisitors.incrementAndGet()
-                    log("Unique hourly visitor")
-                }
+//                requests.incrementAndGet()
+//                hourlyRequests.incrementAndGet()
+//
+//                if(it[ConstantValues.HOURLY_UNIQUE_VISITOR, false]) {
+//                    uniqueVisitors.incrementAndGet()
+//                    log("Unique visitor")
+//                }
+//                if(it[ConstantValues.HOURLY_UNIQUE_VISITOR, false]) {
+//                    hourlyUniqueVisitors.incrementAndGet()
+//                    log("Unique hourly visitor")
+//                }
 
                 it.next()
             }
@@ -192,6 +186,8 @@ object EternalJukebox {
             audio = EmptyDataAPI
         }
 
+        analyticsProviders.forEach { provider -> provider.setupWebAnalytics(mainRouter) }
+
         apis.forEach { api ->
             val sub = Router.router(vertx)
             api.setup(sub)
@@ -206,10 +202,10 @@ object EternalJukebox {
 
         webserver.requestHandler(mainRouter::accept)
 
-        if(runSiteAPI)
-            schedule.scheduleAtFixedRate(0, 1000 * 60 * 60) { hourlyRequests.set(0); hourlyUniqueVisitors.set(0); hourlyVisitorsAddress.clear() }
-        else
-            schedule.scheduleAtFixedRate(0, 1000 * 60 * 60) { hourlyVisitorsAddress.clear() }
+//        if(runSiteAPI)
+//            schedule.scheduleAtFixedRate(0, 1000 * 60 * 60) { hourlyRequests.set(0); hourlyUniqueVisitors.set(0); hourlyVisitorsAddress.clear() }
+//        else
+//            schedule.scheduleAtFixedRate(0, 1000 * 60 * 60) { hourlyVisitorsAddress.clear() }
     }
 
     fun isEnabled(function: String): Boolean = config.disable[function] != true
