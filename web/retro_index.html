@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="en"><head>
+<html lang="en">
+<head>
     <meta http-equiv="content-type" content="text/html; charset=windows-1252">
     <script type="text/javascript" async="" src="files/ga.js"></script>
     <script id="twitter-wjs" src="files/widgets.js"></script>
@@ -26,10 +27,11 @@
     <script src="files/topsongs.js" type="text/javascript" charset="utf-8"></script>
     <link href="files/css.css" rel="stylesheet" type="text/css">
     <title> The Eternal Jukebox </title>
-    <script type="text/javascript" charset="utf-8" async="" src="files/button.js"></script></head>
+    <script type="text/javascript" charset="utf-8" async="" src="files/button.js"></script>
+</head>
 
 <body>
-<div id="title"> <a href="retro_index.html"><b>The <strike>Infinite</strike> Eternal Jukebox</b></a> </div>
+<div id="title"><a href="retro_index.html"><b>The <strike>Infinite</strike> Eternal Jukebox</b></a></div>
 <img alt="logo" src="files/jukebox.png" class="rotate" id="open-img-left">
 <img alt="logo" src="files/jukebox.png" class="rotate" id="open-img-right">
 <div id="main">
@@ -39,10 +41,11 @@
     </div>
 
     <div id="info"></div>
-    <div id="error" style="display: none;"> </div>
+    <div id="error" style="display: none;"></div>
     <div id="song-div">
         <div id="search-form">
-            Search for a track <input id="search-text" type="text"> <button id="search"> Search </button>
+            Search for a track <input id="search-text" type="text">
+            <button id="search"> Search</button>
         </div>
         <div id="sel-text"> Or select a
             <!--<span class="sel-list" id="recent-list">recent</span>,
@@ -50,7 +53,8 @@
             <span class="sel-list" id="upload-list">most uploaded</span>
             track:</div> -->
             <span class="sel-list" id="popular-list">popular</span>
-            track: </div>
+            track:
+        </div>
         <ul id="song-list"></ul>
     </div>
 </div>
@@ -63,13 +67,30 @@
                 <button class="cbut" id="go"> Play</button>
             </span>
         <span id="tweet-span">
-                <iframe id="twitter-widget-0" scrolling="no" allowtransparency="true" class="twitter-share-button twitter-share-button-rendered twitter-tweet-button" style="position: static; visibility: visible; width: 61px; height: 20px;" title="Twitter Tweet Button" src="files/tweet_button.html" frameborder="0"></iframe>
-                <script>!function(d,s,id){var
-                    js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="https://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+                <iframe id="twitter-widget-0" scrolling="no" allowtransparency="true"
+                        class="twitter-share-button twitter-share-button-rendered twitter-tweet-button"
+                        style="position: static; visibility: visible; width: 61px; height: 20px;"
+                        title="Twitter Tweet Button" src="files/tweet_button.html" frameborder="0"></iframe>
+                <script>!function (d, s, id) {
+                    var
+                        js, fjs = d.getElementsByTagName(s)[0];
+                    if (!d.getElementById(id)) {
+                        js = d.createElement(s);
+                        js.id = id;
+                        js.src = "https://platform.twitter.com/widgets.js";
+                        fjs.parentNode.insertBefore(js, fjs);
+                    }
+                }(document, "script", "twitter-wjs");</script>
             </span>
     </div>
 
-    <div id="tiles"><svg height="680" version="1.1" width="900" xmlns="http://www.w3.org/2000/svg" style="overflow: hidden; position: relative; left: -0.5px;"><desc>Created with Raphaël 2.1.0</desc><defs></defs></svg></div>
+    <div id="tiles">
+        <svg height="680" version="1.1" width="900" xmlns="http://www.w3.org/2000/svg"
+             style="overflow: hidden; position: relative; left: -0.5px;">
+            <desc>Created with Raphaël 2.1.0</desc>
+            <defs></defs>
+        </svg>
+    </div>
 
     <div id="stats">
         <span id="sbeats"> Total Beats: <span id="beats"> 0 </span></span>
@@ -78,13 +99,14 @@
     </div>
 </div>
 <div id="footer">
-	<ul id="footer-list">
-    	<li>Now powered by <a href="http://http://spotify.com/">Spotify </a></li>
-    	<li>Built at  <a href="http://boston.musichackday.org/">Music Hack Day @ MIT</a> by <a href="http://twitter.com/plamere"> Paul Lamere </a></li> 
-    	<li>Now hosted by <a href="https://github.com/UnderMybrella/EternalJukebox"> UnderMybrella </a></li>
-    	<li>Read the <a href="retro_faq.html"> FAQ </a></li>
-    	<li>More info at <a href="http://musicmachinery.com/2012/11/12/the-infinite-jukebox/">Music Machinery</a></li>
-    	<li>Check out the <a href="http://www.reddit.com/r/infinitejukebox/"> Infinite Jukebox Reddit </a></li>
+    <ul id="footer-list">
+        <li>Now powered by <a href="http://http://spotify.com/">Spotify </a></li>
+        <li>Built at <a href="http://boston.musichackday.org/">Music Hack Day @ MIT</a> by <a
+                href="http://twitter.com/plamere"> Paul Lamere </a></li>
+        <li>Now hosted by <a href="https://github.com/UnderMybrella/EternalJukebox"> UnderMybrella </a></li>
+        <li>Read the <a href="retro_faq.html"> FAQ </a></li>
+        <li>More info at <a href="http://musicmachinery.com/2012/11/12/the-infinite-jukebox/">Music Machinery</a></li>
+        <li>Check out the <a href="http://www.reddit.com/r/infinitejukebox/"> Infinite Jukebox Reddit </a></li>
     </ul>
     <!--
     Interested in a <b>mobile</b> version of the Infinite Jukebox? Let me know by taking this
@@ -102,11 +124,13 @@
     _gaq.push(['_setAccount', 'UA-3675615-27']);
     _gaq.push(['_trackPageview']);
 
-    (function() {
-        var ga = document.createElement('script'); ga.type =
-            'text/javascript'; ga.async = true;
+    (function () {
+        var ga = document.createElement('script');
+        ga.type =
+            'text/javascript';
+        ga.async = true;
         ga.src = ('https:' == document.location.protocol ? 'https://ssl' :
-                'http://www') + '.google-analytics.com/ga.js';
+            'http://www') + '.google-analytics.com/ga.js';
         var s = document.getElementsByTagName('script')[0];
         s.parentNode.insertBefore(ga, s);
     })();
@@ -129,9 +153,9 @@
     var defaultMinRandomBranchChance = .18
     var defaultMaxRandomBranchChance = .5
 
-    var defaultRandomBranchChanceDelta =.018;
-    var minRandomBranchChanceDelta =.000;
-    var maxRandomBranchChanceDelta =.200;
+    var defaultRandomBranchChanceDelta = .018;
+    var minRandomBranchChanceDelta = .000;
+    var maxRandomBranchChanceDelta = .200;
 
     var highlightColor = "#0000ff";
     var jumpHighlightColor = "#00ff22";
@@ -150,9 +174,9 @@
 
 
     var jukeboxData = {
-        infiniteMode:true,      // if true, allow branching
-        maxBranches : 4,        // max branches allowed per beat
-        maxBranchThreshold :80, // max allowed distance threshold
+        infiniteMode: true,      // if true, allow branching
+        maxBranches: 4,        // max branches allowed per beat
+        maxBranchThreshold: 80, // max allowed distance threshold
 
         computedThreshold: 0,   // computed best threshold
         currentThreshold: 0,    // current in-use max threshold
@@ -163,27 +187,27 @@
 
         deletedEdgeCount: 0,    // number of edges that have been deleted
 
-        lastBranchPoint : 0,    // last beat with a good branch
-        longestReach : 0,       // longest looping secstion
+        lastBranchPoint: 0,    // last beat with a good branch
+        longestReach: 0,       // longest looping secstion
 
-        beatsPlayed:0,          // total number of beats played
-        totalBeats : 0,         // total number of beats in the song
+        beatsPlayed: 0,          // total number of beats played
+        totalBeats: 0,         // total number of beats in the song
         branchCount: 0,         // total number of active branches
 
-        selectedTile : null,    // current selected tile
-        selectedCurve : null,   // current selected branch
+        selectedTile: null,    // current selected tile
+        selectedCurve: null,   // current selected branch
 
         tiles: [],              // all of the tiles
         allEdges: [],           // all of the edges
         deletedEdges: [],       // edges that should be deleted
-        
-        audioURL : null,		// The URL to play audio from; null means default
+
+        audioURL: null,		// The URL to play audio from; null means default
 
         minRandomBranchChance: 0,
         maxRandomBranchChance: 0,
         randomBranchChanceDelta: 0,
-        curRandomBranchChance : 0,
-        lastThreshold : 0,
+        curRandomBranchChance: 0,
+        lastThreshold: 0,
     };
 
 
@@ -191,7 +215,8 @@
 
     if (typeof Object.create !== 'function') {
         Object.create = function (o) {
-            var F = function () {};
+            var F = function () {
+            };
             F.prototype = o;
             return new F();
         };
@@ -255,10 +280,10 @@
         var n = qlist.length;
         var R = radius;
         var alpha = Math.PI * 2 / n;
-        var perimeter = 2 * n * R * Math.sin(alpha/2);
+        var perimeter = 2 * n * R * Math.sin(alpha / 2);
         var a = perimeter / n;
         var width = a * 20;
-        var angleOffset = - Math.PI / 2;
+        var angleOffset = -Math.PI / 2;
         // var angleOffset = 0;
 
         if (width > maxWidth) {
@@ -272,7 +297,7 @@
         var angle = angleOffset;
         for (var i = 0; i < qlist.length; i++) {
             var tile = createNewTile(i, qlist[i], a, width);
-            var y = y_padding + R + R  * Math.sin(angle);
+            var y = y_padding + R + R * Math.sin(angle);
             var x = x_padding + R + R * Math.cos(angle);
             tile.move(x, y);
             tile.rotate(angle);
@@ -308,7 +333,7 @@
                 addCurveClickHandler(curve);
                 highlightCurve(curve, false, false);
                 tile.q.neighbors[j].curve = curve;
-                branchCount ++;
+                branchCount++;
             }
         }
         jukeboxData.branchCount = branchCount;
@@ -317,7 +342,7 @@
 
     function addCurveClickHandler(curve) {
         curve.click(
-            function() {
+            function () {
                 if (jukeboxData.selectedCurve) {
                     highlightCurve(jukeboxData.selectedCurve, false, false);
                 }
@@ -326,13 +351,13 @@
             });
 
         curve.mouseover(
-            function() {
+            function () {
                 highlightCurve(curve, true, false);
             }
         );
 
-        curve.mouseout (
-            function() {
+        curve.mouseout(
+            function () {
                 if (curve != jukeboxData.selectedCurve) {
                     highlightCurve(curve, false, false);
                 }
@@ -369,7 +394,7 @@
     function extractTitle(url) {
         var lastSlash = url.lastIndexOf('/');
         if (lastSlash >= 0 && lastSlash < url.length - 1) {
-            var res =  url.substring(lastSlash + 1, url.length - 4);
+            var res = url.substring(lastSlash + 1, url.length - 4);
             return res;
         } else {
             return url;
@@ -424,22 +449,24 @@
 
     function gotTheAnalysis(profile) {
         info("Loading track ...");
-        remixer.remixTrack(profile, jukeboxData, function(state, t, percent) {
+        remixer.remixTrack(profile, jukeboxData, function (state, t, percent) {
             track = t;
             if (isNaN(percent)) {
                 percent = 0;
             }
             if (state == 1) {
                 info("Calculating pathways through the song ...");
-                setTimeout( function() { readyToPlay(t); }, 10);
+                setTimeout(function () {
+                    readyToPlay(t);
+                }, 10);
             } else if (state == 0) {
                 if (percent >= 99) {
                     info("Calculating pathways through the song ...");
                 } else {
                     if (percent > 0) {
-                        info( percent  + "% of track loaded ");
+                        info(percent + "% of track loaded ");
                     } else {
-                        info( "Loading the track ");
+                        info("Loading the track ");
                     }
                 }
             } else {
@@ -457,7 +484,7 @@
             var item = $('<li>').append(title);
 
             item.attr('class', 'song-link');
-            item.click(function() {
+            item.click(function () {
                 showPlotPage(r.id);
             });
         }
@@ -485,7 +512,7 @@
     }
 
     function listPopularTracks() {
-        $.getJSON('/api/popular/jukebox', { count : 12}, function(data) {
+        $.getJSON('/api/popular/jukebox', {count: 12}, function (data) {
             listTracks('#popular-list', data);
             ga_track('list', 'popular-tracks', '');
         });
@@ -493,12 +520,14 @@
 
     function analyzeAudio(audio, tag, callback) {
         var url = 'qanalyze'
-        $.getJSON(url, { url:audio, tag:tag}, function(data) {
+        $.getJSON(url, {url: audio, tag: tag}, function (data) {
             if (data.status === 'done' || data.status === 'error') {
                 callback(data);
             } else {
                 info(data.status + ' - ready in about ' + data.estimated_wait + ' secs. ');
-                setTimeout(function() { analyzeAudio(audio, tag, callback); }, 5000);
+                setTimeout(function () {
+                    analyzeAudio(audio, tag, callback);
+                }, 5000);
             }
         });
     }
@@ -507,14 +536,16 @@
     // the labs server
 
     function noCache() {
-        return { "noCache" : now() }
+        return {"noCache": now()}
     }
 
     function fetchAnalysis(id) {
         var url = '/api/analysis/analyse/' + id;
         info('Fetching the analysis');
-        $.getJSON(url, function(data) { gotTheAnalysis(data); } )
-            .error( function() {
+        $.getJSON(url, function (data) {
+            gotTheAnalysis(data);
+        })
+            .error(function () {
                 info("Sorry, can't find info for that track");
             });
     }
@@ -530,7 +561,7 @@
 
     function fetchSignature() {
         var url = 'policy'
-        $.getJSON(url, {}, function(data) {
+        $.getJSON(url, {}, function (data) {
             policy = data.policy;
             signature = data.signature;
             $('#f-policy').val(data.policy);
@@ -567,7 +598,7 @@
 
     function dynamicCalculateNearestNeighbors(type) {
         var count = 0;
-        var targetBranchCount =  track.analysis[type].length / 6;
+        var targetBranchCount = track.analysis[type].length / 6;
 
         precalculateNearestNeighbors(type, jukeboxData.maxBranches, jukeboxData.maxBranchThreshold);
 
@@ -679,7 +710,7 @@
             var lb = '';
 
             if (!jukeboxData.addLastEdge) {
-                lb='&lb=0';
+                lb = '&lb=0';
             }
 
             var p = '?id=' + track.info.id + edges + lb;
@@ -697,11 +728,11 @@
             }
 
             if (jukeboxData.currentThreshold != jukeboxData.computedThreshold) {
-                p +=  '&thresh=' + jukeboxData.currentThreshold;
+                p += '&thresh=' + jukeboxData.currentThreshold;
             }
-            
+
             if (jukeboxData.audioURL != null) {
-            	p += "&audio=" + encodeURIComponent(jukeboxData.audioURL);  
+                p += "&audio=" + encodeURIComponent(jukeboxData.audioURL);
             }
 
             if (jukeboxData.minRandomBranchChance != defaultMinRandomBranchChance) {
@@ -717,10 +748,10 @@
 
             if (addBranchParams) {
                 p += '&bp=' + [
-                        Math.round(map_value_to_percent(jukeboxData.minRandomBranchChance, 0,1)),
-                        Math.round(map_value_to_percent(jukeboxData.maxRandomBranchChance, 0, 1)),
-                        Math.round(map_value_to_percent(jukeboxData.randomBranchChanceDelta,
-                            minRandomBranchChanceDelta, maxRandomBranchChanceDelta))].join(',')
+                    Math.round(map_value_to_percent(jukeboxData.minRandomBranchChance, 0, 1)),
+                    Math.round(map_value_to_percent(jukeboxData.maxRandomBranchChance, 0, 1)),
+                    Math.round(map_value_to_percent(jukeboxData.randomBranchChanceDelta,
+                        minRandomBranchChanceDelta, maxRandomBranchChanceDelta))].join(',')
             }
             history.replaceState({}, document.title, p);
             tweetSetup(track);
@@ -752,7 +783,7 @@
                 }
             }
         }
-        var lbb =  longest * 100 / quanta.length;
+        var lbb = longest * 100 / quanta.length;
         return lbb;
     }
 
@@ -772,7 +803,7 @@
                 var which = neighbor.dest.which;
                 var thresh = neighbor.distance;
                 var delta = i - which;
-                if (delta > 0  &&  thresh < maxThreshold) {
+                if (delta > 0 && thresh < maxThreshold) {
                     var percent = delta * 100 / quanta.length;
                     var edge = [percent, i, which, q, neighbor]
                     branches.push(edge);
@@ -785,7 +816,7 @@
         }
 
         branches.sort(
-            function(a,b) {
+            function (a, b) {
                 return a[0] - b[0];
             }
         )
@@ -807,14 +838,14 @@
         var iter = 0;
         var quanta = track.analysis[type];
 
-        for (var qi = 0; qi < quanta.length; qi++)  {
+        for (var qi = 0; qi < quanta.length; qi++) {
             var q = quanta[qi];
             q.reach = quanta.length - q.which;
         }
 
         for (iter = 0; iter < maxIter; iter++) {
             var changeCount = 0;
-            for (qi = 0; qi < quanta.length; qi++)  {
+            for (qi = 0; qi < quanta.length; qi++) {
                 var q = quanta[qi];
                 var changed = false;
 
@@ -826,8 +857,8 @@
                     }
                 }
 
-                if (qi < quanta.length -1) {
-                    var q2 = quanta[qi +1];
+                if (qi < quanta.length - 1) {
+                    var q2 = quanta[qi + 1];
                     if (q2.reach > q.reach) {
                         q.reach = q2.reach;
                         changed = true;
@@ -850,7 +881,7 @@
         }
 
         if (false) {
-            for (var qi = 0; qi < quanta.length; qi++)  {
+            for (var qi = 0; qi < quanta.length; qi++) {
                 var q = quanta[qi];
                 console.log(q.which, q.reach, Math.round(q.reach * 100 / quanta.length));
             }
@@ -879,7 +910,7 @@
         var quanta = track.analysis[type];
         var longest = 0;
         var longestReach = 0;
-        for (var i = quanta.length -1; i >=0; i--) {
+        for (var i = quanta.length - 1; i >= 0; i--) {
             var q = quanta[i];
             //var reach = q.reach * 100 / quanta.length;
             var distanceToEnd = quanta.length - i;
@@ -887,7 +918,7 @@
             // if q is the last quanta, then we can never go past it
             // which limits our reach
 
-            var reach = (q.reach  - distanceToEnd) * 100 / quanta.length;
+            var reach = (q.reach - distanceToEnd) * 100 / quanta.length;
 
             if (reach > longestReach && q.neighbors.length > 0) {
                 longestReach = reach;
@@ -922,7 +953,7 @@
     }
 
     function hasSequentialBranch(q, neighbor) {
-        if (q.which ===  jukeboxData.lastBranchPoint) {
+        if (q.which === jukeboxData.lastBranchPoint) {
             return false;
         }
 
@@ -988,20 +1019,20 @@
             var totalDistance = sum / q1.overlappingSegments.length + pdistance;
             if (totalDistance < maxThreshold) {
                 var edge = {
-                    id : id,
-                    src : q1,
-                    dest : q2,
-                    distance : totalDistance,
-                    curve : null,
+                    id: id,
+                    src: q1,
+                    dest: q2,
+                    distance: totalDistance,
+                    curve: null,
                     deleted: false
                 };
-                edges.push( edge );
+                edges.push(edge);
                 id++;
             }
         }
 
         edges.sort(
-            function(a,b) {
+            function (a, b) {
                 if (a.distance > b.distance) {
                     return 1;
                 } else if (b.distance > a.distance) {
@@ -1029,7 +1060,7 @@
             return;
         }
         jukeboxData.allEdges = [];
-        for (var qi = 0; qi < track.analysis[type].length; qi++)  {
+        for (var qi = 0; qi < track.analysis[type].length; qi++) {
             var q1 = track.analysis[type][qi];
             calculateNearestNeighborsForQuantum(type, maxNeighbors, maxThreshold, q1);
         }
@@ -1037,9 +1068,9 @@
 
     function collectNearestNeighbors(type, maxThreshold) {
         var branchingCount = 0;
-        for (var qi = 0; qi < track.analysis[type].length; qi++)  {
+        for (var qi = 0; qi < track.analysis[type].length; qi++) {
             var q1 = track.analysis[type][qi];
-            q1.neighbors = extractNearestNeighbors(q1,maxThreshold);
+            q1.neighbors = extractNearestNeighbors(q1, maxThreshold);
             if (q1.neighbors.length > 0) {
                 branchingCount += 1;
             }
@@ -1085,16 +1116,16 @@
     function calcBranchInfo(type) {
         var histogram = {}
         var total = 0;
-        for (var qi = 0; qi < track.analysis[type].length; qi++)  {
+        for (var qi = 0; qi < track.analysis[type].length; qi++) {
             var q = track.analysis[type][qi];
             for (var i = 0; i < q.neighbors.length; i++) {
                 var neighbor = q.neighbors[i];
                 var distance = neighbor.distance;
                 var bucket = Math.round(distance / 10);
-                if (! (bucket in histogram)) {
+                if (!(bucket in histogram)) {
                     histogram[bucket] = 0;
                 }
-                histogram[bucket] +=1;
+                histogram[bucket] += 1;
                 total += 1;
             }
         }
@@ -1127,8 +1158,8 @@
     }
 
     function redrawTiles() {
-        _.each(jukeboxData.tiles, function(tile) {
-            var newWidth = Math.round( (minTileWidth + tile.playCount * growthPerPlay) * curGrowFactor);
+        _.each(jukeboxData.tiles, function (tile) {
+            var newWidth = Math.round((minTileWidth + tile.playCount * growthPerPlay) * curGrowFactor);
             if (newWidth < 1) {
                 newWidth = 1;
             }
@@ -1137,21 +1168,21 @@
     }
 
     var tilePrototype = {
-        normalColor:"#5f9",
+        normalColor: "#5f9",
 
-        move: function(x,y)  {
-            this.rect.attr( { x:x, y:y});
+        move: function (x, y) {
+            this.rect.attr({x: x, y: y});
             if (this.label) {
-                this.label.attr( { x:x + 2, y: y + 8});
+                this.label.attr({x: x + 2, y: y + 8});
             }
         },
 
-        rotate: function(angle)  {
+        rotate: function (angle) {
             var dangle = 360 * (angle / (Math.PI * 2));
-            this.rect.transform('r' +  dangle);
+            this.rect.transform('r' + dangle);
         },
 
-        play:function(force) {
+        play: function (force) {
             if (force || shifted) {
                 this.playStyle(true);
                 player.play(0, this.q);
@@ -1168,20 +1199,19 @@
         },
 
 
-
-        selectStyle: function() {
+        selectStyle: function () {
             this.rect.attr("fill", "#C9a");
         },
 
-        queueStyle: function() {
+        queueStyle: function () {
             this.rect.attr("fill", "#aFF");
         },
 
-        pauseStyle: function() {
+        pauseStyle: function () {
             this.rect.attr("fill", "#F8F");
         },
 
-        playStyle: function(didJump) {
+        playStyle: function (didJump) {
             if (!this.isPlaying) {
                 this.isPlaying = true;
                 if (!this.isScaled) {
@@ -1195,12 +1225,12 @@
         },
 
 
-        normal: function() {
+        normal: function () {
             this.rect.attr("fill", this.normalColor);
             if (this.isScaled) {
                 this.isScaled = false;
                 //this.rect.scale(1/1.5, 1/1.5);
-                var newWidth = Math.round( (minTileWidth + this.playCount * growthPerPlay) * curGrowFactor);
+                var newWidth = Math.round((minTileWidth + this.playCount * growthPerPlay) * curGrowFactor);
                 if (newWidth < 1) {
                     newWidth = 1;
                 }
@@ -1215,30 +1245,30 @@
             this.isPlaying = false;
         },
 
-        init:function() {
+        init: function () {
             var that = this;
 
-            this.rect.mouseover( function(event) {
+            this.rect.mouseover(function (event) {
                 that.playStyle(false);
                 if (debugMode) {
                     if (that.q.which > jukeboxData.lastBranchPoint) {
-                        $("#beats").text( that.q.which + ' ' + that.q.reach  +  '*');
+                        $("#beats").text(that.q.which + ' ' + that.q.reach + '*');
                     } else {
                         var qlength = track.analysis.beats.length;
-                        var distanceToEnd = qlength  - that.q.which;
-                        $("#beats").text( that.q.which + ' ' + that.q.reach
-                            +  ' ' + Math.floor((that.q.reach - distanceToEnd) * 100 / qlength));
+                        var distanceToEnd = qlength - that.q.which;
+                        $("#beats").text(that.q.which + ' ' + that.q.reach
+                            + ' ' + Math.floor((that.q.reach - distanceToEnd) * 100 / qlength));
                     }
                 }
                 event.preventDefault();
             });
 
-            this.rect.mouseout( function(event) {
+            this.rect.mouseout(function (event) {
                 that.normal();
                 event.preventDefault();
             });
 
-            this.rect.mousedown(function(event) {
+            this.rect.mousedown(function (event) {
                 event.preventDefault();
                 driver.setNextTile(that);
                 if (!driver.isRunning()) {
@@ -1298,7 +1328,7 @@
         var tile = Object.create(tilePrototype);
         tile.which = which;
         tile.width = width;
-        tile.height =  height;
+        tile.height = height;
         tile.branchColor = getBranchColor(q);
         tile.quantumColor = getQuantumColor(q);
         tile.normalColor = tile.quantumColor;
@@ -1323,8 +1353,8 @@
     }
 
     function normalizeColor() {
-        cmin = [100,100,100];
-        cmax = [-100,-100,-100];
+        cmin = [100, 100, 100];
+        cmax = [-100, -100, -100];
 
         var qlist = track.analysis.segments;
         for (var i = 0; i < qlist.length; i++) {
@@ -1364,7 +1394,7 @@
     }
 
     function removeAllTiles() {
-        for (var i =0; i < jukeboxData.tiles.length; i++) {
+        for (var i = 0; i < jukeboxData.tiles.length; i++) {
             jukeboxData.tiles[i].rect.remove();
         }
         jukeboxData.tiles = [];
@@ -1414,12 +1444,12 @@
             driver.setIncr(inc - 1);
         }
 
-        if (evt.which == 38 ) {  // up arrow
+        if (evt.which == 38) {  // up arrow
             driver.setIncr(1);
             evt.preventDefault();
         }
 
-        if (evt.which == 40  ) {  // down arrow
+        if (evt.which == 40) {  // down arrow
             driver.setIncr(0);
             evt.preventDefault();
         }
@@ -1477,7 +1507,7 @@
 
         if (q.length > 0) {
             var url = '/api/analysis/search';
-            $.getJSON(url, { query:q, results:30}, function(data) {
+            $.getJSON(url, {query: q, results: 30}, function (data) {
                 console.log(data);
                 for (var i = 0; i < data.length; i++) {
                     data[i].id = data[i].id;
@@ -1504,7 +1534,7 @@
 
 
         $("#load").click(
-            function() {
+            function () {
                 ga_track('main', 'load', '');
                 if (!uploadingAllowed) {
                     alert("Sorry, uploading is temporarily disabled, while we are under heavy load");
@@ -1515,7 +1545,7 @@
         );
 
         $("#go").click(
-            function() {
+            function () {
                 if (driver.isRunning()) {
                     driver.stop();
                     ga_track('main', 'stop', track.info.id);
@@ -1527,14 +1557,14 @@
         );
 
         $("#search").click(searchForTrack);
-        $("#search-text").keyup(function(e) {
+        $("#search-text").keyup(function (e) {
             if (e.keyCode == 13) {
                 searchForTrack();
             }
         });
 
         $("#new").click(
-            function() {
+            function () {
                 if (driver) {
                     driver.stop();
                 }
@@ -1545,7 +1575,7 @@
         );
 
         $("#tune").click(
-            function() {
+            function () {
                 var controls = $("#controls");
                 controls.dialog('open');
                 ga_track('main', 'tune', '');
@@ -1558,20 +1588,20 @@
                 autoOpen: false,
                 title: "Fine tune your endless song",
                 width: 350,
-                position: [4,4],
-                resizable:false,
+                position: [4, 4],
+                resizable: false
             }
         );
 
         $("#reset-edges").click(
-            function() {
+            function () {
                 resetTuning();
                 ga_track('main', 'reset', '');
             }
         );
 
         $("#last-branch").change(
-            function(event) {
+            function (event) {
                 if (event.originalEvent) {
                     jukeboxData.addLastEdge = $('#last-branch').is(':checked');
                     drawVisualization();
@@ -1580,7 +1610,7 @@
         );
 
         $("#reverse-branch").change(
-            function(event) {
+            function (event) {
                 if (event.originalEvent) {
                     jukeboxData.justBackwards = $('#reverse-branch').is(':checked');
                     drawVisualization();
@@ -1589,7 +1619,7 @@
         );
 
         $("#long-branch").change(
-            function(event) {
+            function (event) {
                 if (event.originalEvent) {
                     jukeboxData.justLongBranches = $('#long-branch').is(':checked');
                     drawVisualization();
@@ -1598,7 +1628,7 @@
         );
 
         $("#sequential-branch").change(
-            function(event) {
+            function (event) {
                 if (event.originalEvent) {
                     jukeboxData.removeSequentialBranches = $('#sequential-branch').is(':checked');
                     drawVisualization();
@@ -1606,19 +1636,19 @@
             }
         );
 
-        $( "#threshold-slider" ).slider( {
+        $("#threshold-slider").slider({
                 max: 80,
                 min: 2,
                 step: 1,
-                value:30,
-                change: function(event, ui) {
+                value: 30,
+                change: function (event, ui) {
                     if (event.originalEvent) {
                         jukeboxData.currentThreshold = ui.value;
                         drawVisualization();
                     }
                 },
 
-                slide: function(event, ui) {
+                slide: function (event, ui) {
                     if (event.originalEvent) {
                         jukeboxData.currentThreshold = ui.value;
                     }
@@ -1627,16 +1657,16 @@
             }
         );
 
-        $( "#probability-slider" ).slider( {
+        $("#probability-slider").slider({
                 max: 100,
                 min: 0,
-                range:true,
+                range: true,
                 step: 1,
-                values:[
+                values: [
                     Math.round(defaultMinRandomBranchChance * 100),
                     Math.round(defaultMaxRandomBranchChance * 100)
                 ],
-                change: function(event, ui) {
+                change: function (event, ui) {
                     if (event.originalEvent) {
                         jukeboxData.minRandomBranchChance = ui.values[0] / 100.;
                         jukeboxData.maxRandomBranchChance = ui.values[1] / 100.;
@@ -1644,7 +1674,7 @@
                     }
                 },
 
-                slide: function(event, ui) {
+                slide: function (event, ui) {
                     if (event.originalEvent) {
                         jukeboxData.minRandomBranchChance = ui.values[0] / 100.;
                         jukeboxData.maxRandomBranchChance = ui.values[1] / 100.;
@@ -1653,12 +1683,12 @@
             }
         );
 
-        $( "#probability-ramp-slider" ).slider( {
+        $("#probability-ramp-slider").slider({
                 max: 100,
                 min: 0,
                 step: 2,
-                value:30,
-                change: function(event, ui) {
+                value: 30,
+                change: function (event, ui) {
                     if (event.originalEvent) {
                         jukeboxData.randomBranchChanceDelta =
                             map_percent_to_range(ui.value, minRandomBranchChanceDelta, maxRandomBranchChanceDelta)
@@ -1666,7 +1696,7 @@
                     }
                 },
 
-                slide: function(event, ui) {
+                slide: function (event, ui) {
                     if (event.originalEvent) {
                         jukeboxData.randomBranchChanceDelta =
                             map_percent_to_range(ui.value, minRandomBranchChanceDelta, maxRandomBranchChanceDelta)
@@ -1674,80 +1704,80 @@
                 }
             }
         );
-        
-		$( "#audio-url" ).keypress(function(event) {
-    		var keycode = event.keyCode || event.which;
-    		if(keycode == '13') {
-        		jukeboxData.audioURL = event.target.value;  
-        		setTunedURL();
-        		window.location.reload(true);
-    		}
-		});
-		
-		$( "#audio-upload" ).change(function (){
-			$.ajax({
-        		url: "/api/upload/song",
-        		type: "POST",
-        		data: formData,data: new FormData($('#audio-upload-form')[0]),
+
+        $("#audio-url").keypress(function (event) {
+            var keycode = event.keyCode || event.which;
+            if (keycode == '13') {
+                jukeboxData.audioURL = event.target.value;
+                setTunedURL();
+                window.location.reload(true);
+            }
+        });
+
+        $("#audio-upload").change(function () {
+            $.ajax({
+                url: "/api/upload/song",
+                type: "POST",
+                data: formData, data: new FormData($('#audio-upload-form')[0]),
                 processData: false,
                 contentType: false,
                 headers: {
                     "X-XSRF-TOKEN": document.cookie.substring(document.cookie.indexOf("XSRF-TOKEN")).split(";")[0].split("=").slice(1).join("=")
                 },
-        		success: function(data) {
-        			jukeboxData.audioURL = data;
-        			setTunedURL();
-        			window.location.reload(true);
-        		},
-        		error: function(xhr, textStatus, error) {
-        			console.log("Error: " + error);
-        		}
-    		});
-		});
+                success: function (data) {
+                    jukeboxData.audioURL = data;
+                    setTunedURL();
+                    window.location.reload(true);
+                },
+                error: function (xhr, textStatus, error) {
+                    console.log("Error: " + error);
+                }
+            });
+        });
 
         watch(jukeboxData, 'addLastEdge',
-            function() {
+            function () {
                 $("#last-branch").attr('checked', jukeboxData.addLastEdge);
                 setTunedURL();
             }
         );
 
         watch(jukeboxData, 'justBackwards',
-            function() {
+            function () {
                 $("#reverse-branch").attr('checked', jukeboxData.justBackwards);
                 setTunedURL();
             }
         );
 
         watch(jukeboxData, 'justLongBranches',
-            function() {
+            function () {
                 $("#long-branch").attr('checked', jukeboxData.justLongBranches);
                 setTunedURL();
             }
         );
 
         watch(jukeboxData, 'removeSequentialBranches',
-            function() {
+            function () {
                 $("#sequential-branch").attr('checked', jukeboxData.removeSequentialBranches);
                 setTunedURL();
             }
         );
 
         watch(jukeboxData, 'currentThreshold',
-            function() {
+            function () {
                 $("#threshold").text(jukeboxData.currentThreshold);
                 $("#threshold-slider").slider("value", jukeboxData.currentThreshold);
             }
         );
 
         watch(jukeboxData, 'lastThreshold',
-            function() {
+            function () {
                 $("#last-threshold").text(Math.round(jukeboxData.lastThreshold));
             }
         );
 
         watch(jukeboxData, 'minRandomBranchChance',
-            function() {
+            function () {
                 $("#min-prob").text(Math.round(jukeboxData.minRandomBranchChance * 100));
                 $("#probability-slider").slider("values",
                     [jukeboxData.minRandomBranchChance * 100, jukeboxData.maxRandomBranchChance * 100]);
@@ -1757,7 +1787,7 @@
         );
 
         watch(jukeboxData, 'maxRandomBranchChance',
-            function() {
+            function () {
                 $("#max-prob").text(Math.round(jukeboxData.maxRandomBranchChance * 100));
                 $("#probability-slider").slider("values",
                     [jukeboxData.minRandomBranchChance * 100, jukeboxData.maxRandomBranchChance * 100]);
@@ -1767,13 +1797,13 @@
         );
 
         watch(jukeboxData, 'curRandomBranchChance',
-            function() {
+            function () {
                 $("#branch-chance").text(Math.round(jukeboxData.curRandomBranchChance * 100));
             }
         );
 
         watch(jukeboxData, 'randomBranchChanceDelta',
-            function() {
+            function () {
                 var val = Math.round(map_value_to_percent(jukeboxData.randomBranchChanceDelta,
                     minRandomBranchChanceDelta, maxRandomBranchChanceDelta));
                 $("#ramp-speed").text(val);
@@ -1782,38 +1812,38 @@
         );
 
         watch(jukeboxData, 'totalBeats',
-            function() {
+            function () {
                 $("#total-beats").text(jukeboxData.totalBeats);
             }
         );
 
         watch(jukeboxData, 'branchCount',
-            function() {
+            function () {
                 $("#branch-count").text(jukeboxData.branchCount);
             }
         );
 
         watch(jukeboxData, 'deletedEdgeCount',
-            function() {
+            function () {
                 $("#deleted-branches").text(jukeboxData.deletedEdgeCount);
             }
         );
 
         watch(jukeboxData, 'longestReach',
-            function() {
+            function () {
                 $("#loop-length-percent").text(Math.round(jukeboxData.longestReach));
                 var loopBeats = Math.round(jukeboxData.longestReach * jukeboxData.totalBeats / 100);
                 $("#loop-length-beats").text(Math.round(loopBeats));
                 $("#total-beats").text(jukeboxData.totalBeats);
             }
         );
-        
+
         watch(jukeboxData, 'audioURL',
-        	function() {
-        		console.log("Trying to update the audio url!");
-        		$("#audio-url").text(decodeURIComponent(jukeboxData.audioURL));
-        		console.log("Updated the audio url!");
-        	}
+            function () {
+                console.log("Trying to update the audio url!");
+                $("#audio-url").text(decodeURIComponent(jukeboxData.audioURL));
+                console.log("Updated the audio url!");
+            }
         );
 
         $("#popular-list").click(listPopularTracks);
@@ -1877,7 +1907,8 @@
                     } else {
                         return bounceSeed;
                     }
-                } if (controlled) {
+                }
+                if (controlled) {
                     return curTile;
                 } else {
                     if (bounceSeed != null) {
@@ -1891,7 +1922,7 @@
 
                 if (nextIndex < 0) {
                     return jukeboxData.tiles[0];
-                } else if  (nextIndex >= jukeboxData.tiles.length) {
+                } else if (nextIndex >= jukeboxData.tiles.length) {
                     curOp = null;
                     player.stop();
                 } else {
@@ -1942,7 +1973,7 @@
                 nextTiles.push(seed);
             }
             seed.q.neighbors.forEach(
-                function(edge, which) {
+                function (edge, which) {
                     var tile = edge.dest.tile;
                     nextTiles.push(tile);
                 }
@@ -1952,7 +1983,7 @@
 
             if (lookAhead == 0) {
                 var minTile = null;
-                nextTiles.forEach(function(tile) {
+                nextTiles.forEach(function (tile) {
                     if (minTile == null || tile.playCount < minTile.playCount) {
                         minTile = tile;
                     }
@@ -1960,9 +1991,9 @@
                 return [minTile, minTile.playCount];
             } else {
                 var minTile = null;
-                nextTiles.forEach(function(tile) {
+                nextTiles.forEach(function (tile) {
                     var futureTile = findLeastPlayedNeighbor(tile, lookAhead - 1);
-                    if (minTile == null || futureTile[1] <  minTile[1]) {
+                    if (minTile == null || futureTile[1] < minTile[1]) {
                         minTile = futureTile;
                     }
                 });
@@ -2050,7 +2081,9 @@
                     curTile.playCount += 1;
 
                     var delta = nextTime - ctime;
-                    setTimeout( function () { process(); }, 1000 * delta  - 10);
+                    setTimeout(function () {
+                        process();
+                    }, 1000 * delta - 10);
 
                     var didJump = false;
                     if (lastTile && lastTile.which != curTile.which - 1) {
@@ -2069,7 +2102,7 @@
         }
 
         function resetPlayCounts() {
-            for (var i =0; i < jukeboxData.tiles.length; i++) {
+            for (var i = 0; i < jukeboxData.tiles.length; i++) {
                 jukeboxData.tiles[i].playCount = 0;
             }
             curGrowFactor = 1;
@@ -2078,7 +2111,7 @@
 
         var startTime = 0;
         var interface = {
-            start: function() {
+            start: function () {
                 jukeboxData.beatsPlayed = 0;
                 nextTime = 0;
                 bounceSeed = null;
@@ -2094,7 +2127,7 @@
                 process();
             },
 
-            stop: function() {
+            stop: function () {
                 var delta = now() - startTime;
                 $("#go").text('Play');
                 if (curTile) {
@@ -2107,23 +2140,23 @@
                 player.stop();
             },
 
-            isRunning: function() {
+            isRunning: function () {
                 return curOp !== null;
             },
 
-            getIncr: function() {
+            getIncr: function () {
                 return incr;
             },
 
-            getCurTile : function() {
+            getCurTile: function () {
                 return curTile;
             },
 
-            setIncr: function(inc) {
+            setIncr: function (inc) {
                 incr = inc;
             },
 
-            setNextTile: function(tile) {
+            setNextTile: function (tile) {
                 nextTile = tile;
             },
         }
@@ -2134,7 +2167,7 @@
         secs = Math.floor(secs);
         var hours = Math.floor(secs / 3600);
         secs -= hours * 3600;
-        var mins = Math.floor(secs/60);
+        var mins = Math.floor(secs / 60);
         secs -= mins * 60;
 
         if (hours < 10) {
@@ -2156,9 +2189,9 @@
     function processParams() {
         var params = {};
         var q = document.URL.split('?')[1];
-        if(q != undefined){
+        if (q != undefined) {
             q = q.split('&');
-            for(var i = 0; i < q.length; i++){
+            for (var i = 0; i < q.length; i++) {
                 var pv = q[i].split('=');
                 var p = pv[0];
                 var v = pv[1];
@@ -2173,7 +2206,7 @@
                 jukeboxData.currentThreshold = parseInt(params['thresh']);
             }
             if ('audio' in params) {
-            	jukeboxData.audioURL = decodeURIComponent(params['audio']);
+                jukeboxData.audioURL = decodeURIComponent(params['audio']);
             }
             if ('d' in params) {
                 var df = params['d'].split(',');
@@ -2229,7 +2262,7 @@
             setDisplayMode(true);
             $("#select-track").hide();
             analyzeAudio(url, 'tag',
-                function(data) {
+                function (data) {
                     if (data.status === 'done') {
                         showPlotPage(data.id);
                     } else {
@@ -2250,7 +2283,7 @@
     }
 
     function urldecode(str) {
-        return decodeURIComponent((str+'').replace(/\+/g, '%20'));
+        return decodeURIComponent((str + '').replace(/\+/g, '%20'));
     }
 
     function endsWith(str, suffix) {
@@ -2296,66 +2329,27 @@
 </script>
 
 
-
-<div class="ui-dialog ui-widget ui-widget-content ui-corner-all ui-draggable" style="display: none; outline: 0px none; z-index: 1000;" tabindex="-1" role="dialog" aria-labelledby="ui-id-1"><div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix"><span id="ui-id-1" class="ui-dialog-title">Fine tune your endless song</span><a href="#" class="ui-dialog-titlebar-close ui-corner-all" role="button"><span class="ui-icon ui-icon-closethick">close</span></a></div><div id="controls" visibility="visible" style="display: block;" class="ui-dialog-content ui-widget-content">
-    <div>
-       	<div id="control-instructions">
-           	You can tune control the frequency and quality of the branching. See the FAQ for more details.
-       	</div>
-       	<div id="threshold-div">
-      		<div id="sthreshold"> Branch Similarity Threshold: <span id="threshold"> 50 </span> </div>
-
-           	<div class="slider ui-slider ui-slider-horizontal ui-widget ui-widget-content ui-corner-all" id="threshold-slider"><a class="ui-slider-handle ui-state-default ui-corner-all" href="#" style="left: 35.8974%;"></a></div>
-           	<div id="slider-labels">
-               	<span class="left-label"> Higher<br> Quality </span>
-               	<span class="right-label"> More <br>Branches </span>
-           	</div>
-       	</div>
-       	<br clear="all">
-       	<div id="probability-div">
-           	<div id="sprobability"> Branch Probability Range:
-               	<span id="min-prob">18</span>% to
-               	<span id="max-prob">50</span>%
-           	</div>
-           	<div class="slider ui-slider ui-slider-horizontal ui-widget ui-widget-content ui-corner-all" id="probability-slider"><div class="ui-slider-range ui-widget-header" style="left: 18%; width: 32%;"></div><a class="ui-slider-handle ui-state-default ui-corner-all" href="#" style="left: 18%;"></a><a class="ui-slider-handle ui-state-default ui-corner-all" href="#" style="left: 50%;"></a></div>
-           	<div id="slider-labels">
-               	<span class="left-label"> Low </span>
-               	<span class="right-label"> High </span>
-           	</div>
-   	 	</div>
-	    <br clear="all">
-	
-        <div id="probability-div">
-            <div id="sprobability"> Branch Probability Ramp-up Speed:
-                <span id="ramp-speed">9</span>%
+<div class="ui-dialog ui-widget ui-widget-content ui-corner-all ui-draggable"
+     style="display: none; outline: 0px none; z-index: 1000;" tabindex="-1" role="dialog" aria-labelledby="ui-id-1">
+    <div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix"><span id="ui-id-1"
+                                                                                            class="ui-dialog-title">Fine tune your endless song</span><a
+            href="#" class="ui-dialog-titlebar-close ui-corner-all" role="button"><span
+            class="ui-icon ui-icon-closethick"></span></a></div>
+    <div id="controls" visibility="visible" style="display: block;" class="ui-dialog-content ui-widget-content">
+        <div>
+            <div id="control-instructions">
+                You can retune the Auto Canonizer to use a different audio track here.
             </div>
-            <div class="slider ui-slider ui-slider-horizontal ui-widget ui-widget-content ui-corner-all" id="probability-ramp-slider"><a class="ui-slider-handle ui-state-default ui-corner-all" href="#" style="left: 30%;"></a></div>
-            <div id="slider-labels">
-                <span class="left-label"> Slow </span>
-                <span class="right-label"> Fast </span>
-            </div>
+            <div class="l-cb" id="l-audio-url">Audio URL: <input id="audio-url" type="url"></div>
+            <br>
+            <div class="l-cb" id="l-audio-upload"><form id="audio-upload-form"><input id="audio-upload" type="file" name="song_upload"
+                                                                                      accept="audio/*"></form></div>
+            <button class="btn btn-small" id="reset-edges"> Reset</button>
         </div>
-        <br clear="all">
-        <div class="l-cb" id="l-last-branch"> Loop extension optimization: <input id="last-branch" checked="checked" type="checkbox"> </div>
-        <div class="l-cb" id="l-reverse-branch"> Allow only reverse branches : <input id="reverse-branch" type="checkbox"> </div>
-        <div class="l-cb" id="l-long-branch"> Allow only long branches : <input id="long-branch" type="checkbox"> </div>
-        <div class="l-cb" id="l-sequential-branch"> Remove sequential branches: <input id="sequential-branch" type="checkbox"> </div>
-		<div class="l-cb" id="l-audio-url">Audio URL: <input id="audio-url" type="url"> </div>
-		<br>
-        <div class="l-cb" id="l-audio-upload"><form id="audio-upload-form"><input id="audio-upload" type="file" name="song_upload" accept="audio/*"></form></div>
-
-       	<hr>
-       	<div id="tune-info">
-       	    <div id="l-branch-chance"> Branch chance (%): <span class="ti-val" id="branch-chance">18</span></div>
-       	    <div id="l-branch-threshold"> Last threshold: <span class="ti-val" id="last-threshold">0</span></div>
-       	    <br>
-       	    <div id="l-beat-count"> Total beats: <span class="ti-val" id="total-beats"></span></div>
-       	    <div id="l-branch-count"> Total branches: <span class="ti-val" id="branch-count"></span></div>
-       	    <div id="l-loop-length-beats"> Longest loop (beats):  <span class="ti-val" id="loop-length-beats"></span> </div>
-       	    <div id="l-loop-length-percent"> Longest loop (%):  <span class="ti-val" id="loop-length-percent"></span> </div>
-       	    <br>
-       	    <div id="l-deleted-branches"> Deleted branches: <span class="ti-val" id="deleted-branches">0</span></div>
-      	</div>
-       	<button class="cbut" id="reset-edges"> Reset </button>
-	</div>
-</div></div><iframe id="rufous-sandbox" scrolling="no" allowtransparency="true" allowfullscreen="true" style="position: absolute; visibility: hidden; display: none; width: 0px; height: 0px; padding: 0px; border: medium none;" title="Twitter analytics iframe" frameborder="0"></iframe></body></html>
+    </div>
+</div>
+<iframe id="rufous-sandbox" scrolling="no" allowtransparency="true" allowfullscreen="true"
+        style="position: absolute; visibility: hidden; display: none; width: 0px; height: 0px; padding: 0px; border: medium none;"
+        title="Twitter analytics iframe" frameborder="0"></iframe>
+</body>
+</html>

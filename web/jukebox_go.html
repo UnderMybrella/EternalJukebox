@@ -2,20 +2,22 @@
 <head>
     <script src="files/raphael-min.js" type="text/javascript" charset="utf-8"></script>
     <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
-    <link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.7/superhero/bootstrap.min.css" rel="stylesheet" integrity="sha384-Xqcy5ttufkC3rBa8EdiAyA1VgOGrmel2Y+wxm4K3kI3fcjTWlDWrlnxyD6hOi3PF" crossorigin="anonymous">
-    <link rel="stylesheet" href="files/canonizer_styles.css" type="text/css" media="screen">
-    <script type="text/javascript" async="" src="files/ga.js"></script>
-    <script id="twitter-wjs" src="files/widgets.js"></script>
-    <link rel="stylesheet" href="files/jquery-ui.css" type="text/css" media="screen">
     <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
     <script src="files/underscore-min.js" type="text/javascript" charset="utf-8"></script>
     <script type="text/javascript" src="files/jremix.js"></script>
+
+    <link rel="stylesheet" href="files/canonizer_styles.css" type="text/css" media="screen">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+    <link rel="stylesheet" href="files/jquery-ui.css" type="text/css" media="screen">
+    <link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.7/superhero/bootstrap.min.css" rel="stylesheet" integrity="sha384-Xqcy5ttufkC3rBa8EdiAyA1VgOGrmel2Y+wxm4K3kI3fcjTWlDWrlnxyD6hOi3PF" crossorigin="anonymous">
+
+    <script type="text/javascript" async="" src="files/ga.js"></script>
+    <script id="twitter-wjs" src="files/widgets.js"></script>
     <script type="text/javascript" src="files/watch.js"></script>
-    <link href="files/css.css" rel="stylesheet" type="text/css">
     <script type="text/javascript" charset="utf-8" async="" src="files/button.js"></script>
+
     <title> The Eternal Jukebox </title>
 
     <meta property="og:title" content="The Eternal Jukebox"/>
@@ -1637,7 +1639,7 @@
                 title: "Fine tune your endless song",
                 width: 350,
                 position: [4, 4],
-                resizable: false,
+                resizable: false
             }
         );
 
@@ -2408,88 +2410,21 @@
     <div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix"><span id="ui-id-1"
                                                                                             class="ui-dialog-title">Fine tune your endless song</span><a
             href="#" class="ui-dialog-titlebar-close ui-corner-all" role="button"><span
-            class="ui-icon ui-icon-closethick">close</span></a></div>
+            class="ui-icon ui-icon-closethick"></span></a></div>
     <div id="controls" visibility="visible" style="display: block;" class="ui-dialog-content ui-widget-content">
         <div>
             <div id="control-instructions">
-                You can tune control the frequency and quality of the branching. See the FAQ for more details.
+                You can retune the Auto Canonizer to use a different audio track here.
             </div>
-            <div id="threshold-div">
-                <div id="sthreshold"> Branch Similarity Threshold: <span id="threshold"> 50 </span></div>
-
-                <div class="slider ui-slider ui-slider-horizontal ui-widget ui-widget-content ui-corner-all"
-                     id="threshold-slider"><a class="ui-slider-handle ui-state-default ui-corner-all" href="#"
-                                              style="left: 35.8974%;"></a></div>
-                <div id="slider-labels">
-                    <span class="left-label"> Higher<br> Quality </span>
-                    <span class="right-label"> More <br>Branches </span>
-                </div>
-            </div>
-            <br clear="all">
-            <div id="probability-div">
-                <div id="sprobability"> Branch Probability Range:
-                    <span id="min-prob">18</span>% to
-                    <span id="max-prob">50</span>%
-                </div>
-                <div class="slider ui-slider ui-slider-horizontal ui-widget ui-widget-content ui-corner-all"
-                     id="probability-slider">
-                    <div class="ui-slider-range ui-widget-header" style="left: 18%; width: 32%;"></div>
-                    <a class="ui-slider-handle ui-state-default ui-corner-all" href="#" style="left: 18%;"></a><a
-                        class="ui-slider-handle ui-state-default ui-corner-all" href="#" style="left: 50%;"></a></div>
-                <div id="slider-labels">
-                    <span class="left-label"> Low </span>
-                    <span class="right-label"> High </span>
-                </div>
-            </div>
-            <br clear="all">
-
-            <div id="probability-div">
-                <div id="sprobability"> Branch Probability Ramp-up Speed:
-                    <span id="ramp-speed">9</span>%
-                </div>
-                <div class="slider ui-slider ui-slider-horizontal ui-widget ui-widget-content ui-corner-all"
-                     id="probability-ramp-slider"><a class="ui-slider-handle ui-state-default ui-corner-all" href="#"
-                                                     style="left: 30%;"></a></div>
-                <div id="slider-labels">
-                    <span class="left-label"> Slow </span>
-                    <span class="right-label"> Fast </span>
-                </div>
-            </div>
-            <br clear="all">
-            <div class="l-cb" id="l-last-branch"> Loop extension optimization: <input id="last-branch" checked="checked"
-                                                                                      type="checkbox"></div>
-            <div class="l-cb" id="l-reverse-branch"> Allow only reverse branches : <input id="reverse-branch"
-                                                                                          type="checkbox"></div>
-            <div class="l-cb" id="l-long-branch"> Allow only long branches : <input id="long-branch" type="checkbox">
-            </div>
-            <div class="l-cb" id="l-sequential-branch"> Remove sequential branches: <input id="sequential-branch"
-                                                                                           type="checkbox"></div>
-            <div class="l-cb" id="l-disable-keys"> Disable Keypresses: <input id="disable-keys" type="checkbox"></div>
             <div class="l-cb" id="l-audio-url">Audio URL: <input id="audio-url" type="url"></div>
             <br>
             <div class="l-cb" id="l-audio-upload"><form id="audio-upload-form"><input id="audio-upload" type="file" name="song_upload"
-                                                         accept="audio/*"></form></div>
-            <br>
-            <hr>
-            <div id="tune-info">
-                <div id="l-branch-chance"> Branch chance (%): <span class="ti-val" id="branch-chance">18</span></div>
-                <div id="l-branch-threshold"> Last threshold: <span class="ti-val" id="last-threshold">0</span></div>
-                <br>
-                <div id="l-beat-count"> Total beats: <span class="ti-val" id="total-beats"></span></div>
-                <div id="l-branch-count"> Total branches: <span class="ti-val" id="branch-count"></span></div>
-                <div id="l-loop-length-beats"> Longest loop (beats): <span class="ti-val" id="loop-length-beats"></span>
-                </div>
-                <div id="l-loop-length-percent"> Longest loop (%): <span class="ti-val" id="loop-length-percent"></span>
-                </div>
-                <br>
-                <div id="l-deleted-branches"> Deleted branches: <span class="ti-val" id="deleted-branches">0</span>
-                </div>
-            </div>
+                                                                                      accept="audio/*"></form></div>
             <button class="btn btn-small" id="reset-edges"> Reset</button>
-            <button class="btn btn-small" id="close-tune"> Close</button>
         </div>
     </div>
 </div>
+
 <iframe id="rufous-sandbox" scrolling="no" allowtransparency="true" allowfullscreen="true"
         style="position: absolute; visibility: hidden; display: none; width: 0px; height: 0px; padding: 0px; border: medium none;"
         title="Twitter analytics iframe" frameborder="0"></iframe>
