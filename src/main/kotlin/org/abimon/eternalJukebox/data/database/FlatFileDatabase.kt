@@ -14,6 +14,9 @@ import java.util.*
  */
 object FlatFileDatabase : IDatabase {
     val AUDIO_TRACK_OVERRIDE_DB = File(".AUDIO_TRACK_OVERRIDES")
+    val ACCOUNTS_DB = File(".ACCOUNTS")
+    val POPULAR_DB = File(".POPULAR")
+    val SHORT_URL_DB = File(".SHORT_URLS")
 
     override fun provideAudioTrackOverride(id: String, clientInfo: ClientInfo?): String? {
         val trackEntry = AUDIO_TRACK_OVERRIDE_DB getEntryForPrimaryKey id ?: return null

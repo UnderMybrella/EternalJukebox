@@ -45,7 +45,10 @@ object YoutubeAudioSource: IAudioSource {
                 add(format)
             }).redirectErrorStream(true).redirectOutput(tmpLog).start()
 
-            downloadProcess.waitFor(60, TimeUnit.SECONDS)
+            if(!downloadProcess.waitFor(90, TimeUnit.SECONDS)) {
+                downloadProcess.destroyForcibly().waitFor()
+                log("[${clientInfo?.userUID}] Forcibly destroyed the download process for ${closest.id}", true)
+            }
 
             if(!endGoalTmp.exists()) {
                 log("[${clientInfo?.userUID}] $endGoalTmp does not exist, attempting to convert with ffmpeg")
@@ -70,6 +73,7 @@ object YoutubeAudioSource: IAudioSource {
         }
         finally {
             tmpFile.delete()
+            File(tmpFile.absolutePath + ".part").delete()
             tmpLog.useThenDelete { EternalJukebox.storage.store(it.name, EnumStorageType.LOG, FileDataSource(it), clientInfo) }
             ffmpegLog.useThenDelete { EternalJukebox.storage.store(it.name, EnumStorageType.LOG, FileDataSource(it), clientInfo) }
             endGoalTmp.useThenDelete { EternalJukebox.storage.store("${info.id}.$format", EnumStorageType.AUDIO, FileDataSource(it), clientInfo) }

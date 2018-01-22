@@ -1,5 +1,8 @@
 package org.abimon.eternalJukebox
 
+import io.vertx.core.AsyncResult
+import io.vertx.core.Future
+import io.vertx.core.Handler
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpServerResponse
 import io.vertx.core.json.JsonArray
@@ -39,3 +42,9 @@ val RoutingContext.clientInfo: ClientInfo
 
         return info
     }
+
+fun <T> executeBlocking(operation: () -> T, onComplete: (AsyncResult<T>) -> Unit) {
+    EternalJukebox.vertx.executeBlocking(Handler<Future<T>> { future ->
+        future.complete(operation())
+    }, Handler { result -> onComplete(result) })
+}

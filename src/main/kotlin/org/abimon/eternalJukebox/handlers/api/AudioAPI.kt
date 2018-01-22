@@ -95,7 +95,7 @@ object AudioAPI : IAPI {
 
         if (url != null) {
             val (_, response, _) = Fuel.head(url).response()
-            if (response.httpStatusCode < 300) {
+            if (response.statusCode < 300) {
                 val mime = response.httpResponseHeaders["Content-Type"]?.firstOrNull()
 
                 if (mime != null && mime.startsWith("audio"))

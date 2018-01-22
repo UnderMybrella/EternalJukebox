@@ -42,10 +42,7 @@ object SiteAPI: IAPI {
                 "Free Memory" to ByteUnit(Runtime.getRuntime().freeMemory()).toMegabytes().format(memoryFormat),
                 "Used Memory" to ByteUnit(Runtime.getRuntime().usedMemory()).toMegabytes().format(memoryFormat),
                 "CPU Load (Process)" to "${cpuFormat.format(osBean.processCpuLoad)}%",
-                "CPU Load (System)" to "${cpuFormat.format(osBean.systemCpuLoad)}%",
-                "Requests this session" to "${EternalJukebox.requests.get()}",
-                "Requests this hour" to "${EternalJukebox.hourlyRequests.get()}",
-                "Unique Visitors this hour" to "${EternalJukebox.hourlyUniqueVisitors.get()}"
+                "CPU Load (System)" to "${cpuFormat.format(osBean.systemCpuLoad)}%"
         )
 
         context.response().putHeader("X-Client-UID", context.clientInfo.userUID).end(FlipTable.of(arrayOf("Key", "Value"), rows.map { (one, two) -> arrayOf(one, two) }.toTypedArray()))
@@ -57,9 +54,7 @@ object SiteAPI: IAPI {
 
             try {
                 EternalJukebox.analyticsProviders.forEach { provider ->
-                    provider.provideMultiple(time, *EnumAnalyticType.VALUES.filter { type -> provider.shouldProvide(type) }.toTypedArray()).forEach { type, data ->
-                        EternalJukebox.analytics.storeGeneric(time, data, type)
-                    }
+                    EternalJukebox.analytics.storeMultiple(time, provider.provideMultiple(time, *EnumAnalyticType.VALUES.filter { type -> provider.shouldProvide(type) }.toTypedArray()).map { (type, data) -> type to data })
                 }
             } catch (th: Throwable) {
                 th.printStackTrace()
