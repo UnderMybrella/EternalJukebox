@@ -1486,10 +1486,10 @@
         var q = document.URL.split('?')[1];
 
         $.ajax({
-            url: "/api/shrink",
+            url: "/api/site/shrink",
             dataType: "json",
             type: "POST",
-            data: q === undefined ? "type=jukebox" : "type=jukebox&" + q,
+            data: q === undefined ? "service=jukebox" : "service=jukebox&" + q,
             success: function (data) {
                 return callback(data["id"]);
             },
@@ -1526,7 +1526,7 @@
             event.preventDefault();
             event.stopPropagation();
             return false;
-        }
+        };
 
         $(document).keydown(keydown);
         $(document).keyup(keyup);

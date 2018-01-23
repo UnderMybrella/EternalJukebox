@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.2.10'
+    ext.kotlin_version = '1.2.20'
     ext.vertx_version = '3.5.0'
     ext.jackson_version = '2.9.2'
 
@@ -34,12 +34,14 @@ repositories {
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.21.2'
 
     compile "io.vertx:vertx-web:$vertx_version"
     compile "io.vertx:vertx-auth-oauth2:$vertx_version"
 
+    compile "com.h2database:h2:1.4.196"
     compile "mysql:mysql-connector-java:5.1.38"
     compile "com.zaxxer:HikariCP:2.6.2"
 
@@ -66,5 +68,11 @@ dependencies {
 compileKotlin {
     kotlinOptions {
         jvmTarget = '1.8'
+    }
+}
+
+kotlin {
+    experimental {
+        coroutines "enable"
     }
 }

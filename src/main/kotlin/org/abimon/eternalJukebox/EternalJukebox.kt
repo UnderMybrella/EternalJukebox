@@ -21,13 +21,12 @@ import org.abimon.eternalJukebox.data.analysis.SpotifyAnalyser
 import org.abimon.eternalJukebox.data.analytics.IAnalyticsProvider
 import org.abimon.eternalJukebox.data.analytics.IAnalyticsStorage
 import org.abimon.eternalJukebox.data.audio.IAudioSource
+import org.abimon.eternalJukebox.data.database.H2Database
+import org.abimon.eternalJukebox.data.database.IDatabase
 import org.abimon.eternalJukebox.data.storage.IStorage
 import org.abimon.eternalJukebox.handlers.OpenGraphHandler
 import org.abimon.eternalJukebox.handlers.StaticResources
-import org.abimon.eternalJukebox.handlers.api.AnalysisAPI
-import org.abimon.eternalJukebox.handlers.api.AudioAPI
-import org.abimon.eternalJukebox.handlers.api.IAPI
-import org.abimon.eternalJukebox.handlers.api.SiteAPI
+import org.abimon.eternalJukebox.handlers.api.*
 import org.abimon.eternalJukebox.objects.ConstantValues
 import org.abimon.eternalJukebox.objects.EmptyDataAPI
 import org.abimon.eternalJukebox.objects.JukeboxConfig
@@ -56,6 +55,8 @@ object EternalJukebox {
     val jsonConfig: File = File("config.json")
     val yamlConfig: File = File("config.yaml")
 
+    val BASE_64_URL = charArrayOf('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_')
+
     val secureRandom: SecureRandom = SecureRandom()
 
     val config: JukeboxConfig
@@ -69,6 +70,8 @@ object EternalJukebox {
 
     val analytics: IAnalyticsStorage
     val analyticsProviders: List<IAnalyticsProvider>
+
+    val database: IDatabase
 
     val visitorAlgorithm: Algorithm
     val visitorVerifier: JWTVerifier
@@ -129,7 +132,7 @@ object EternalJukebox {
 //                uniqueVisitorsAddress.add(ip)
 //            }
 
-            if(ip !in hourlyVisitorsAddress) {
+            if (ip !in hourlyVisitorsAddress) {
                 it.data()[ConstantValues.HOURLY_UNIQUE_VISITOR] = true
                 hourlyVisitorsAddress.add(ip)
             }
@@ -143,7 +146,7 @@ object EternalJukebox {
 
         if (runSiteAPI) {
             mainRouter.route().handler {
-//                requests.incrementAndGet()
+                //                requests.incrementAndGet()
 //                hourlyRequests.incrementAndGet()
 //
 //                if(it[ConstantValues.HOURLY_UNIQUE_VISITOR, false]) {
@@ -161,22 +164,25 @@ object EternalJukebox {
 
         val apiRouter = Router.router(vertx)
 
-        if (isEnabled("analysisAPI")) {
+        if (isEnabled("analysisAPI"))
             apis.add(AnalysisAPI)
-            spotify = SpotifyAnalyser
-        }
-        else
-            spotify = EmptyDataAPI
 
         if (runSiteAPI) {
             apis.add(SiteAPI)
 
-            analytics = config.analyticsStorageType.analytics
-            analyticsProviders = config.analyticsProviders.map { (type) -> type.provider }
+            if(isEnabled("analytics")) {
+                analytics = config.analyticsStorageType.analytics
+                analyticsProviders = config.analyticsProviders.map { (type) -> type.provider }
+            } else {
+                analytics = EmptyDataAPI
+                analyticsProviders = emptyList()
+            }
         } else {
             analytics = EmptyDataAPI
             analyticsProviders = emptyList()
         }
+
+        database = H2Database
 
         if (isEnabled("audioAPI")) {
             apis.add(AudioAPI)
@@ -185,6 +191,14 @@ object EternalJukebox {
         } else {
             audio = EmptyDataAPI
         }
+
+        if (isEnabled("audioAPI") || isEnabled("analysisAPI"))
+            spotify = SpotifyAnalyser
+        else
+            spotify = EmptyDataAPI
+
+        if (isEnabled("nodeAPI"))
+            apis.add(NodeAPI)
 
         analyticsProviders.forEach { provider -> provider.setupWebAnalytics(mainRouter) }
 

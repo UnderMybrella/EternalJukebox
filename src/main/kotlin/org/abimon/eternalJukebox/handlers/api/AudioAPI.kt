@@ -24,7 +24,7 @@ object AudioAPI : IAPI {
     val mime: String
         get() = EternalJukebox.config.audioSourceOptions["AUDIO_MIME"] as? String ?: run {
             when (format) {
-                "m4a" -> return@run "audi/mp4"
+                "m4a" -> return@run "audio/mp4"
                 "aac" -> return@run "audio/aac"
                 "mp3" -> return@run "audio/mpeg"
                 "ogg" -> return@run "audio/ogg"
@@ -96,7 +96,7 @@ object AudioAPI : IAPI {
         if (url != null) {
             val (_, response, _) = Fuel.head(url).response()
             if (response.statusCode < 300) {
-                val mime = response.httpResponseHeaders["Content-Type"]?.firstOrNull()
+                val mime = response.headers["Content-Type"]?.firstOrNull()
 
                 if (mime != null && mime.startsWith("audio"))
                     return context.response().putHeader("X-Client-UID", context.clientInfo.userUID).redirect(url)

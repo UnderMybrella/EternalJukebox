@@ -48,3 +48,5 @@ fun <T> executeBlocking(operation: () -> T, onComplete: (AsyncResult<T>) -> Unit
         future.complete(operation())
     }, Handler { result -> onComplete(result) })
 }
+
+operator fun JsonObject.set(key: String, value: Any) = put(key, value)

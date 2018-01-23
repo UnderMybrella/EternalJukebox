@@ -157,7 +157,7 @@ object SpotifyAnalyser : IAnalyser {
 
             when (response.statusCode) {
                 200 -> {
-                    track = JukeboxInfo("SPOTIFY", mapResponse["id"] as String, mapResponse["name"] as String, mapResponse["name"] as String, ((mapResponse["artists"] as List<*>).first() as Map<*, *>)["name"] as String, "https://open.spotify.com/mapResponse/${mapResponse["id"] as String}", mapResponse["duration_ms"] as Int)
+                    track = JukeboxInfo("SPOTIFY", mapResponse["id"] as String, mapResponse["name"] as String, mapResponse["name"] as String, ((mapResponse["artists"] as List<*>).first() as Map<*, *>)["name"] as String, "https://open.spotify.com/track/${mapResponse["id"] as String}", mapResponse["duration_ms"] as Int)
                     return@exponentiallyBackoff false
                 }
                 400 -> {
