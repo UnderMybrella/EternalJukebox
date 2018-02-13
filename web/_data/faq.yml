@@ -55,7 +55,7 @@ faq:
 - question: Who made this?
   id: creator
   answer: "The original site was made by [Paul Lamere](http://twitter.com/plamere) at [Music Hack Day Boston](http://boston.musichackday.org/) on November 11, 2012 (More info at [Music Machinery](http://musicmachinery.com/2012/11/12/the-infinite-jukebox/) ), and used to be hosted over [here.](http://labs.echonest.com/Uploader/index.html)
-  This site is a rework of the original project, and is now hosted by [UnderMybrella]({{ site.git }})."
+  This site is a rework of the original project, and is now hosted by [UnderMybrella]({{ site.data.var.git }})."
 
 - question: Help! My audio seems to be jumping randomly!
   id: random-jump
@@ -66,4 +66,4 @@ faq:
 
 - question: Help! Something broke!
   id: issue
-  answer: This is still a fairly early build, so there may be some bugs in the server. If you do find an issue, please file an issue [here]({{ site.git }}/issues).
+  answer: This is still a fairly early build, so there may be some bugs in the server. If you do find an issue, please file an issue [here]({{ site.data.var.git }}/issues).
