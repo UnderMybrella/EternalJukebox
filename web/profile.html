@@ -3,94 +3,94 @@ title: 'The Eternal Jukebox'
 layout: default
 ---
 
-        <div>
-            <h1 id="display-name">Username Here</h1>
-            <hr>
-            <div id="starred"></div>
-        </div>
-        <hr>
+<div>
+    <h1 id="display-name">Username Here</h1>
+    <hr>
+    <div id="starred"></div>
+</div>
+<hr>
 
-        <script>
-            function extractTitle(url) {
-                var lastSlash = url.lastIndexOf('/');
-                if (lastSlash >= 0 && lastSlash < url.length - 1) {
-                    return url.substring(lastSlash + 1, url.length - 4);
-                } else {
-                    return url;
-                }
+<script>
+    function extractTitle(url) {
+        var lastSlash = url.lastIndexOf('/');
+        if (lastSlash >= 0 && lastSlash < url.length - 1) {
+            return url.substring(lastSlash + 1, url.length - 4);
+        } else {
+            return url;
+        }
+    }
+
+    function getTitle(title, artist, url) {
+        console.log(title + ":" + artist + ":" + url);
+        if (title === undefined || title.length === 0 || title === '(unknown title)' || title === 'undefined') {
+            console.log("???");
+            if (url) {
+                title = extractTitle(url);
+            } else {
+                title = null;
             }
-
-            function getTitle(title, artist, url) {
-                console.log(title + ":" + artist + ":" + url);
-                if (title === undefined || title.length === 0 || title === '(unknown title)' || title === 'undefined') {
-                    console.log("???");
-                    if (url) {
-                        title = extractTitle(url);
-                    } else {
-                        title = null;
-                    }
-                } else {
-                    if (artist !== '(unknown artist)') {
-                        title = title + ' by ' + artist;
-                    }
-                }
-                return title;
+        } else {
+            if (artist !== '(unknown artist)') {
+                title = title + ' by ' + artist;
             }
+        }
+        return title;
+    }
 
-            function listSong(track) {
-                console.log("Listing " + track);
-                var title = getTitle(track.info.title, track.info.artist, track.info.url);
-                if (title) {
-                    var link = $('<a>');
-                    link.attr('href', track.url);
-                    var item = $('<li>').append(title);
+    function listSong(track) {
+        console.log("Listing " + track);
+        var title = getTitle(track.info.title, track.info.artist, track.info.url);
+        if (title) {
+            var link = $('<a>');
+            link.attr('href', track.url);
+            var item = $('<li>').append(title);
 
-                    item.attr('class', 'song-link');
-                    link.append(item);
-                    return link;
-                }
-                return null;
+            item.attr('class', 'song-link');
+            link.append(item);
+            return link;
+        }
+        return null;
+    }
+
+    window.onload = function() {
+        $.ajax({
+            url: "api/profile/google",
+            dataType: "json",
+            type: "GET",
+            success: function(data) {
+                $("#display-name").text(data["displayName"])
+            },
+            error: function(xhr, textStatus, error) {
+                $("#display-name").text("An error occurred: " + error + "!")
             }
-
-            window.onload = function() {
-                $.ajax({
-                    url: "api/profile/google",
-                    dataType: "json",
-                    type: "GET",
-                    success: function(data) {
-                        $("#display-name").text(data["displayName"])
-                    },
-                    error: function(xhr, textStatus, error) {
-                        $("#display-name").text("An error occurred: " + error + "!")
-                    }
-                });
+        });
 
 
-                $.ajax({
-                    url: "api/profile/stars",
-                    dataType: "json",
-                    type: "GET",
-                    success: function(data) {
-                        console.log(data);
-                        for (var i = 0; i < data.length; i++) {
-                            var s = data[i];
-                            var url = 'api/expand/' + s;
-                            $.getJSON(url, function(data) {
-                                var item = listSong(data);
-                                console.log("item: " + item);
-                                if (item) {
-                                    console.log(item);
-                                    $('#starred').append(item);
-                                }
-                            }).error(function(error) {
-                                console.log("Error: " + error);
-                            });
+        $.ajax({
+            url: "api/profile/stars",
+            dataType: "json",
+            type: "GET",
+            success: function(data) {
+                console.log(data);
+                for (var i = 0; i < data.length; i++) {
+                    var s = data[i];
+                    var url = 'api/expand/' + s;
+                    $.getJSON(url, function(data) {
+                        var item = listSong(data);
+                        console.log("item: " + item);
+                        if (item) {
+                            console.log(item);
+                            $('#starred').append(item);
                         }
-                    },
-                    error: function(xhr, textStatus, error) {
-                        console.log("Error: " + error)
-                    }
-                });
-
+                    }).error(function(error) {
+                        console.log("Error: " + error);
+                    });
+                }
+            },
+            error: function(xhr, textStatus, error) {
+                console.log("Error: " + error)
             }
-        </script>
+        });
+
+    }
+</script>

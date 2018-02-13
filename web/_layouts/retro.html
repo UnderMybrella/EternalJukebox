@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=windows-1252">
+    <script type="text/javascript" async="" src="files/ga.js"></script>
+    <script id="twitter-wjs" src="files/widgets.js"></script>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+    <link rel="stylesheet" href="files/jquery-ui.css" type="text/css" media="screen">
+
+    <script type="text/javascript" src="files/watch.js"></script>
+    <link rel="stylesheet" href="files/styles.css" type="text/css" media="screen">
+    <!--
+    -->
+
+    <!--
+    <link rel="stylesheet" href="styles.css" type="text/css" media="screen">
+    <script type="text/javascript" src="watch.js"></script>
+    <link rel="stylesheet" href="styles.css" type="text/css" media="screen">
+    <script type="text/javascript" src="jremix.js"></script>
+    -->
+    <script type="text/javascript" src="files/jremix.js"></script>
+
+    <script src="files/underscore-min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="files/raphael-min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="files/poplist.js" type="text/javascript" charset="utf-8"></script>
+    <script src="files/topsongs.js" type="text/javascript" charset="utf-8"></script>
+    <link href="files/css.css" rel="stylesheet" type="text/css">
+    <title> The Eternal Jukebox </title>
+    <script type="text/javascript" charset="utf-8" async="" src="files/button.js"></script>
+</head>
+
+<body>
+<div id="title"><a href="retro_index.html"><b>The <strike>Infinite</strike> Eternal Jukebox</b></a></div>
+<img alt="logo" src="files/jukebox.png" class="rotate" id="open-img-left">
+<img alt="logo" src="files/jukebox.png" class="rotate" id="open-img-right">
+
+    {{ content }}
+
+{% include ga.html %}
+</div>
+<iframe id="rufous-sandbox" scrolling="no" allowtransparency="true" allowfullscreen="true"
+        style="position: absolute; visibility: hidden; display: none; width: 0px; height: 0px; padding: 0px; border: medium none;"
+        title="Twitter analytics iframe" frameborder="0"></iframe>
+{% include footer.html %}
+</body>
+</html>
