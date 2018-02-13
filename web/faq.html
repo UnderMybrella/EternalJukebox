@@ -16,7 +16,7 @@ type: faq
             <b id="{{ item.id }}" class="question">{{ item.question }}</b>
             <div class="indented">
 {% capture x %}
-{{ item.answer }}
+{{ item.answer | liquify }}
 {% endcapture %}{{ x | markdownify }}
             </div>
             <br>
