@@ -1,141 +1,57 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta http-equiv="content-type" content="text/html; charset=windows-1252">
-    <script type="text/javascript" async="" src="files/ga.js"></script>
-    <script id="twitter-wjs" src="files/widgets.js"></script>
-    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
-    <link rel="stylesheet" href="files/jquery-ui.css" type="text/css" media="screen">
-
-    <script type="text/javascript" src="files/watch.js"></script>
-    <link rel="stylesheet" href="files/styles.css" type="text/css" media="screen">
-    <!--
-    -->
-
-    <!--
-    <link rel="stylesheet" href="styles.css" type="text/css" media="screen">
-    <script type="text/javascript" src="watch.js"></script>
-    <link rel="stylesheet" href="styles.css" type="text/css" media="screen">
-    <script type="text/javascript" src="jremix.js"></script>
-    -->
-    <script type="text/javascript" src="files/jremix.js"></script>
-
-    <script src="files/underscore-min.js" type="text/javascript" charset="utf-8"></script>
-    <script src="files/raphael-min.js" type="text/javascript" charset="utf-8"></script>
-    <script src="files/poplist.js" type="text/javascript" charset="utf-8"></script>
-    <script src="files/topsongs.js" type="text/javascript" charset="utf-8"></script>
-    <link href="files/css.css" rel="stylesheet" type="text/css">
-    <title> The Eternal Jukebox </title>
-    <script type="text/javascript" charset="utf-8" async="" src="files/button.js"></script>
-</head>
-
-<body>
-<div id="title"><a href="retro_index.html"><b>The <strike>Infinite</strike> Eternal Jukebox</b></a></div>
-<img alt="logo" src="files/jukebox.png" class="rotate" id="open-img-left">
-<img alt="logo" src="files/jukebox.png" class="rotate" id="open-img-right">
+---
+title: 'The Eternal Jukebox'
+layout: retro
+app: jukebox
+---
 <div id="main">
     <i> For when your favorite song just isn't long enough</i>
-    <div id="select-track">
-        <!-- <button id='load'> Upload your own MP3 </button> -->
-    </div>
+<div id="select-track">
+    <!-- <button id='load'> Upload your own MP3 </button> -->
+</div>
 
-    <div id="info"></div>
-    <div id="error" style="display: none;"></div>
-    <div id="song-div">
-        <div id="search-form">
-            Search for a track <input id="search-text" type="text">
-            <button id="search"> Search</button>
-        </div>
-        <div id="sel-text"> Or select a
-            <!--<span class="sel-list" id="recent-list">recent</span>,
-            <span class="sel-list activated" id="popular-list">most played</span> or
-            <span class="sel-list" id="upload-list">most uploaded</span>
-            track:</div> -->
-            <span class="sel-list" id="popular-list">popular</span>
-            track:
-        </div>
-        <ul id="song-list"></ul>
+<div id="info"></div>
+<div id="error" style="display: none;"></div>
+<div id="song-div">
+    <div id="search-form">
+        Search for a track <input id="search-text" type="text">
+        <button id="search"> Search</button>
     </div>
+    <div id="sel-text"> Or select a
+        <!--<span class="sel-list" id="recent-list">recent</span>,
+        <span class="sel-list activated" id="popular-list">most played</span> or
+        <span class="sel-list" id="upload-list">most uploaded</span>
+        track:</div> -->
+        <span class="sel-list" id="popular-list">popular</span>
+        track:
+    </div>
+    <ul id="song-list"></ul>
+</div>
 </div>
 <div id="running" style="display: none;">
-    <div id="details">
-        <a href="" target="_blank" id="song-url"><span id="song-title"> </span></a>
-        <span id="button-panel">
-                <button class="cbut" id="new"> New song</button> 
-                <button class="cbut" id="tune"> Tune </button> 
-                <button class="cbut" id="go"> Play</button>
-            </span>
-        <span id="tweet-span">
-                <iframe id="twitter-widget-0" scrolling="no" allowtransparency="true"
-                        class="twitter-share-button twitter-share-button-rendered twitter-tweet-button"
-                        style="position: static; visibility: visible; width: 61px; height: 20px;"
-                        title="Twitter Tweet Button" src="files/tweet_button.html" frameborder="0"></iframe>
-                <script>!function (d, s, id) {
-                    var
-                        js, fjs = d.getElementsByTagName(s)[0];
-                    if (!d.getElementById(id)) {
-                        js = d.createElement(s);
-                        js.id = id;
-                        js.src = "https://platform.twitter.com/widgets.js";
-                        fjs.parentNode.insertBefore(js, fjs);
-                    }
-                }(document, "script", "twitter-wjs");</script>
-            </span>
-    </div>
-
-    <div id="tiles">
-        <svg height="680" version="1.1" width="900" xmlns="http://www.w3.org/2000/svg"
-             style="overflow: hidden; position: relative; left: -0.5px;">
-            <desc>Created with Raphaël 2.1.0</desc>
-            <defs></defs>
-        </svg>
-    </div>
-
-    <div id="stats">
-        <span id="sbeats"> Total Beats: <span id="beats"> 0 </span></span>
-        <!--<span id='sbeats'> PC: <span id='playcount'> 0 </span></span> -->
-        <span id="stime"> Listen Time: <span id="time"> 00:00:00 </span></span>
-    </div>
-</div>
-<div id="footer">
-    <ul id="footer-list">
-        <li>Now powered by <a href="http://http://spotify.com/">Spotify </a></li>
-        <li>Built at <a href="http://boston.musichackday.org/">Music Hack Day @ MIT</a> by <a
-                href="http://twitter.com/plamere"> Paul Lamere </a></li>
-        <li>Now hosted by <a href="https://github.com/UnderMybrella/EternalJukebox"> UnderMybrella </a></li>
-        <li>Read the <a href="retro_faq.html"> FAQ </a></li>
-        <li>More info at <a href="http://musicmachinery.com/2012/11/12/the-infinite-jukebox/">Music Machinery</a></li>
-        <li>Check out the <a href="http://www.reddit.com/r/infinitejukebox/"> Infinite Jukebox Reddit </a></li>
-    </ul>
-    <!--
-    Interested in a <b>mobile</b> version of the Infinite Jukebox? Let me know by taking this
-    <a href="https://docs.google.com/forms/d/1jLy_XlPt2WD4tuE9-paLBMbapzLJ9CAgTDjuD2Wefa0/viewform">
-    one minute survey</a>.
-    -->
-    <!--
-    -->
+<div id="details">
+    <a href="" target="_blank" id="song-url"><span id="song-title"> </span></a>
+    <span id="button-panel">
+            <button class="cbut" id="new"> New song</button>
+            <button class="cbut" id="tune"> Tune </button>
+            <button class="cbut" id="go"> Play</button>
+        </span>
+    {% include tweet.html %}
 </div>
 
-<script type="text/javascript">
+<div id="tiles">
+    <svg height="680" version="1.1" width="900" xmlns="http://www.w3.org/2000/svg"
+         style="overflow: hidden; position: relative; left: -0.5px;">
+        <desc>Created with Raphaï¿½l 2.1.0</desc>
+        <defs></defs>
+    </svg>
+</div>
 
-
-    var _gaq = _gaq || [];
-    _gaq.push(['_setAccount', 'UA-3675615-27']);
-    _gaq.push(['_trackPageview']);
-
-    (function () {
-        var ga = document.createElement('script');
-        ga.type =
-            'text/javascript';
-        ga.async = true;
-        ga.src = ('https:' == document.location.protocol ? 'https://ssl' :
-            'http://www') + '.google-analytics.com/ga.js';
-        var s = document.getElementsByTagName('script')[0];
-        s.parentNode.insertBefore(ga, s);
-    })();
-
-</script>
+<div id="stats">
+    <span id="sbeats"> Total Beats: <span id="beats"> 0 </span></span>
+    <!--<span id='sbeats'> PC: <span id='playcount'> 0 </span></span> -->
+    <span id="stime"> Listen Time: <span id="time"> 00:00:00 </span></span>
+</div>
+</div>
 
 <script type="text/javascript">
     // This code will make you cry. It was written in a mad
@@ -2348,8 +2264,3 @@
         </div>
     </div>
 </div>
-<iframe id="rufous-sandbox" scrolling="no" allowtransparency="true" allowfullscreen="true"
-        style="position: absolute; visibility: hidden; display: none; width: 0px; height: 0px; padding: 0px; border: medium none;"
-        title="Twitter analytics iframe" frameborder="0"></iframe>
-</body>
-</html>

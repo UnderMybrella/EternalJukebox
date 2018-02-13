@@ -82,7 +82,7 @@ hr {
 #stime {
     position:relative;
     float:right;
-    
+
 }
 
 #file {
@@ -245,8 +245,8 @@ a:link {text-decoration: none; }
     float:right;
     margin-bottom:20px;
 
-    -webkit-animation-name:             rotate; 
-    -webkit-animation-duration:         0.5s; 
+    -webkit-animation-name:             rotate;
+    -webkit-animation-duration:         0.5s;
     -webkit-animation-iteration-count:  infinite;
     -webkit-animation-timing-function: linear;
 }
@@ -258,13 +258,13 @@ a:link {text-decoration: none; }
     -moz-transition-duration: 0.8s;
     -o-transition-duration: 0.8s;
     transition-duration: 0.8s;
-    
+
     -webkit-transition-property: -webkit-transform;
     -moz-transition-property: -moz-transform;
     -o-transition-property: -o-transform;
     transition-property: transform;
     overflow:hidden;
-}   
+}
 
 .sel-list {
     font-weight:bold;
@@ -409,10 +409,15 @@ a:link {text-decoration: none; }
 }
 
 /*
-.rotate:hover   
-{ 
+.rotate:hover
+{
     -webkit-transform:rotate(360deg);
-    -moz-transform:rotate(360deg); 
+    -moz-transform:rotate(360deg);
     -o-transform:rotate(360deg);
 }
 */
+
+.ui-dialog {
+  top: 75px;
+  left: 20px;
+}

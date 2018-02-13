@@ -55,3 +55,4 @@ trid_audio/
 working/
 !/src/main/kotlin/org/abimon/eternalJukebox/data/audio
 /data/
+web

@@ -111,3 +111,8 @@ li.dropdown {
 #song-list {
     cursor:pointer;
 }
+
+.ui-dialog {
+  top: 75px;
+  left: 20px;
+}
