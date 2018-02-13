@@ -1,0 +1,36 @@
+<nav class="navbar navbar-fixed-top">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+    </div>
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav">
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle navbar-brand" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" style="">{% if page.title == 'The Autocanonizer' %}The Autocanonizer{% endif %}{% if page.title == 'The Eternal Jukebox' %}The Eternal Jukebox{% endif %} <span class="caret"></span></a>
+          <ul class="dropdown-menu">
+              <li><a href="jukebox_index.html">The Eternal Jukebox</a></li>
+              <li><a href="retro_index.html">The Eternal Jukebox (Retro)</a></li>
+              <li><a href="canonizer_index.html">The Autocanonizer</a></li>
+          </ul>
+        </li>
+        <li class="active"><a id="show-main" href="{% if page.title == 'The Autocanonizer' %}canonizer{% endif %}{% if page.title == 'The Eternal Jukebox' %}jukebox{% endif %}_index.html">Main</a></li>
+        <li><a id="show-loader" href="{% if page.title == 'The Autocanonizer' %}canonizer{% endif %}{% if page.title == 'The Eternal Jukebox' %}jukebox{% endif %}_search.html">Pick a song</a></li>
+        <li><a id="show-about" href="{% if page.title == 'The Autocanonizer' %}http://musicmachinery.com/2014/03/13/the-autocanonizer/{% endif %}{% if page.title == 'The Eternal Jukebox' %}http://musicmachinery.com/2012/11/12/the-infinite-jukebox/{% endif %}">About</a></li>
+        <li><a href="faq.html">FAQ</a></li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" style="">Social <span class="caret"></span></a>
+            <ul class="dropdown-menu">
+              <li><a id="show-reddit" href="https://www.reddit.com/r/infinitejukebox/">Infinite Jukebox Reddit</a></li>
+              <li><a id="show-discord" href="https://discord.gg/KWN5BfD">Eternal Jukebox Discord</a></li>
+            </ul>
+          </li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right"><li><a id="show-profile" href="profile.html">Profile</a></li></ul>
+    </div>
+  </div>
+</nav>
