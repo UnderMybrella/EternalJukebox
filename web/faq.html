@@ -6,118 +6,20 @@ type: faq
 
 <div id="hero" class="hero-unit">
     <div class="container">
-        <h1> The
-            <del>Infinite</del>
-            Eternal Jukebox FAQ
-        </h1>
-        <p><i>For when your favorite song just isn't long enough</i></p>
+{% capture x %}
+# The ~~Infinite~~ Eternal Jukebox FAQ
+#### For when your favorite song just isn't long enough
+{% endcapture %}{{ x | markdownify }}
         <br>
         <div class="container lead span11">
-            <b id="about" class="question">What is this?</b>
+          {% for item in site.data.faq.faq %}
+            <b id="{{ item.id }}" class="question">{{ item.question }}</b>
             <div class="indented">
-                <i>For when your favorite song just isn't long enough.</i>
-                <br>
-                This web app lets you search a song on Spotify and will then generate a never-ending and ever changing
-                version of the song.
-                It does what Infinite Gangnam Style did but for any song.
+{% capture x %}
+{{ item.answer }}
+{% endcapture %}{{ x | markdownify }}
             </div>
             <br>
-            <b id="technical" class="question">How does it work?</b>
-            <div class="indented">
-                We use the <a href="https://developer.spotify.com/web-api/get-audio-features/">Spotify
-                API</a> to break the song into beats. We play the song beat by beat, but at every beat there's a chance
-                that we will jump to a different part of song that happens to sound very similar to the current beat.
-                For beat similarity
-                we look at pitch, timbre, loudness, duration and the position of the beat within a bar. There's a nifty
-                visualization
-                that shows all the possible transitions that can occur at any beat.
-                <br>
-                The backend is written in <a href="https://kotlinlang.org/">Kotlin</a> and hosted on a
-                <a href="https://console.cloud.google.com/">Google Compute</a> server. The source code is available <a href="https://github.com/UnderMybrella/EternalJukebox">here.</a>
-            </div>
-            <br>
-            <b id="controls" class="question">Are there any ways to control the song?</b>
-            <div class="indented">
-                Yes - here are some keys:
-                <ul>
-                    <li><b> [Space] </b> - Start and stop playing the song</li>
-                    <li><b> [Left Arrow] </b> - Decrement the current play velocity by one</li>
-                    <li><b> [Right Arrow] </b> - Increment the current play velocity by one</li>
-                    <li><b> [Down Arrow] </b> - Sets the current play velocity to zero</li>
-                    <li><b> [Control] </b> - freeze on the current beat</li>
-                    <li><b> [Shift] </b> - bounce between the current beat and all of the similar sounding beats. These
-                        are the branch points.
-                    </li>
-                    <li><b> 'H' </b> - Bring it on home - toggles infinite mode off/on.</li>
-                </ul>
-            </div>
-            <br>
-            <b id="colours" class="question">What do the coloured blocks represent?</b>
-            <div class="indented">
-                Each block represents a beat in the song. The colors are related
-                to the timbre of the music for that beat.
-            </div>
-            <br>
-            <b id="tune" class="question">How can I tune the Jukebox?</b>
-            <div class="indented">
-                (For detailed tuning instructions see <a href="http://musicmachinery.com/2012/11/26/tuning-the-infinite-jukebox/">"Tuning the Infinite Jukebox"</a> on Music
-                Machinery.)
-                <br>
-                This is a mostly experimental feature.
-                <ul class="indented">
-                    <li>You can tune by clicking the tune button.</li>
-                    <li>Adjust the slider to the left for higher audio quality, and adjust the slider to the right for more branch points.</li>
-                    <li>You can also delete any edge by clicking on it to select it (when selected the edge turns red).</li>
-                    <li>Delete the edge by pressing the <b>[del]</b> key.</li>
-                    <li>The Infinite Jukebox will try hard to maximize the amount of the song that is played when in infinite mode.</li>
-                    <li>This behavior can be turned off by de-selecting the 'Loop Extension Optimization' checkbox.</li>
-                    <li>If we don't get the track right for the song you request, you can change the audio by putting in a YouTube URL into the Audio URL box.</li>
-                    <li>You can also upload an audio track for the current song using the "Browse" button</li>
-                    <li>You can throw away all of your tunings by pressing the 'reset' button.</li>
-                    <li>You can share your tuned songs, all your edits are encoded in the URL.</li>
-                </ul>
-            </div>
-            <br>
-            <b id="sharing" class="question">I have an awesome infinite track that I'd like everyone to hear. What do I do?</b>
-            <div class="indented">
-                You can tweet it with the tags <a href="https://twitter.com/hashtag/eternaljukebox">#EternalJukebox</a>
-                <br>
-                ...or you could submit it to the <a href="https://www.reddit.com/r/infinitejukebox">InfiniteJukebox subreddit</a>
-                <br>
-                ...or you might want to share it in the <a href="https://discord.gg/KWN5BfD">Eternal Jukebox Discord</a>.
-                <br><br>
-                You can either copy the URL of the page you're on, or you can click the "Share" button to obtain a nicer link to use.
-            </div>
-            <br>
-            <b id="logo" class="question">Who made the cool logo?</b>
-            <div class="indented">
-                The logo was contributed by <a href="http://jasperallijn.crevado.com/">Jasper Allijn</a>
-            </div>
-            <br>
-            <b id="creator" class="question">Who made this?</b>
-            <div class="indented">
-                The original site was made by <a href="http://twitter.com/plamere">Paul Lamere</a> at <a href="http://boston.musichackday.org/"> Music Hack Day Boston</a> on November
-                11, 2012 (More info at <a href="http://musicmachinery.com/2012/11/12/the-infinite-jukebox/"> Music Machinery </a>), and used to be hosted over <a href="http://labs.echonest.com/Uploader/index.html">here.</a>
-                <br>
-                This site is a rework of the original project, and is now hosted by <a href="https://github.com/UnderMybrella/EternalJukebox">UnderMybrella</a>.
-            </div>
-            <br>
-            <b id="random-jump" class="question">Help! My audio seems to be jumping randomly!</b>
-            <div class="indented">
-                There's a couple of reasons this could be:
-                <br>
-                The most likely being that the audio file we found for your song
-                doesn't match up perfectly with the version that Spotify has, which means you'll experience jumps at points that there shouldn't be throughout a song.
-                <br>
-                The solution to this is to find a version of it that matches up to the version on Spotify <b>as close as possible</b>, or to upload your own track, if you can't find one online.
-                <br>
-                If you <i>do</i> have a song that seems to be synchronised perfectly, but still seems to jump randomly, feel free to file an issue <a href="https://github.com/UnderMybrella/EternalJukebox/issues" target="_blank">here</a>
-            </div>
-            <br>
-            <b id="issue" class="question">Help! Something broke!</b>
-            <div class="indented">
-                This is still a fairly early build, so there may be some bugs in the server.
-                If you do find an issue, please file an issue <a href="https://github.com/UnderMybrella/EternalJukebox/issues" target="_blank">here</a>.
-            </div>
+         {% endfor %}
         </div>
     </div>

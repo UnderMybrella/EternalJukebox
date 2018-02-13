@@ -18,10 +18,12 @@
               <li><a href="canonizer_index.html">The Autocanonizer</a></li>
           </ul>
         </li>
-        <li class="active"><a id="show-main" href="{% if page.title == 'The Autocanonizer' %}canonizer{% endif %}{% if page.title == 'The Eternal Jukebox' %}jukebox{% endif %}_index.html">Main</a></li>
-        <li><a id="show-loader" href="{% if page.title == 'The Autocanonizer' %}canonizer{% endif %}{% if page.title == 'The Eternal Jukebox' %}jukebox{% endif %}_search.html">Pick a song</a></li>
-        <li><a id="show-about" href="{% if page.title == 'The Autocanonizer' %}http://musicmachinery.com/2014/03/13/the-autocanonizer/{% endif %}{% if page.title == 'The Eternal Jukebox' %}http://musicmachinery.com/2012/11/12/the-infinite-jukebox/{% endif %}">About</a></li>
-        <li><a href="faq.html">FAQ</a></li>
+        {% for item in site.data.nav.bar %}
+            <li class="{% if item.url == page.url %}active{% endif %}">
+              <a id="{{ item.id }}" href="{% if page.title == 'The Autocanonizer' %}{{ item.canonizer }}{% elsif page.title == 'The Eternal Jukebox' %}{{ item.jukebox }}{% endif %}">{{ item.title }}</a>
+            </li>
+        {% endfor %}
+        {% if page.title == 'The Autocanonizer' %}{% elsif page.title == 'The Eternal Jukebox' %}<li><a href="faq.html">FAQ</a></li>{% endif %}
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" style="">Social <span class="caret"></span></a>
             <ul class="dropdown-menu">
