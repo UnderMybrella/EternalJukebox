@@ -1,1 +1,1 @@
-youtube-dl %1 -f best --audio-format %3 -x -o %2 --max-filesize 10m
+youtube-dl %1 -f best --audio-format %3 -x -o %2 --max-filesize 25m

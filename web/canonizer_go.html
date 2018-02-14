@@ -426,8 +426,7 @@
         info('Fetching the analysis');
         $.getJSON(url, function (data) {
             gotTheAnalysis(data);
-        })
-            .error(function () {
+        }).error(function () {
                 info("Sorry, can't find info for that track");
             });
     }
@@ -565,7 +564,7 @@
         $("#short-url").click(
             function () {
                 getShareURL(function (id) {
-                    prompt("Copy the URL below and press 'Enter' to automatically close this prompt", window.location.origin + "/api/expand/" + id + "/redirect")
+                    prompt("Copy the URL below and press 'Enter' to automatically close this prompt", window.location.origin + "/api/site/expand/" + id + "/redirect")
                 })
             }
         );
@@ -717,15 +716,15 @@
             }
         }
 
+        if ('audio' in params) {
+            canonizerData.audioURL = decodeURIComponent(params['audio']);
+        }
+
         if ('id' in params) {
             var id = params['id'];
             fetchAnalysis(id);
         } else {
             fetchAnalysis('4kflIGfjdZJW4ot2ioixTB');
-        }
-
-        if ('audio' in params) {
-            canonizerData.audioURL = decodeURIComponent(params['audio']);
         }
     }
 

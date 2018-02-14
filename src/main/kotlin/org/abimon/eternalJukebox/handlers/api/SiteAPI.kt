@@ -7,6 +7,7 @@ import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.BodyHandler
 import org.abimon.eternalJukebox.*
+import org.abimon.eternalJukebox.objects.ClientInfo
 import org.abimon.eternalJukebox.objects.EnumAnalyticType
 import org.abimon.units.data.ByteUnit
 import org.abimon.visi.lang.usedMemory
@@ -36,7 +37,7 @@ object SiteAPI: IAPI {
         router.post().handler(BodyHandler.create().setBodyLimit(1 * 1000 * 1000).setDeleteUploadedFilesOnEnd(true))
 
         router.get("/expand/:id").handler(SiteAPI::expand)
-        //router.get("/expand/:id/redirect").handler(SiteAPI::expandAndRedirect)
+        router.get("/expand/:id/redirect").handler(SiteAPI::expandAndRedirect)
         router.post("/shrink").handler(SiteAPI::shrink)
     }
 
@@ -56,7 +57,20 @@ object SiteAPI: IAPI {
     fun expand(context: RoutingContext) {
         val id = context.pathParam("id")
         val clientInfo = context.clientInfo
-        val params = EternalJukebox.database.expandShortURL(id, clientInfo) ?: return context.response().putHeader("X-Client-UID", clientInfo.userUID).setStatusCode(400).end(jsonObjectOf("error" to "No short ID stored", "id" to id))
+        val expanded = expand(id, clientInfo) ?: return context.response().putHeader("X-Client-UID", clientInfo.userUID).setStatusCode(400).end(jsonObjectOf("error" to "No short ID stored", "id" to id))
+        context.response().end(expanded)
+    }
+
+    fun expandAndRedirect(context: RoutingContext) {
+        val id = context.pathParam("id")
+        val clientInfo = context.clientInfo
+        val expanded = expand(id, clientInfo) ?: return context.response().putHeader("X-Client-UID", clientInfo.userUID).setStatusCode(400).end(jsonObjectOf("error" to "No short ID stored", "id" to id))
+
+        context.response().redirect(expanded.getString("url"))
+    }
+
+    fun expand(id: String, clientInfo: ClientInfo): JsonObject? {
+        val params = EternalJukebox.database.expandShortURL(id, clientInfo) ?: return null
         val paramsMap = params.map { pair -> pair.split('=', limit = 2) }.filter { pair -> pair.size == 2 }.map { pair -> Pair(pair[0], pair[1]) }.toMap(HashMap())
 
         val service = paramsMap["service"] ?: "jukebox"
@@ -74,10 +88,8 @@ object SiteAPI: IAPI {
         response["song"] = EternalJukebox.jsonMapper.convertValue(trackInfo, Map::class.java)
         response["params"] = paramsMap
 
-        context.response().end(response)
+        return response
     }
-
-
 
     fun shrink(context: RoutingContext) {
         val params = context.bodyAsString.split('&').toTypedArray()

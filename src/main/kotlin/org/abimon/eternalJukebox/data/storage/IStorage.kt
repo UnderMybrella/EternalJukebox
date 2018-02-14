@@ -1,11 +1,15 @@
 package org.abimon.eternalJukebox.data.storage
 
 import io.vertx.ext.web.RoutingContext
+import org.abimon.eternalJukebox.EternalJukebox
 import org.abimon.eternalJukebox.objects.ClientInfo
 import org.abimon.eternalJukebox.objects.EnumStorageType
 import org.abimon.visi.io.DataSource
 
 interface IStorage {
+    val storageOptions
+        get() = EternalJukebox.config.storageOptions
+
     /**
      * Should we store this type of storage?
      */

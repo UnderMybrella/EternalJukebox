@@ -21,7 +21,6 @@ import org.abimon.eternalJukebox.data.analysis.SpotifyAnalyser
 import org.abimon.eternalJukebox.data.analytics.IAnalyticsProvider
 import org.abimon.eternalJukebox.data.analytics.IAnalyticsStorage
 import org.abimon.eternalJukebox.data.audio.IAudioSource
-import org.abimon.eternalJukebox.data.database.H2Database
 import org.abimon.eternalJukebox.data.database.IDatabase
 import org.abimon.eternalJukebox.data.storage.IStorage
 import org.abimon.eternalJukebox.handlers.OpenGraphHandler
@@ -108,7 +107,10 @@ object EternalJukebox {
         else
             config = JukeboxConfig()
 
-        log("Loaded config: $config")
+        if(config.printConfig)
+            log("Loaded config: $config")
+        else
+            log("Loaded config")
 
         // Config Handling
 
@@ -117,7 +119,7 @@ object EternalJukebox {
 
         storage = config.storageType.storage
 
-        vertx = Vertx.vertx(VertxOptions().setMaxWorkerExecuteTime(90000000000))
+        vertx = Vertx.vertx(VertxOptions().setMaxWorkerExecuteTime(config.workerExecuteTime))
         webserver = vertx.createHttpServer()
 
         val mainRouter = Router.router(vertx)
@@ -182,7 +184,10 @@ object EternalJukebox {
             analyticsProviders = emptyList()
         }
 
-        database = H2Database
+        if (isEnabled("database"))
+            database = config.databaseType.db.objectInstance!!
+        else
+            database = EmptyDataAPI
 
         if (isEnabled("audioAPI")) {
             apis.add(AudioAPI)

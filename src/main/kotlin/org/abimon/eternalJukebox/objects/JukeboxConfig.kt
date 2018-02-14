@@ -23,5 +23,12 @@ data class JukeboxConfig(
 
         val analyticsProviders: Map<EnumAnalyticsProvider, Map<String, Any?>> = emptyMap(),
 
-        val usageWritePeriod: Long = 1000 * 60
+        val databaseType: EnumDatabaseType = EnumDatabaseType.H2,
+        val databaseOptions: Map<String, Any?> = emptyMap(),
+
+        val usageWritePeriod: Long = 1000 * 60,
+
+        val workerExecuteTime: Long = 90L * 1000 * 1000 * 1000,
+
+        val printConfig: Boolean = false
 )

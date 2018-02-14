@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.2.20'
+    ext.kotlin_version = '1.2.21'
     ext.vertx_version = '3.5.0'
     ext.jackson_version = '2.9.2'
 
@@ -44,6 +44,7 @@ dependencies {
     compile "com.h2database:h2:1.4.196"
     compile "mysql:mysql-connector-java:5.1.38"
     compile "com.zaxxer:HikariCP:2.6.2"
+    compile "com.google.cloud.sql:mysql-socket-factory:1.0.5"
 
     compile 'org.jsoup:jsoup:1.10.2'
     compile 'com.auth0:java-jwt:3.2.0'

@@ -1,10 +1,16 @@
 package org.abimon.eternalJukebox.data.database
 
+import org.abimon.eternalJukebox.EternalJukebox
 import org.abimon.eternalJukebox.objects.ClientInfo
 import org.abimon.eternalJukebox.objects.JukeboxAccount
 import org.abimon.eternalJukebox.objects.JukeboxInfo
 
 interface IDatabase {
+    val databaseOptions
+        get() = EternalJukebox.config.databaseOptions
+    val databaseName
+        get() = databaseOptions["databaseName"] ?: "eternal_jukebox"
+
     fun provideAudioTrackOverride(id: String, clientInfo: ClientInfo?): String?
     fun storeAudioTrackOverride(id: String, newURL: String, clientInfo: ClientInfo?)
     fun provideAccountForID(accountID: String, clientInfo: ClientInfo?): JukeboxAccount?
