@@ -492,12 +492,13 @@
     function checkIfStarred() {
         getShareURL(function (id) {
             $.ajax({
-                url: "/api/profile/stars",
+                url: "/api/profile/me",
                 dataType: "json",
                 type: "GET",
                 success: function (data) {
-                    for (var i = 0; i < data.length; i++) {
-                        if (data[i] === id) {
+                    var stars = data["stars"];
+                    for (var i = 0; i < stars.length; i++) {
+                        if (stars[i] === id) {
                             $("#star").text("Unstar");
                             break;
                         }
@@ -613,7 +614,7 @@
                     "X-XSRF-TOKEN": document.cookie.substring(document.cookie.indexOf("XSRF-TOKEN")).split(";")[0].split("=").slice(1).join("=")
                 },
                 success: function (data) {
-                    jukeboxData.audioURL = data;
+                    jukeboxData.audioURL = 'upl:' + data["id"];
                     setTunedURL();
                     window.location.reload(true);
                 },

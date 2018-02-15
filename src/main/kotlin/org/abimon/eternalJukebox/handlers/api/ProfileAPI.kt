@@ -2,11 +2,14 @@ package org.abimon.eternalJukebox.handlers.api
 
 import com.auth0.jwt.JWT
 import com.github.kittinunf.fuel.Fuel
+import com.github.kittinunf.fuel.core.Request
+import com.github.kittinunf.fuel.core.Response
 import io.vertx.ext.web.Cookie
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import org.abimon.eternalJukebox.*
 import org.abimon.eternalJukebox.objects.*
+import org.abimon.visi.io.ByteArrayDataSource
 import org.abimon.visi.security.sha512Hash
 
 object ProfileAPI : IAPI {
@@ -31,6 +34,9 @@ object ProfileAPI : IAPI {
         router.get("/google").handler(this::googleProfile)
         router.get("/me").handler(this::profile)
 
+        router.put("/stars/:id").handler(this::addStar)
+        router.delete("/stars/:id").handler(this::deleteStar)
+
         router.get("/google_callback").handler(this::googleCallback)
     }
 
@@ -46,7 +52,7 @@ object ProfileAPI : IAPI {
         val clientInfo = context.clientInfo
         val account = clientInfo.authToken?.let { auth -> EternalJukebox.database.provideAccountForEternalAuth(auth, clientInfo) } ?: return context.fail(401)
 
-        val (_, response) = Fuel.get(oauthDocument.userinfo_endpoint).header("Authorization" to "Bearer ${(account.googleAccessToken ?: return context.fail(402))}").response()
+        val (_, response) = Fuel.get(oauthDocument.userinfo_endpoint).oauthRequest(account)
         val person = EternalJukebox.jsonMapper.tryReadValue(response.data, GooglePerson::class) ?: return context.fail(403)
 
         context.endWithStatusCode(200) { this["displayName"] = person.name }
@@ -55,6 +61,13 @@ object ProfileAPI : IAPI {
     fun profile(context: RoutingContext) {
         val clientInfo = context.clientInfo
         val account = clientInfo.authToken?.let { auth -> EternalJukebox.database.provideAccountForEternalAuth(auth, clientInfo) } ?: return context.fail(401)
+        if(!EternalJukebox.storage.shouldStore(EnumStorageType.PROFILE)) {
+            return context.endWithStatusCode(501) {
+                this["error"] = "Configured storage method does not support storing profiles"
+                this["client_uid"] = context.clientInfo.userUID
+            }
+        }
+
         if(EternalJukebox.storage.isStored("${account.eternalID}.json", EnumStorageType.PROFILE))
             EternalJukebox.storage.provide("${account.eternalID}.json", EnumStorageType.PROFILE, context, clientInfo)
         else
@@ -66,6 +79,54 @@ object ProfileAPI : IAPI {
         val account = clientInfo.authToken?.let { auth -> EternalJukebox.database.provideAccountForEternalAuth(auth, clientInfo) } ?: return context.fail(401)
         val profile = profileForID(account.eternalID, clientInfo)
         context.response().putHeader("Content-Type", "application/json").putHeader("X-Client-UID", clientInfo.userUID).end(EternalJukebox.jsonMapper.writeValueAsString(profile?.stars ?: emptySet<String>()))
+    }
+
+    fun addStar(context: RoutingContext) {
+        val clientInfo = context.clientInfo
+        val account = clientInfo.authToken?.let { auth -> EternalJukebox.database.provideAccountForEternalAuth(auth, clientInfo) } ?: return context.fail(401)
+        if(!EternalJukebox.storage.shouldStore(EnumStorageType.PROFILE)) {
+            return context.endWithStatusCode(501) {
+                this["error"] = "Configured storage method does not support storing profiles"
+                this["client_uid"] = context.clientInfo.userUID
+            }
+        }
+
+        val profile: EternalUserProfile = profileForID(account.eternalID, clientInfo) ?: EternalUserProfile(HashSet())
+        profile.stars.add(context.pathParam("id"))
+
+        EternalJukebox.storage.store(
+                "${account.eternalID}.json",
+                EnumStorageType.PROFILE,
+                ByteArrayDataSource(EternalJukebox.jsonMapper.writeValueAsBytes(profile)),
+                "application/json",
+                clientInfo
+        )
+
+        context.response().setStatusCode(204).end()
+    }
+
+    fun deleteStar(context: RoutingContext) {
+        val clientInfo = context.clientInfo
+        val account = clientInfo.authToken?.let { auth -> EternalJukebox.database.provideAccountForEternalAuth(auth, clientInfo) } ?: return context.fail(401)
+        if(!EternalJukebox.storage.shouldStore(EnumStorageType.PROFILE)) {
+            return context.endWithStatusCode(501) {
+                    this["error"] = "Configured storage method does not support storing profiles"
+                    this["client_uid"] = context.clientInfo.userUID
+            }
+        }
+
+        val profile: EternalUserProfile = profileForID(account.eternalID, clientInfo) ?: EternalUserProfile(HashSet())
+        profile.stars.remove(context.pathParam("id"))
+
+        EternalJukebox.storage.store(
+                "${account.eternalID}.json",
+                EnumStorageType.PROFILE,
+                ByteArrayDataSource(EternalJukebox.jsonMapper.writeValueAsBytes(profile)),
+                "application/json",
+                clientInfo
+        )
+
+        context.response().setStatusCode(204).end()
     }
 
     fun googleCallback(context: RoutingContext) {
@@ -121,5 +182,32 @@ object ProfileAPI : IAPI {
         if(EternalJukebox.storage.isStored("$eternalID.json", EnumStorageType.PROFILE))
             return EternalJukebox.storage.provide("$eternalID.json", EnumStorageType.PROFILE, clientInfo)?.use { stream -> EternalJukebox.jsonMapper.tryReadValue(stream, EternalUserProfile::class) }
         return null
+    }
+
+    fun Request.oauthRequest(account: JukeboxAccount): Pair<Request, Response> {
+        val (requestA, responseA) = header("Authorization" to "Bearer ${account.googleAccessToken}").response()
+
+        if(responseA.statusCode == 401) {
+            log("Refreshing ${account.eternalID}/${account.googleID}'s account")
+            
+            val (requestRefresh, responseRefresh) = Fuel.post("https://www.googleapis.com/oauth2/v4/token", listOf(
+                    "refresh_token" to account.googleRefreshToken,
+                    "client_id" to googleClient,
+                    "client_secret" to googleSecret,
+                    "grant_type" to "refresh_token"
+            )).response()
+
+            if(responseRefresh.statusCode in 200..299) {
+                val token = EternalJukebox.jsonMapper.tryReadValue(responseRefresh.data, GoogleTokenOAuthResponse::class) ?: return requestA to responseA
+                account.googleAccessToken = token.access_token
+
+                EternalJukebox.database.storeAccount(account, null)
+
+                val (requestB, responseB) = header("Authorization" to "Bearer ${account.googleAccessToken}").response()
+                return requestB to responseB
+            }
+        }
+
+        return requestA to responseA
     }
 }

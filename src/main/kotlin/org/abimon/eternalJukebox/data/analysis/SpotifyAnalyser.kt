@@ -81,7 +81,7 @@ object SpotifyAnalyser : IAnalyser {
                 200 -> {
                     if(mapResponse == null) {
                         val name = "SPOTIFY-RESPONSE-200-${UUID.randomUUID()}.txt"
-                        if(EternalJukebox.storage.shouldStore(EnumStorageType.LOG) && EternalJukebox.storage.store(name, EnumStorageType.LOG, ByteArrayDataSource(response.data), clientInfo)) {
+                        if(EternalJukebox.storage.shouldStore(EnumStorageType.LOG) && EternalJukebox.storage.store(name, EnumStorageType.LOG, ByteArrayDataSource(response.data), "text/plain", clientInfo)) {
                             log("[${clientInfo?.userUID}] Got back response code 200; invalid response body however; saved as $name")
                             return@exponentiallyBackoff true
                         } else {
@@ -107,7 +107,7 @@ object SpotifyAnalyser : IAnalyser {
                 400 -> {
                     if(mapResponse == null) {
                         val name = "SPOTIFY-RESPONSE-400-${UUID.randomUUID()}.txt"
-                        if(EternalJukebox.storage.shouldStore(EnumStorageType.LOG) && EternalJukebox.storage.store(name, EnumStorageType.LOG, ByteArrayDataSource(response.data), clientInfo)) {
+                        if(EternalJukebox.storage.shouldStore(EnumStorageType.LOG) && EternalJukebox.storage.store(name, EnumStorageType.LOG, ByteArrayDataSource(response.data), "text/plain", clientInfo)) {
                             log("[${clientInfo?.userUID}] Got back response code 400; invalid response body however; saved as $name")
                             return@exponentiallyBackoff true
                         } else {

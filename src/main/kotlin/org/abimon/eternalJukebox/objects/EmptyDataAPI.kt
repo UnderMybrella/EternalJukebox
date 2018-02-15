@@ -15,7 +15,7 @@ object EmptyDataAPI: IAnalyser, IAudioSource, IDatabase, IStorage, IAnalyticsSto
     override fun search(query: String, clientInfo: ClientInfo?): Array<JukeboxInfo> = emptyArray()
     override fun provide(info: JukeboxInfo, clientInfo: ClientInfo?): DataSource? = null
     override fun analyse(id: String, clientInfo: ClientInfo?): JukeboxTrack? = null
-    override fun store(name: String, type: EnumStorageType, data: DataSource, clientInfo: ClientInfo?): Boolean = false
+    override fun store(name: String, type: EnumStorageType, data: DataSource, mime: String, clientInfo: ClientInfo?): Boolean = false
     override fun getInfo(id: String, clientInfo: ClientInfo?): JukeboxInfo? = null
     override fun provide(name: String, type: EnumStorageType, clientInfo: ClientInfo?): DataSource? = null
     override fun provide(name: String, type: EnumStorageType, context: RoutingContext, clientInfo: ClientInfo?): Boolean = false

@@ -43,7 +43,7 @@ object AnalysisAPI : IAPI {
             else {
                 context.response().putHeader("X-Client-UID", context.clientInfo.userUID).end(track.toJsonObject())
 
-                EternalJukebox.storage.store("$id.json", EnumStorageType.ANALYSIS, ByteArrayDataSource(track.toJsonObject().toString().toByteArray(Charsets.UTF_8)), context.clientInfo)
+                EternalJukebox.storage.store("$id.json", EnumStorageType.ANALYSIS, ByteArrayDataSource(track.toJsonObject().toString().toByteArray(Charsets.UTF_8)), "application/json", context.clientInfo)
             }
         } else {
             context.response().putHeader("X-Client-UID", context.clientInfo.userUID).setStatusCode(501).end(jsonObjectOf(

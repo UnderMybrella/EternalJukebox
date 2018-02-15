@@ -122,7 +122,6 @@ abstract class HikariDatabase : IDatabase {
 
         while (results.next()) {
             val songID = results.getString("song_id")
-            println("$songID: ${results.getLong("hits")}")
             popular.add(EternalJukebox.spotify.getInfo(songID, clientInfo) ?: continue)
         }
 

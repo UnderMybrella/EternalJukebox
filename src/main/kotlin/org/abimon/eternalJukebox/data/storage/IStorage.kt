@@ -19,7 +19,7 @@ interface IStorage {
      * Store [data] under [name], as type [type]
      * Returns true if successfully stored; false otherwise
      */
-    fun store(name: String, type: EnumStorageType, data: DataSource, clientInfo: ClientInfo?): Boolean
+    fun store(name: String, type: EnumStorageType, data: DataSource, mimeType: String, clientInfo: ClientInfo?): Boolean
 
     /**
      * Provide previously stored data of name [name] and type [type]

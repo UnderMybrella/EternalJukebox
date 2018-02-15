@@ -28,7 +28,7 @@ object LocalAnalyticStorage : IAnalyticsStorage {
         storageLocations.forEach { (type, log) ->
             if (log.exists()) {
                 if (EternalJukebox.storage.shouldStore(EnumStorageType.LOG)) {
-                    log.useThenDelete { file -> EternalJukebox.storage.store("Analysis-${type::class.simpleClassName}-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(file), null) }
+                    log.useThenDelete { file -> EternalJukebox.storage.store("Analysis-${type::class.simpleClassName}-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(file), "text/plain", null) }
                 } else {
                     log.delete()
                 }

@@ -14,7 +14,7 @@ object LocalStorage : IStorage {
 
     override fun shouldStore(type: EnumStorageType): Boolean = true
 
-    override fun store(name: String, type: EnumStorageType, data: DataSource, clientInfo: ClientInfo?): Boolean {
+    override fun store(name: String, type: EnumStorageType, data: DataSource, mime: String, clientInfo: ClientInfo?): Boolean {
         FileOutputStream(File(storageLocations[type]!!, name)).use { fos -> data.use { inputStream -> inputStream.copyTo(fos) } }
         return true
     }

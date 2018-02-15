@@ -83,12 +83,12 @@ object SiteAPI: IAPI {
         val params = EternalJukebox.database.expandShortURL(id, clientInfo) ?: return null
         val paramsMap = params.map { pair -> pair.split('=', limit = 2) }.filter { pair -> pair.size == 2 }.map { pair -> Pair(pair[0], pair[1]) }.toMap(HashMap())
 
-        val service = paramsMap["service"] ?: "jukebox"
+        val service = paramsMap.remove("service") ?: "jukebox"
         val response = JsonObject()
 
         when(service.toLowerCase()) {
-            "jukebox" -> response["url"] = "/jukebox_go.html?${params.joinToString("&")}"
-            "canonizer" -> response["url"] = "/canonizer_go.html?${params.joinToString("&")}"
+            "jukebox" -> response["url"] = "/jukebox_go.html?${paramsMap.entries.joinToString("&") { (key, value) -> "$key=$value" } }"
+            "canonizer" -> response["url"] = "/canonizer_go.html?${paramsMap.entries.joinToString("&") { (key, value) -> "$key=$value" } }"
 
             else -> response["url"] = "/jukebox_index.html"
         }

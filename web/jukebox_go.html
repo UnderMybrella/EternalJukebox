@@ -1503,19 +1503,20 @@
     function checkIfStarred() {
         getShareURL(function (id) {
             $.ajax({
-                url: "/api/profile/stars",
+                url: "/api/profile/me",
                 dataType: "json",
                 type: "GET",
                 success: function (data) {
-                    for (var i = 0; i < data.length; i++) {
-                        if (data[i] === id) {
+                    var stars = data["stars"];
+                    for (var i = 0; i < stars.length; i++) {
+                        if (stars[i] === id) {
                             $("#star").text("Unstar");
                             break;
                         }
                     }
                 },
                 error: function (xhr, textStatus, error) {
-                    console.log("Error: " + error)
+                    console.log("Could not retrieve stars: " + error)
                 }
             });
         });
@@ -1774,7 +1775,7 @@
 
         $("#audio-upload").change(function () {
             $.ajax({
-                url: "/api/upload/audio",
+                url: "/api/audio/upload",
                 type: "POST",
                 data: new FormData($('#audio-upload-form')[0]),
                 processData: false,
@@ -1782,13 +1783,25 @@
                 headers: {
                     "X-XSRF-TOKEN": document.cookie.substring(document.cookie.indexOf("XSRF-TOKEN")).split(";")[0].split("=").slice(1).join("=")
                 },
+                xhr: function () {
+                    var xhr = new window.XMLHttpRequest();
+                    xhr.upload.addEventListener("progress", function (evt) {
+                        if (evt.lengthComputable) {
+                            var percentComplete = evt.loaded / evt.total;
+                            percentComplete = percentComplete * 100;
+                            $('#audio-progress').text(percentComplete + '%');
+                            $('#audio-progress').css('width', percentComplete + '%');
+                        }
+                    }, false);
+                    return xhr;
+                },
                 success: function (data) {
-                    jukeboxData.audioURL = data;
+                    jukeboxData.audioURL = 'upl:' + data["id"];
                     setTunedURL();
                     window.location.reload(true);
                 },
                 error: function (xhr, textStatus, error) {
-                    console.log("Error: " + error);
+                    console.log("Error upon attempting to upload: " + error);
                 }
             });
         });
@@ -2471,10 +2484,14 @@
         <div class="l-cb" id="l-disable-keys"> Disable Keypresses: <input id="disable-keys" type="checkbox"></div>
         <div class="l-cb" id="l-audio-url">Audio URL: <input id="audio-url" type="url"></div>
         <br>
-        <div class="l-cb" id="l-audio-upload"><form id="audio-upload-form"><input id="audio-upload" type="file" name="song_upload"
-                                                                                  accept="audio/*"></form></div>
+        <div class="l-cb" id="l-audio-upload">
+            <form id="audio-upload-form">
+                <input id="audio-upload" type="file" name="song_upload" accept="audio/*">
+            </form>
+            <div class='progress_outer' id="audio-progress" style="background-color: green;">
+                <div id='_progress' class='progress'></div>
+            </div></div>
         <br>
-        <hr>
         <div id="tune-info">
             <div id="l-branch-chance"> Branch chance (%): <span class="ti-val" id="branch-chance">18</span></div>
             <div id="l-branch-threshold"> Last threshold: <span class="ti-val" id="last-threshold">0</span></div>
