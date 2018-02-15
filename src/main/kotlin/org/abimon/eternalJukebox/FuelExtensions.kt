@@ -43,7 +43,7 @@ val Request.progressCallback: ((Long, Long) -> Unit)?
         return progressCallbackProperty.call(task)
     }
 
-@Suppress("UNCHECKED_CAST")
+@Suppress("UNCHECKED_CAST", "UNUSED_PARAMETER")
 operator fun <C: Any, T> KClass<C>.get(property: String, returnClass: Class<T>): KProperty<T> {
     val field = this.declaredMemberProperties.firstOrNull { field -> field.name == property } ?: throw NoSuchFieldException(property)
     field.isAccessible = true

@@ -189,8 +189,8 @@ object ProfileAPI : IAPI {
 
         if(responseA.statusCode == 401) {
             log("Refreshing ${account.eternalID}/${account.googleID}'s account")
-            
-            val (requestRefresh, responseRefresh) = Fuel.post("https://www.googleapis.com/oauth2/v4/token", listOf(
+
+            val (_, responseRefresh) = Fuel.post("https://www.googleapis.com/oauth2/v4/token", listOf(
                     "refresh_token" to account.googleRefreshToken,
                     "client_id" to googleClient,
                     "client_secret" to googleSecret,

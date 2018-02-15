@@ -218,7 +218,6 @@ object AudioAPI : IAPI {
             }
         } else {
             val file = context.fileUploads().first()
-            val newName = UUID.randomUUID().toString()
 
             val ffmpegLog = File("${file.fileName()}-$uuid.log")
             val starting = File(file.uploadedFileName())
