@@ -1,14 +1,21 @@
 package org.abimon.eternalJukebox.objects
 
 data class JukeboxConfig(
+        val baseDomain: String = "http://localhost:8080",
         val port: Int = 8080,
 
         val webRoot: String = "web",
 
         val visitorSecretSize: Int = 8192,
+        val oauthStateSecretSize: Int = 8192,
+
+        val epoch: Long = 1489148833L,
 
         val spotifyClient: String? = null,
         val spotifySecret: String? = null,
+
+        val googleClient: String? = null,
+        val googleSecret: String? = null,
 
         val disable: Map<String, Boolean> = emptyMap(),
 

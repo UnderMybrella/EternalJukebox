@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.vertx.core.json.JsonObject
 import org.abimon.visi.collections.copyFrom
 import java.io.File
+import java.io.InputStream
 import java.io.Reader
 import java.util.*
 import java.util.concurrent.ScheduledExecutorService
@@ -98,6 +99,18 @@ fun ScheduledExecutorService.scheduleAtFixedRate(initialDelay: Long, every: Long
 fun ScheduledExecutorService.schedule(delay: Long, unit: TimeUnit = TimeUnit.MILLISECONDS, op: () -> Unit) = this.schedule(op, delay, unit)
 
 fun <T: Any> ObjectMapper.tryReadValue(src: ByteArray, klass: KClass<T>): T? {
+    try {
+        return this.readValue(src, klass.java)
+    } catch (jsonProcessing: JsonProcessingException) {
+        return null
+    } catch (jsonMapping: JsonMappingException) {
+        return null
+    } catch (jsonParsing: JsonParseException) {
+        return null
+    }
+}
+
+fun <T: Any> ObjectMapper.tryReadValue(src: InputStream, klass: KClass<T>): T? {
     try {
         return this.readValue(src, klass.java)
     } catch (jsonProcessing: JsonProcessingException) {

@@ -17,6 +17,23 @@ import kotlin.reflect.KClass
 fun HttpServerResponse.end(json: JsonArray) = putHeader("Content-Type", "application/json").end(json.toString())
 fun HttpServerResponse.end(json: JsonObject) = putHeader("Content-Type", "application/json").end(json.toString())
 
+fun HttpServerResponse.end(init: JsonObject.() -> Unit) {
+    val json = JsonObject()
+    json.init()
+
+    putHeader("Content-Type", "application/json").end(json.toString())
+}
+
+fun RoutingContext.endWithStatusCode(statusCode: Int, init: JsonObject.() -> Unit) {
+    val json = JsonObject()
+    json.init()
+
+    this.response().setStatusCode(statusCode)
+            .putHeader("Content-Type", "application/json")
+            .putHeader("X-Client-UID", clientInfo.userUID)
+            .end(json.toString())
+}
+
 fun HttpServerResponse.end(data: DataSource, contentType: String = "application/octet-stream") {
     putHeader("Content-Type", contentType)
     putHeader("Content-Length", "${data.size}")
@@ -25,15 +42,17 @@ fun HttpServerResponse.end(data: DataSource, contentType: String = "application/
 }
 
 fun HttpServerResponse.redirect(url: String): Unit = putHeader("Location", url).setStatusCode(302).end()
+fun HttpServerResponse.redirect(builderAction: StringBuilder.() -> Unit): Unit = putHeader("Location", StringBuilder().apply(builderAction).toString()).setStatusCode(302).end()
 
 operator fun RoutingContext.set(key: String, value: Any) = put(key, value)
-operator fun <T: Any> RoutingContext.get(key: String, @Suppress("UNUSED_PARAMETER") klass: KClass<T>): T? = get<T>(key)
-operator fun <T: Any> RoutingContext.get(key: String, default: T): T = get<T>(key) ?: default
-operator fun <T: Any> RoutingContext.get(key: String, default: T, @Suppress("UNUSED_PARAMETER") klass: KClass<T>): T = get<T>(key) ?: default
+operator fun <T : Any> RoutingContext.get(key: String, @Suppress("UNUSED_PARAMETER") klass: KClass<T>): T? = get<T>(key)
+operator fun <T : Any> RoutingContext.get(key: String, default: T): T = get<T>(key) ?: default
+operator fun <T : Any> RoutingContext.get(key: String, default: T, @Suppress("UNUSED_PARAMETER") klass: KClass<T>): T = get<T>(key)
+        ?: default
 
 val RoutingContext.clientInfo: ClientInfo
     get() {
-        if(ConstantValues.CLIENT_INFO in data() && data()[ConstantValues.CLIENT_INFO] is ClientInfo)
+        if (ConstantValues.CLIENT_INFO in data() && data()[ConstantValues.CLIENT_INFO] is ClientInfo)
             return data()[ConstantValues.CLIENT_INFO] as ClientInfo
 
         val info = ClientInfo(this)

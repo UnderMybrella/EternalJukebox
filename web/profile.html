@@ -100,7 +100,7 @@
 
             function listSong(track) {
                 console.log("Listing " + track);
-                var title = getTitle(track.info.title, track.info.artist, track.info.url);
+                var title = getTitle(track.song.title, track.song.artist, track.song.url);
                 if (title) {
                     var link = $('<a>');
                     link.attr('href', track.url);
@@ -128,14 +128,15 @@
 
 
                 $.ajax({
-                    url: "api/profile/stars",
+                    url: "api/profile/me",
                     dataType: "json",
                     type: "GET",
                     success: function(data) {
                         console.log(data);
-                        for (var i = 0; i < data.length; i++) {
-                            var s = data[i];
-                            var url = 'api/expand/' + s;
+                        var stars = data["stars"];
+                        for (var i = 0; i < stars.length; i++) {
+                            var s = stars[i];
+                            var url = 'api/site/expand/' + s;
                             $.getJSON(url, function(data) {
                                 var item = listSong(data);
                                 console.log("item: " + item);

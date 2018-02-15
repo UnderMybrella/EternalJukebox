@@ -29,6 +29,7 @@ import org.abimon.eternalJukebox.handlers.api.*
 import org.abimon.eternalJukebox.objects.ConstantValues
 import org.abimon.eternalJukebox.objects.EmptyDataAPI
 import org.abimon.eternalJukebox.objects.JukeboxConfig
+import org.abimon.visi.lang.Snowstorm
 import java.io.File
 import java.security.SecureRandom
 import java.time.Instant
@@ -57,6 +58,7 @@ object EternalJukebox {
     val BASE_64_URL = charArrayOf('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_')
 
     val secureRandom: SecureRandom = SecureRandom()
+    val snowstorm: Snowstorm
 
     val config: JukeboxConfig
     val vertx: Vertx
@@ -117,10 +119,15 @@ object EternalJukebox {
         visitorAlgorithm = Algorithm.HMAC512(ByteArray(config.visitorSecretSize).apply { secureRandom.nextBytes(this) })
         visitorVerifier = JWT.require(visitorAlgorithm).build()
 
+//        oauthStateAlgorithm = Algorithm.HMAC512(ByteArray(config.oauthStateSecretSize).apply { secureRandom.nextBytes(this) })
+//        oauthStateVerifier = JWT.require(oauthStateAlgorithm).build()
+
         storage = config.storageType.storage
 
         vertx = Vertx.vertx(VertxOptions().setMaxWorkerExecuteTime(config.workerExecuteTime))
         webserver = vertx.createHttpServer()
+
+        snowstorm = Snowstorm(config.epoch)
 
         val mainRouter = Router.router(vertx)
 
@@ -134,9 +141,9 @@ object EternalJukebox {
 //                uniqueVisitorsAddress.add(ip)
 //            }
 
-            if (ip !in hourlyVisitorsAddress) {
-                it.data()[ConstantValues.HOURLY_UNIQUE_VISITOR] = true
-                hourlyVisitorsAddress.add(ip)
+                if (ip !in hourlyVisitorsAddress) {
+                    it.data()[ConstantValues.HOURLY_UNIQUE_VISITOR] = true
+                    hourlyVisitorsAddress.add(ip)
             }
 
             it.data()[ConstantValues.USER_UID] = UUID.randomUUID().toString()
@@ -204,6 +211,9 @@ object EternalJukebox {
 
         if (isEnabled("nodeAPI"))
             apis.add(NodeAPI)
+
+        if (isEnabled("profileAPI"))
+            apis.add(ProfileAPI)
 
         analyticsProviders.forEach { provider -> provider.setupWebAnalytics(mainRouter) }
 

@@ -8,7 +8,7 @@ object H2Database: HikariDatabase() {
 
     init {
         val config = HikariConfig()
-        config.jdbcUrl = "jdbc:h2:./$databaseName"
+        config.jdbcUrl = "jdbc:h2:./$databaseName;mode=MySQL"
 
         config.addDataSourceProperty("cachePrepStmts", "true")
         config.addDataSourceProperty("prepStmtCacheSize", "250")

@@ -13,11 +13,18 @@ interface IDatabase {
 
     fun provideAudioTrackOverride(id: String, clientInfo: ClientInfo?): String?
     fun storeAudioTrackOverride(id: String, newURL: String, clientInfo: ClientInfo?)
+
     fun provideAccountForID(accountID: String, clientInfo: ClientInfo?): JukeboxAccount?
     fun provideAccountForGoogleID(googleID: String, clientInfo: ClientInfo?): JukeboxAccount?
-    fun storeAccount(clientInfo: ClientInfo?, account: JukeboxAccount)
+    fun provideAccountForEternalAuth(eternalAuth: String, clientInfo: ClientInfo?): JukeboxAccount?
+    fun storeAccount(account: JukeboxAccount, clientInfo: ClientInfo?)
+
     fun providePopularSongs(service: String, count: Int, clientInfo: ClientInfo?): List<JukeboxInfo>
     fun makeSongPopular(service: String, id: String, clientInfo: ClientInfo?)
+
     fun provideShortURL(params: Array<String>, clientInfo: ClientInfo?): String
-    fun expandShortURL(id: String, clientInfo: ClientInfo?): Array<String>? 
+    fun expandShortURL(id: String, clientInfo: ClientInfo?): Array<String>?
+
+    fun storeOAuthState(path: String, clientInfo: ClientInfo?): String
+    fun retrieveOAuthState(state: String, clientInfo: ClientInfo?): String?
 }

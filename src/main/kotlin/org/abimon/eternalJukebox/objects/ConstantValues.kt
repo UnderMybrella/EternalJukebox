@@ -5,4 +5,6 @@ object ConstantValues {
 
     val USER_UID = "User-UID"
     val CLIENT_INFO = "Jukebox-Client-Info"
+
+    val AUTH_COOKIE_NAME = "Eternal-Jukebox-Auth-Cookie"
 }

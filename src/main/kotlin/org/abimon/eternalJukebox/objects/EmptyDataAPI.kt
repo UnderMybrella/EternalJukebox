@@ -30,8 +30,11 @@ object EmptyDataAPI: IAnalyser, IAudioSource, IDatabase, IStorage, IAnalyticsSto
     override fun shouldProvide(type: EnumAnalyticType<*>): Boolean = false
     override fun <T: Any> provide(now: Long, type: EnumAnalyticType<T>): T? = null
     override fun provideAccountForID(accountID: String, clientInfo: ClientInfo?): JukeboxAccount? = null
-    override fun storeAccount(clientInfo: ClientInfo?, account: JukeboxAccount) {}
+    override fun provideAccountForEternalAuth(eternalAuth: String, clientInfo: ClientInfo?): JukeboxAccount? = null
+    override fun storeAccount(account: JukeboxAccount, clientInfo: ClientInfo?) {}
     override fun makeSongPopular(service: String, id: String, clientInfo: ClientInfo?) {}
     override fun expandShortURL(id: String, clientInfo: ClientInfo?): Array<String>? = null
     override fun setupWebAnalytics(router: Router) {}
+    override fun storeOAuthState(path: String, clientInfo: ClientInfo?): String = ""
+    override fun retrieveOAuthState(state: String, clientInfo: ClientInfo?): String? = null
 }
