@@ -12,8 +12,7 @@ object StaticResources {
 
     fun setup(router: Router) {
         router.get("/profile.html").handler(this::profile)
-        router.get("/jukebox_go.html").handler(this::makeJukeboxPopular)
-        router.get("/canonizer_go.html").handler(this::makeCanonizerPopular)
+
         router.get().handler(StaticHandler.create(EternalJukebox.config.webRoot))
     }
 
@@ -47,27 +46,5 @@ object StaticResources {
             if (account?.googleRefreshToken == null)
                 append("&prompt=consent")
         }
-    }
-
-    fun makeJukeboxPopular(context: RoutingContext) {
-        val clientInfo = context.clientInfo
-        if (clientInfo.isNewHourly) {
-            val id = context.request().getParam("id") ?: return context.next()
-            if (EternalJukebox.spotify.getInfo(id, clientInfo) != null)
-                EternalJukebox.database.makeSongPopular("jukebox", id, clientInfo)
-        }
-
-        context.next()
-    }
-
-    fun makeCanonizerPopular(context: RoutingContext) {
-        val clientInfo = context.clientInfo
-        if (clientInfo.isNewHourly) {
-            val id = context.request().getParam("id") ?: return context.next()
-            if (EternalJukebox.spotify.getInfo(id, clientInfo) != null)
-                EternalJukebox.database.makeSongPopular("canonizer", id, clientInfo)
-        }
-
-        context.next()
     }
 }

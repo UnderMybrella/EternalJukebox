@@ -2,6 +2,7 @@ package org.abimon.eternalJukebox.handlers.api
 
 import com.jakewharton.fliptables.FlipTable
 import com.sun.management.OperatingSystemMXBean
+import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
@@ -39,6 +40,15 @@ object SiteAPI: IAPI {
         router.get("/expand/:id").handler(SiteAPI::expand)
         router.get("/expand/:id/redirect").handler(SiteAPI::expandAndRedirect)
         router.post("/shrink").handler(SiteAPI::shrink)
+
+        router.get("/popular/:service").handler(this::popular)
+    }
+
+    fun popular(context: RoutingContext) {
+        val service = context.pathParam("service")
+        val count = context.request().getParam("count")?.toIntOrNull() ?: context.request().getParam("limit")?.toIntOrNull() ?: 10
+
+        context.response().putHeader("X-Client-UID", context.clientInfo.userUID).end(JsonArray(EternalJukebox.database.providePopularSongs(service, count, context.clientInfo)))
     }
 
     fun usage(context: RoutingContext) {

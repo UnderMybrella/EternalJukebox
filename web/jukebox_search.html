@@ -166,7 +166,7 @@ function init() {
         }
     });
 
-    $.getJSON('api/popular/jukebox', { count : 12}, function(data) {
+    $.getJSON('api/site/popular/jukebox', { count : 12}, function(data) {
             listTracks('#favourite-list', data);
     });
 }

@@ -165,7 +165,7 @@
             }
         });
 
-        $.getJSON('api/popular/canonizer', {count: 12}, function (data) {
+        $.getJSON('api/site/popular/canonizer', {count: 12}, function (data) {
             listTracks('#favourite-list', data);
         });
     }

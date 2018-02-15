@@ -113,7 +113,7 @@ abstract class HikariDatabase : IDatabase {
     }
 
     override fun providePopularSongs(service: String, count: Int, clientInfo: ClientInfo?): List<JukeboxInfo> = use { connection ->
-        val select = connection.prepareStatement("SELECT song_id, hits FROM popular WHERE service=? ORDER BY hits LIMIT $count;")
+        val select = connection.prepareStatement("SELECT song_id, hits FROM popular WHERE service=? ORDER BY hits DESC LIMIT $count;")
         select.setString(1, service)
         select.execute()
 
@@ -149,6 +149,8 @@ abstract class HikariDatabase : IDatabase {
                 insert.setString(1, id)
                 insert.setString(2, service)
                 insert.setLong(3, 1)
+
+                insert.execute()
             }
 
             Unit

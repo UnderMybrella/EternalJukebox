@@ -24,6 +24,7 @@ import org.abimon.eternalJukebox.data.audio.IAudioSource
 import org.abimon.eternalJukebox.data.database.IDatabase
 import org.abimon.eternalJukebox.data.storage.IStorage
 import org.abimon.eternalJukebox.handlers.OpenGraphHandler
+import org.abimon.eternalJukebox.handlers.PopularHandler
 import org.abimon.eternalJukebox.handlers.StaticResources
 import org.abimon.eternalJukebox.handlers.api.*
 import org.abimon.eternalJukebox.objects.ConstantValues
@@ -224,6 +225,8 @@ object EternalJukebox {
         }
         mainRouter.mountSubRouter("/api", apiRouter)
 
+        if (isEnabled("popular"))
+            PopularHandler.setup(mainRouter)
         if (isEnabled("openGraph"))
             OpenGraphHandler.setup(mainRouter)
         if (isEnabled("staticResources"))
