@@ -428,7 +428,7 @@ app: jukebox
     }
 
     function listPopularTracks() {
-        $.getJSON('/api/popular/jukebox', {count: 12}, function (data) {
+        $.getJSON('/api/site/popular/jukebox', {count: 12}, function (data) {
             listTracks('#popular-list', data);
             ga_track('list', 'popular-tracks', '');
         });
@@ -458,12 +458,19 @@ app: jukebox
     function fetchAnalysis(id) {
         var url = '/api/analysis/analyse/' + id;
         info('Fetching the analysis');
-        $.getJSON(url, function (data) {
-            gotTheAnalysis(data);
-        })
-            .error(function () {
-                info("Sorry, can't find info for that track");
-            });
+
+        $.ajax({
+            url: url,
+            dataType: "json",
+            type: "GET",
+            crossDomain: true,
+            success: function (data) {
+                gotTheAnalysis(data);
+            },
+            error: function(xhr, textStatus, error) {
+                info("Sorry, can't find info for that track: " + error)
+            }
+        });
     }
 
     function get_status(data) {

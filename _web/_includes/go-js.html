@@ -399,11 +399,19 @@
     function fetchAnalysis(id) {
         var url = '/api/analysis/analyse/' + id;
         info('Fetching the analysis');
-        $.getJSON(url, function (data) {
-            gotTheAnalysis(data);
-        }).fail(function () {
-                info("Sorry, can't find info for that track");
-            });
+
+        $.ajax({
+            url: url,
+            dataType: "json",
+            type: "GET",
+            crossDomain: true,
+            success: function (data) {
+                gotTheAnalysis(data);
+            },
+            error: function(xhr, textStatus, error) {
+                info("Sorry, can't find info for that track: " + error)
+            }
+        });
     }
 
     function get_status(data) {
@@ -2592,11 +2600,18 @@
     function fetchAnalysis(id) {
         var url = 'api/analysis/analyse/' + id;
         info('Fetching the analysis');
-        $.getJSON(url, function (data) {
-            gotTheAnalysis(data);
-        }).error(function () {
-                info("Sorry, can't find info for that track");
-            });
+        $.ajax({
+            url: url,
+            dataType: "json",
+            type: "GET",
+            crossDomain: true,
+            success: function (data) {
+                gotTheAnalysis(data);
+            },
+            error: function(xhr, textStatus, error) {
+                info("Sorry, can't find info for that track: " + error)
+            }
+        });
     }
 
     function get_status(data) {
@@ -2691,7 +2706,7 @@
 
         $("#error").hide();
 
-        $("#play").click(
+        $("#go").click(
             function () {
                 if (driver.isRunning()) {
                     driver.stop();
