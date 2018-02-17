@@ -6,6 +6,8 @@ data class JukeboxConfig(
 
         val webRoot: String = "web",
 
+        val redirects: Map<String, String> = mapOf("/" to "/jukebox_index.html"),
+
         val visitorSecretSize: Int = 8192,
         val oauthStateSecretSize: Int = 8192,
 

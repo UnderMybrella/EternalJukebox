@@ -163,6 +163,8 @@ object EternalJukebox {
             it.next()
         }
 
+        config.redirects.forEach { route, path -> mainRouter.route(route).handler { context -> context.response().redirect(path) } }
+
         val runSiteAPI = isEnabled("siteAPI")
 
         if (runSiteAPI) {
