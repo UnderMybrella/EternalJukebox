@@ -93,11 +93,13 @@ abstract class HikariDatabase : IDatabase {
             select.execute()
 
             if(select.resultSet.next()) {
-                val update = connection.prepareStatement("UPDATE accounts SET google_access_token=?, google_refresh_token=?, eternal_access_token=?;")
+                val update = connection.prepareStatement("UPDATE accounts SET google_access_token=?, google_refresh_token=?, eternal_access_token=? WHERE eternal_id=?;")
 
                 update.setString(1, account.googleAccessToken)
                 update.setString(2, account.googleRefreshToken)
                 update.setString(3, account.eternalAccessToken)
+                update.setString(4, account.eternalID)
+
                 update.execute()
             } else {
                 val insert = connection.prepareStatement("INSERT INTO accounts (eternal_id, google_id, google_access_token, google_refresh_token, eternal_access_token) VALUES (?, ?, ?, ?, ?);")
