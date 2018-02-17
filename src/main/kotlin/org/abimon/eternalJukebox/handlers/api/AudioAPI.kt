@@ -8,9 +8,11 @@ import org.abimon.eternalJukebox.*
 import org.abimon.eternalJukebox.data.audio.YoutubeAudioSource
 import org.abimon.eternalJukebox.objects.EnumStorageType
 import org.abimon.visi.io.FileDataSource
+import org.abimon.visi.security.md5Hash
 import org.abimon.visi.security.sha512Hash
 import java.io.File
 import java.io.FileInputStream
+import java.net.URLEncoder
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -27,7 +29,7 @@ object AudioAPI : IAPI {
     val mime: String
         get() = EternalJukebox.config.audioSourceOptions["AUDIO_MIME"] as? String ?: run {
             when (format) {
-                "m4a" -> return@run "audio/mp4"
+                "m4a" -> return@run "audio/m4a"
                 "aac" -> return@run "audio/aac"
                 "mp3" -> return@run "audio/mpeg"
                 "ogg" -> return@run "audio/ogg"
@@ -38,6 +40,7 @@ object AudioAPI : IAPI {
 
     override fun setup(router: Router) {
         router.get("/jukebox/:id").blockingHandler(AudioAPI::jukeboxAudio)
+        router.get("/jukebox/:id/location").blockingHandler(AudioAPI::jukeboxLocation)
         router.get("/external").blockingHandler(AudioAPI::externalAudio)
         router.post("/upload").handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(true).setBodyLimit(25 * 1000 * 1000))
         router.post("/upload").blockingHandler(this::upload)
@@ -46,6 +49,11 @@ object AudioAPI : IAPI {
     fun jukeboxAudio(context: RoutingContext) {
         if (EternalJukebox.storage.shouldStore(EnumStorageType.AUDIO)) {
             val id = context.pathParam("id")
+
+            val audioOverride = EternalJukebox.database.provideAudioTrackOverride(id, context.clientInfo)
+            if (audioOverride != null)
+                return context.response().redirect("/api/audio/external?url=${URLEncoder.encode(audioOverride, "UTF-8")}")
+
             val update = context.request().getParam("update")?.toBoolean() ?: false
             if (EternalJukebox.storage.isStored("$id.$format", EnumStorageType.AUDIO) && !update) {
                 if (EternalJukebox.storage.provide("$id.$format", EnumStorageType.AUDIO, context, context.clientInfo))
@@ -94,6 +102,26 @@ object AudioAPI : IAPI {
         }
     }
 
+    fun jukeboxLocation(context: RoutingContext) {
+        val id = context.pathParam("id")
+
+        val audioOverride = EternalJukebox.database.provideAudioTrackOverride(id, context.clientInfo)
+        if (audioOverride != null)
+            return context.endWithStatusCode(200) { if (!audioOverride.startsWith("upl")) this["url"] = audioOverride }
+
+        val track = EternalJukebox.spotify.getInfo(id, context.clientInfo) ?: run {
+            log("[${context.clientInfo.userUID}] No track info for $id; returning 400")
+            return context.response().putHeader("X-Client-UID", context.clientInfo.userUID).setStatusCode(400).end(jsonObjectOf(
+                    "error" to "Track info not found for $id",
+                    "client_uid" to context.clientInfo.userUID
+            ))
+        }
+
+        val url = EternalJukebox.audio.provideLocation(track, context.clientInfo)
+
+        context.endWithStatusCode(200) { if (url != null) this["url"] = url.toExternalForm() }
+    }
+
     // url -> fallbackURL -> fallbackID
     fun externalAudio(context: RoutingContext) {
         val url = context.request().getParam("url")
@@ -108,10 +136,10 @@ object AudioAPI : IAPI {
                     }
 
                     val hash = url.substringAfter("upl:")
-                    if(EternalJukebox.storage.isStored("$hash.$format", EnumStorageType.UPLOADED_AUDIO)) {
-                        if(!EternalJukebox.storage.provide("$hash.$format", EnumStorageType.UPLOADED_AUDIO, context, context.clientInfo)) {
+                    if (EternalJukebox.storage.isStored("$hash.$format", EnumStorageType.UPLOADED_AUDIO)) {
+                        if (!EternalJukebox.storage.provide("$hash.$format", EnumStorageType.UPLOADED_AUDIO, context, context.clientInfo)) {
                             val data = EternalJukebox.storage.provide("$hash.$format", EnumStorageType.UPLOADED_AUDIO, context.clientInfo)
-                            if(data != null)
+                            if (data != null)
                                 return context.response().end(data, AudioAPI.mime)
                         } else
                             return
@@ -129,7 +157,7 @@ object AudioAPI : IAPI {
                             return context.response().putHeader("X-Client-UID", context.clientInfo.userUID).redirect(url)
                         else {
                             if (EternalJukebox.storage.shouldStore(EnumStorageType.EXTERNAL_AUDIO)) {
-                                val b64 = base64Encoder.encodeToString(url.toByteArray(Charsets.UTF_8))
+                                val b64 = base64Encoder.encodeToString(url.toByteArray(Charsets.UTF_8)).md5Hash()
 
                                 val update = context.request().getParam("update")?.toBoolean() ?: false
                                 if (EternalJukebox.storage.isStored("$b64.$format", EnumStorageType.EXTERNAL_AUDIO) && !update) {
@@ -156,13 +184,18 @@ object AudioAPI : IAPI {
                                         add(YoutubeAudioSource.format)
                                     }).redirectErrorStream(true).redirectOutput(tmpLog).start()
 
-                                    downloadProcess.waitFor(60, TimeUnit.SECONDS)
+                                    if (!downloadProcess.waitFor(90, TimeUnit.SECONDS)) {
+                                        downloadProcess.destroyForcibly().waitFor()
+                                        log("[${context.clientInfo.userUID}] Forcibly destroyed the download process for $url", true)
+                                    }
 
                                     if (!endGoalTmp.exists()) {
                                         log("[${context.clientInfo.userUID}] $endGoalTmp does not exist, attempting to convert with ffmpeg")
 
-                                        if (!tmpFile.exists())
-                                            return log("[${context.clientInfo.userUID}] $tmpFile does not exist, what happened?", true)
+                                        if (!tmpFile.exists()) {
+                                            val lastLine = tmpLog.readLines().last()
+                                            return log("[${context.clientInfo.userUID}] $tmpFile does not exist, what happened? (Last line was $lastLine)", true)
+                                        }
 
                                         if (MediaWrapper.ffmpeg.installed) {
                                             if (!MediaWrapper.ffmpeg.convert(tmpFile, endGoalTmp, ffmpegLog))
@@ -186,7 +219,7 @@ object AudioAPI : IAPI {
                                     if (data != null)
                                         return context.response().putHeader("X-Client-UID", context.clientInfo.userUID).end(data, AudioAPI.mime)
                                 } finally {
-                                    tmpFile.delete()
+                                    tmpFile.guaranteeDelete()
                                     tmpLog.useThenDelete { EternalJukebox.storage.store(it.name, EnumStorageType.LOG, FileDataSource(it), "text/plain", context.clientInfo) }
                                     ffmpegLog.useThenDelete { EternalJukebox.storage.store(it.name, EnumStorageType.LOG, FileDataSource(it), "text/plain", context.clientInfo) }
                                     endGoalTmp.useThenDelete {
@@ -233,7 +266,9 @@ object AudioAPI : IAPI {
                 } else
                     return log("[${context.clientInfo.userUID}] ffmpeg not installed, nothing we can do", true)
             } finally {
+                starting.guaranteeDelete()
                 ffmpegLog.useThenDelete { EternalJukebox.storage.store(it.name, EnumStorageType.LOG, FileDataSource(it), "text/plain", context.clientInfo) }
+
                 val hash = ending.useThenDelete { endingFile ->
                     val hash = FileInputStream(endingFile).use { stream -> stream.sha512Hash() }
                     EternalJukebox.storage.store(

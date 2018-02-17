@@ -10,6 +10,11 @@ interface IStorage {
     val storageOptions
         get() = EternalJukebox.config.storageOptions
 
+    val disabledStorageTypes: List<EnumStorageType>
+        get() = storageOptions.let { storageOptionMap ->
+            EnumStorageType.values().filter { enumStorageType -> storageOptionMap["${enumStorageType.name.toUpperCase()}_IS_DISABLED"]?.toString()?.toBoolean() ?: false }
+        }
+
     /**
      * Should we store this type of storage?
      */

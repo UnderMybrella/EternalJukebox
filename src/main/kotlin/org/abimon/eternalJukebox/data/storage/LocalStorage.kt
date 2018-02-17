@@ -12,7 +12,7 @@ import java.io.FileOutputStream
 object LocalStorage : IStorage {
     val storageLocations: Map<EnumStorageType, File> = EnumStorageType.values().map { type -> type to File(EternalJukebox.config.storageOptions["${type.name}_FOLDER"] as? String ?: type.name.toLowerCase()) }.toMap()
 
-    override fun shouldStore(type: EnumStorageType): Boolean = true
+    override fun shouldStore(type: EnumStorageType): Boolean = !disabledStorageTypes.contains(type)
 
     override fun store(name: String, type: EnumStorageType, data: DataSource, mimeType: String, clientInfo: ClientInfo?): Boolean {
         FileOutputStream(File(storageLocations[type]!!, name)).use { fos -> data.use { inputStream -> inputStream.copyTo(fos) } }

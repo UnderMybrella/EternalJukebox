@@ -65,6 +65,7 @@
 
         audioURL: null,		// The URL to play audio from; null means default
         trackID: null,
+        ogAudioURL: null,
 
         minRandomBranchChance: 0,
         maxRandomBranchChance: 0,
@@ -412,6 +413,23 @@
                 info("Sorry, can't find info for that track: " + error)
             }
         });
+
+        $.ajax({
+            url: "/api/audio/jukebox/" + id + "/location",
+            dataType: "json",
+            type: "GET",
+            crossDomain: true,
+            success: function (data) {
+                if(data["url"] === undefined) {
+                    $("#og-audio-source").remove();
+                } else {
+                    jukeboxData.ogAudioURL = data["url"];
+                }
+            },
+            error: function(xhr, textStatus, error) {
+                info("Sorry, can't find info for that track: " + error)
+            }
+        });
     }
 
     function get_status(data) {
@@ -423,7 +441,7 @@
     }
 
     function fetchSignature() {
-        var url = 'policy'
+        var url = 'policy';
         $.getJSON(url, {}, function (data) {
             policy = data.policy;
             signature = data.signature;
@@ -1517,10 +1535,15 @@
             }
         );
 
+        $("#og-audio-source").click(
+            function () {
+                location.href = jukeboxData.ogAudioURL;
+            }
+        );
+
         $("#canonize").click(
             function () {
-                history.replaceState({}, document.title, document.URL.replace("jukebox_go", "canonizer_go"));
-                window.location.reload()
+                location.href = document.URL.replace("jukebox_go", "canonizer_go");
             }
         );
 
@@ -2332,6 +2355,7 @@
 
     var canonizerData = {
         audioURL: null,
+        ogAudioURL: null,
         tuningOpen: false
     };
 
@@ -2612,6 +2636,23 @@
                 info("Sorry, can't find info for that track: " + error)
             }
         });
+
+        $.ajax({
+            url: "/api/audio/jukebox/" + id + "/location",
+            dataType: "json",
+            type: "GET",
+            crossDomain: true,
+            success: function (data) {
+                if(data["url"] === undefined) {
+                    $("#og-audio-source").remove();
+                } else {
+                    canonizerData.ogAudioURL = data["url"];
+                }
+            },
+            error: function(xhr, textStatus, error) {
+                info("Sorry, can't find info for that track: " + error)
+            }
+        });
     }
 
     function get_status(data) {
@@ -2807,10 +2848,15 @@
             });
         });
 
+        $("#og-audio-source").click(
+            function () {
+                location.href = canonizerData.ogAudioURL;
+            }
+        );
+
         $("#jukebox").click(
             function () {
-                history.replaceState({}, document.title, document.URL.replace("canonizer_go", "jukebox_go"));
-                window.location.reload()
+                location.href = document.URL.replace("canonizer_go", "jukebox_go");
             }
         );
 

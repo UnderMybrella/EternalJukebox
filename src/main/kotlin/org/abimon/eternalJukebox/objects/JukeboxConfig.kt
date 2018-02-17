@@ -37,5 +37,7 @@ data class JukeboxConfig(
 
         val workerExecuteTime: Long = 90L * 1000 * 1000 * 1000,
 
-        val printConfig: Boolean = false
+        val printConfig: Boolean = false,
+
+        val logFiles: Map<String, String?> = emptyMap()
 )

@@ -51,12 +51,12 @@ function listSong(r) {
     var title = getTitle(r.title, r.artist, null);
     var item = null;
     if (title) {
-        var item = $('<li>').append(title);
+        item = $('<li>').append(title);
 
         item.attr('class', 'song-link');
         item.click(function () {
             console.log(r);
-            document.location = "{% if page.app == 'jukebox' %}jukebox{% elsif page.app == 'canonizer' %}canonizer{% endif %}_go.html?id=" + r.id;
+            location.href = "{% if page.app == 'jukebox' %}jukebox{% elsif page.app == 'canonizer' %}canonizer{% endif %}_go.html?id=" + r.id;
         });
     }
     return item;

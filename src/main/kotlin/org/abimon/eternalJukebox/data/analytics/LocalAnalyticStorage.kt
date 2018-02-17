@@ -1,6 +1,7 @@
 package org.abimon.eternalJukebox.data.analytics
 
 import org.abimon.eternalJukebox.EternalJukebox
+import org.abimon.eternalJukebox.guaranteeDelete
 import org.abimon.eternalJukebox.objects.EnumAnalyticType
 import org.abimon.eternalJukebox.objects.EnumStorageType
 import org.abimon.eternalJukebox.simpleClassName
@@ -30,7 +31,7 @@ object LocalAnalyticStorage : IAnalyticsStorage {
                 if (EternalJukebox.storage.shouldStore(EnumStorageType.LOG)) {
                     log.useThenDelete { file -> EternalJukebox.storage.store("Analysis-${type::class.simpleClassName}-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(file), "text/plain", null) }
                 } else {
-                    log.delete()
+                    log.guaranteeDelete()
                 }
             }
 

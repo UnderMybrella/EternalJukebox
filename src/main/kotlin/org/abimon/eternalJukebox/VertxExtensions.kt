@@ -41,8 +41,8 @@ fun HttpServerResponse.end(data: DataSource, contentType: String = "application/
     end()
 }
 
-fun HttpServerResponse.redirect(url: String): Unit = putHeader("Location", url).setStatusCode(302).end()
-fun HttpServerResponse.redirect(builderAction: StringBuilder.() -> Unit): Unit = putHeader("Location", StringBuilder().apply(builderAction).toString()).setStatusCode(302).end()
+fun HttpServerResponse.redirect(url: String): Unit = putHeader("Location", url).setStatusCode(307).end()
+fun HttpServerResponse.redirect(builderAction: StringBuilder.() -> Unit): Unit = putHeader("Location", StringBuilder().apply(builderAction).toString()).setStatusCode(307).end()
 
 operator fun RoutingContext.set(key: String, value: Any) = put(key, value)
 operator fun <T : Any> RoutingContext.get(key: String, @Suppress("UNUSED_PARAMETER") klass: KClass<T>): T? = get<T>(key)

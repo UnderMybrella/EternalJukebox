@@ -32,6 +32,8 @@ import org.abimon.eternalJukebox.objects.EmptyDataAPI
 import org.abimon.eternalJukebox.objects.JukeboxConfig
 import org.abimon.visi.lang.Snowstorm
 import java.io.File
+import java.io.OutputStream
+import java.io.PrintStream
 import java.security.SecureRandom
 import java.time.Instant
 import java.util.*
@@ -90,6 +92,13 @@ object EternalJukebox {
     val schedule: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     val apis = ArrayList<IAPI>()
 
+    val logStreams: Map<String, PrintStream>
+    val emptyPrintStream = PrintStream(object: OutputStream() {
+        override fun write(b: Int) {}
+        override fun write(b: ByteArray) {}
+        override fun write(b: ByteArray?, off: Int, len: Int) {}
+    })
+
     val hourlyVisitorsAddress: ConcurrentSkipListSet<String> = ConcurrentSkipListSet()
 
     fun start() {
@@ -109,6 +118,8 @@ object EternalJukebox {
             config = yamlMapper.readValue(yamlConfig, JukeboxConfig::class.java)
         else
             config = JukeboxConfig()
+
+        logStreams = config.logFiles.mapValues { (_, filename) -> if(filename != null) PrintStream(File(filename)) else emptyPrintStream }
 
         if(config.printConfig)
             log("Loaded config: $config")

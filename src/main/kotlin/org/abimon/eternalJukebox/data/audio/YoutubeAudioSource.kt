@@ -6,6 +6,7 @@ import org.abimon.eternalJukebox.objects.*
 import org.abimon.visi.io.DataSource
 import org.abimon.visi.io.FileDataSource
 import java.io.File
+import java.net.URL
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -17,7 +18,7 @@ object YoutubeAudioSource : IAudioSource {
     val command: List<String>
 
     val mimes = mapOf(
-            "m4a" to "audio/mp4",
+            "m4a" to "audio/m4a",
             "aac" to "audio/aac",
             "mp3" to "audio/mpeg",
             "ogg" to "audio/ogg",
@@ -79,12 +80,31 @@ object YoutubeAudioSource : IAudioSource {
 
             return EternalJukebox.storage.provide("${info.id}.$format", EnumStorageType.AUDIO, clientInfo)
         } finally {
-            tmpFile.delete()
-            File(tmpFile.absolutePath + ".part").delete()
+            tmpFile.guaranteeDelete()
+            File(tmpFile.absolutePath + ".part").guaranteeDelete()
             tmpLog.useThenDelete { EternalJukebox.storage.store(it.name, EnumStorageType.LOG, FileDataSource(it), "text/plain", clientInfo) }
             ffmpegLog.useThenDelete { EternalJukebox.storage.store(it.name, EnumStorageType.LOG, FileDataSource(it), "text/plain", clientInfo) }
             endGoalTmp.useThenDelete { EternalJukebox.storage.store("${info.id}.$format", EnumStorageType.AUDIO, FileDataSource(it), mimes[format] ?: "audio/mpeg", clientInfo) }
         }
+    }
+
+    override fun provideLocation(info: JukeboxInfo, clientInfo: ClientInfo?): URL? {
+        if (apiKey == null)
+            return null
+
+        log("[${clientInfo?.userUID}] Attempting to provide a location for $info")
+
+        val artistTitle = getMultiContentDetailsWithKey(searchYoutubeWithKey("${info.artist} - ${info.title}", 10).map { it.id.videoId })
+        val artistTitleLyrics = getMultiContentDetailsWithKey(searchYoutubeWithKey("${info.artist} - ${info.title} lyrics", 10).map { it.id.videoId })
+        val both = ArrayList<YoutubeContentItem>().apply {
+            addAll(artistTitle)
+            addAll(artistTitleLyrics)
+        }.sortedWith(Comparator { o1, o2 -> Math.abs(info.duration - o1.contentDetails.duration.toMillis()).compareTo(Math.abs(info.duration - o2.contentDetails.duration.toMillis())) })
+
+        val closest = both.firstOrNull()
+                ?: return logNull("[${clientInfo?.userUID}] Searches for both \"${info.artist} - ${info.title}\" and \"${info.artist} - ${info.title} lyrics\" turned up nothing")
+
+        return URL("https://youtu.be/${closest.id}")
     }
 
     fun getContentDetailsWithKey(id: String): YoutubeContentItem? {
