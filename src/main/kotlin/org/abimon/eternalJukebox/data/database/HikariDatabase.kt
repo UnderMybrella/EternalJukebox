@@ -132,17 +132,16 @@ abstract class HikariDatabase : IDatabase {
 
     override fun makeSongPopular(service: String, id: String, clientInfo: ClientInfo?) {
         use { connection ->
-            val select = connection.prepareStatement("SELECT hits FROM popular WHERE service=? AND song_id=?;")
+            val select = connection.prepareStatement("SELECT id, hits FROM popular WHERE service=? AND song_id=? ORDER BY hits DESC;")
             select.setString(1, service)
             select.setString(2, id)
             select.execute()
 
             val results = select.resultSet
             if(results.next()) {
-                val update = connection.prepareStatement("UPDATE popular SET hits=? WHERE service=? AND song_id=?;")
+                val update = connection.prepareStatement("UPDATE popular SET hits=? WHERE id=?;")
                 update.setLong(1, results.getLong("hits") + 1)
-                update.setString(2, service)
-                update.setString(3, id)
+                update.setLong(2, results.getLong("id"))
 
                 update.execute()
             } else {
