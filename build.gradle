@@ -42,8 +42,8 @@ dependencies {
     compile "io.vertx:vertx-auth-oauth2:$vertx_version"
 
     compile "com.h2database:h2:1.4.196"
-    compile "mysql:mysql-connector-java:5.1.38"
-    compile "com.zaxxer:HikariCP:2.6.2"
+    compile "mysql:mysql-connector-java:5.1.45"
+    compile "com.zaxxer:HikariCP:2.7.7"
     compile "com.google.cloud.sql:mysql-socket-factory:1.0.5"
 
     compile 'org.jsoup:jsoup:1.10.2'
