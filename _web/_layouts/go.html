@@ -1,0 +1,152 @@
+---
+layout: default
+
+buttons:
+   - name: Play
+     id: go
+   - name: Tune
+     id: tune
+   - name: Star
+     id: star
+   - name: Short URL
+     id: short-url
+---
+
+<div id='info-div'>
+    <span id='info'> </span>
+    {% include tweet.html %}
+</div>
+
+<div id='error'></div>
+<div id="hero">
+    <div id="stats">
+        <div id="details">
+            <a href="" target="_blank" id="song-url"><span id="song-title"> </span></a>
+            <br>
+            <span id="button-panel">
+                {% for item in layout.buttons %}
+                  <button class="btn btn-small btn-default" id="{{ item.id }}">{{ item.name }}</button>
+                {% endfor %}
+                {% if page.app == 'jukebox' %}<button class="btn btn-small btn-default" id="canonize">Auto Canonizer Version</button>{% elsif page.app == 'canonizer' %}<button class="btn btn-small btn-default" id="jukebox">Eternal Jukebox Version</button>{% endif %}
+            </span>
+        </div>
+        {{ content }}
+    </div>
+</div>
+
+{% include go-js.html %}
+
+{% if page.app == 'jukebox' %}
+<div class="ui-dialog ui-widget ui-widget-content ui-corner-all ui-draggable"
+     style="display: none; outline: 0px none; z-index: 1000;" tabindex="-1" role="dialog" aria-labelledby="ui-id-1">
+    <div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix"><span id="ui-id-1"
+                                                                                            class="ui-dialog-title">Fine tune your endless song</span><a
+            href="#" class="ui-dialog-titlebar-close ui-corner-all" role="button"><span
+            class="ui-icon ui-icon-closethick"></span></a></div>
+    class="ui-icon ui-icon-closethick"></span></a></div>
+<div id="controls" visibility="visible" style="display: block;" class="ui-dialog-content ui-widget-content">
+    <div>
+        <div id="control-instructions">
+            You can tune control the frequency and quality of the branching. See the FAQ for more details.
+            You can retune the Eternal Jukebox to use a different audio track here.
+        </div>
+        <div id="threshold-div">
+            <div id="sthreshold"> Branch Similarity Threshold: <span id="threshold"> 50 </span></div>
+
+            <div class="slider ui-slider ui-slider-horizontal ui-widget ui-widget-content ui-corner-all"
+                 id="threshold-slider"><a class="ui-slider-handle ui-state-default ui-corner-all" href="#"
+                                          style="left: 35.8974%;"></a></div>
+            <div id="slider-labels">
+                <span class="left-label"> Higher<br> Quality </span>
+                <span class="right-label"> More <br>Branches </span>
+            </div>
+        </div>
+        <br clear="all">
+        <div id="probability-div">
+            <div id="sprobability"> Branch Probability Range:
+                <span id="min-prob">18</span>% to
+                <span id="max-prob">50</span>%
+            </div>
+            <div class="slider ui-slider ui-slider-horizontal ui-widget ui-widget-content ui-corner-all"
+                 id="probability-slider">
+                <div class="ui-slider-range ui-widget-header" style="left: 18%; width: 32%;"></div>
+                <a class="ui-slider-handle ui-state-default ui-corner-all" href="#" style="left: 18%;"></a><a
+                    class="ui-slider-handle ui-state-default ui-corner-all" href="#" style="left: 50%;"></a></div>
+            <div id="slider-labels">
+                <span class="left-label"> Low </span>
+                <span class="right-label"> High </span>
+            </div>
+        </div>
+        <br clear="all">
+
+        <div id="probability-div">
+            <div id="sprobability"> Branch Probability Ramp-up Speed:
+                <span id="ramp-speed">9</span>%
+            </div>
+            <div class="slider ui-slider ui-slider-horizontal ui-widget ui-widget-content ui-corner-all"
+                 id="probability-ramp-slider"><a class="ui-slider-handle ui-state-default ui-corner-all" href="#"
+                                                 style="left: 30%;"></a></div>
+            <div id="slider-labels">
+                <span class="left-label"> Slow </span>
+                <span class="right-label"> Fast </span>
+            </div>
+        </div>
+        <br clear="all">
+        <div class="l-cb" id="l-last-branch"> Loop extension optimization: <input id="last-branch" checked="checked"
+                                                                                  type="checkbox"></div>
+        <div class="l-cb" id="l-reverse-branch"> Allow only reverse branches : <input id="reverse-branch"
+                                                                                      type="checkbox"></div>
+        <div class="l-cb" id="l-long-branch"> Allow only long branches : <input id="long-branch" type="checkbox">
+        </div>
+        <div class="l-cb" id="l-sequential-branch"> Remove sequential branches: <input id="sequential-branch"
+                                                                                       type="checkbox"></div>
+        <div class="l-cb" id="l-disable-keys"> Disable Keypresses: <input id="disable-keys" type="checkbox"></div>
+        <div class="l-cb" id="l-audio-url">Audio URL: <input id="audio-url" type="url"></div>
+        <br>
+        <div class="l-cb" id="l-audio-upload">
+            <form id="audio-upload-form">
+                <input id="audio-upload" type="file" name="song_upload" accept="audio/*">
+            </form>
+            <div class='progress_outer' id="audio-progress" style="background-color: green;">
+                <div id='_progress' class='progress'></div>
+            </div></div>
+        <br>
+        <div id="tune-info">
+            <div id="l-branch-chance"> Branch chance (%): <span class="ti-val" id="branch-chance">18</span></div>
+            <div id="l-branch-threshold"> Last threshold: <span class="ti-val" id="last-threshold">0</span></div>
+            <br>
+            <div id="l-beat-count"> Total beats: <span class="ti-val" id="total-beats"></span></div>
+            <div id="l-branch-count"> Total branches: <span class="ti-val" id="branch-count"></span></div>
+            <div id="l-loop-length-beats"> Longest loop (beats): <span class="ti-val" id="loop-length-beats"></span>
+            </div>
+            <div id="l-loop-length-percent"> Longest loop (%): <span class="ti-val" id="loop-length-percent"></span>
+            </div>
+            <br>
+            <div id="l-deleted-branches"> Deleted branches: <span class="ti-val" id="deleted-branches">0</span>
+            </div>
+        </div>
+        accept="audio/*"></form></div>
+    <button class="btn btn-small" id="reset-edges"> Reset</button>
+    <button class="btn btn-small" id="close-tune"> Close</button>
+</div>
+{% elsif page.app == 'canonizer' %}
+<div class="ui-dialog ui-widget ui-widget-content ui-corner-all ui-draggable"
+     style="display: none; outline: 0px none; z-index: 1000;" tabindex="-1" role="dialog" aria-labelledby="ui-id-1">
+    <div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix"><span id="ui-id-1"
+                                                                                            class="ui-dialog-title">Fine tune your endless song</span><a
+            href="#" class="ui-dialog-titlebar-close ui-corner-all" role="button"><span
+            class="ui-icon ui-icon-closethick"></span></a></div>
+    <div id="controls" visibility="visible" style="display: block;" class="ui-dialog-content ui-widget-content">
+        <div>
+            <div id="control-instructions">
+                You can retune the Auto Canonizer to use a different audio track here.
+            </div>
+            <div class="l-cb" id="l-audio-url">Audio URL: <input id="audio-url" type="url"></div>
+            <br>
+            <div class="l-cb" id="l-audio-upload"><form id="audio-upload-form"><input id="audio-upload" type="file" name="song_upload"
+                                                                                      accept="audio/*"></form></div>
+            <button class="btn btn-small" id="reset-edges"> Reset</button>
+        </div>
+    </div>
+</div>
+{% endif %}

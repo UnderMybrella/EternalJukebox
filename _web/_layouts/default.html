@@ -1,0 +1,21 @@
+---
+layout: compress
+---
+
+<!DOCTYPE HTML>
+<html xmlns="">
+{% include head.html %}
+
+<body data-gr-c-s-loaded="true" style="padding-top:50px;">
+{% include nav.html %}
+{{ content }}
+
+{% if page.type == 'go' %}
+<iframe id="rufous-sandbox" scrolling="no" allowtransparency="true" allowfullscreen="true"
+        style="position: absolute; visibility: hidden; display: none; width: 0px; height: 0px; padding: 0px; border: medium none;"
+        title="Twitter analytics iframe" frameborder="0"></iframe>
+{% endif %}
+{% include footer.html %}
+{% include ga.html %}
+</body>
+</html>
