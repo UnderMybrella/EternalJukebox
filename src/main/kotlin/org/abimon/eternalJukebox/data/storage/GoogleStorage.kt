@@ -136,7 +136,7 @@ object GoogleStorage : IStorage {
             val success = exponentiallyBackoff(64000, 8) { attempt ->
                 log("[${clientInfo?.userUID}] Attempting to download and stream gs://$bucket/$fullPath exists; Attempt $attempt")
                 val (_, response) = tokenLock.withLock {
-                    Fuel.get("https://www.googleapis.com/storage/v1/b/$bucket/o/${URLEncoder.encode(fullPath, "UTF-8")}")
+                    Fuel.get("https://www.googleapis.com/storage/v1/b/$bucket/o/${URLEncoder.encode(fullPath, "UTF-8")}?alt=media")
                             .header("Authorization" to "Bearer $googleAccessToken")
                             .response()
                 }
@@ -212,7 +212,7 @@ object GoogleStorage : IStorage {
             val success = exponentiallyBackoff(64000, 8) { attempt ->
                 log("[${clientInfo?.userUID}] Attempting to download and stream gs://$bucket/$fullPath exists; Attempt $attempt")
                 val (_, response) = tokenLock.withLock {
-                    Fuel.get("https://www.googleapis.com/storage/v1/b/$bucket/o/${URLEncoder.encode(fullPath, "UTF-8")}")
+                    Fuel.get("https://www.googleapis.com/storage/v1/b/$bucket/o/${URLEncoder.encode(fullPath, "UTF-8")}?alt=media")
                             .header("Authorization" to "Bearer $googleAccessToken")
                             .response()
                 }
