@@ -126,70 +126,70 @@ object AudioAPI : IAPI {
     fun externalAudio(context: RoutingContext) {
         val url = context.request().getParam("url")
 
-        try {
-            if (url != null) {
-                if (url.startsWith("upl:")) {
-                    if (!EternalJukebox.storage.shouldStore(EnumStorageType.UPLOADED_AUDIO)) {
-                        log("[${context.clientInfo.userUID}] Rerouting external audio request of URL $url; this server does not support uploaded audio")
-                        return context.reroute("/api" + mountPath + "/jukebox/${context.request().getParam("fallbackID")
-                                ?: "7GhIk7Il098yCjg4BQjzvb"}")
-                    }
+        if (url != null) {
+            if (url.startsWith("upl:")) {
+                if (!EternalJukebox.storage.shouldStore(EnumStorageType.UPLOADED_AUDIO)) {
+                    log("[${context.clientInfo.userUID}] Rerouting external audio request of URL $url; this server does not support uploaded audio")
+                    return context.reroute("/api" + mountPath + "/jukebox/${context.request().getParam("fallbackID")
+                            ?: "7GhIk7Il098yCjg4BQjzvb"}")
+                }
 
-                    val hash = url.substringAfter("upl:")
-                    if (EternalJukebox.storage.isStored("$hash.$format", EnumStorageType.UPLOADED_AUDIO)) {
-                        if (!EternalJukebox.storage.provide("$hash.$format", EnumStorageType.UPLOADED_AUDIO, context, context.clientInfo)) {
-                            val data = EternalJukebox.storage.provide("$hash.$format", EnumStorageType.UPLOADED_AUDIO, context.clientInfo)
-                            if (data != null)
-                                return context.response().end(data, AudioAPI.mime)
-                        } else
-                            return
-                    } else {
-                        log("[${context.clientInfo.userUID}] Rerouting external audio request of URL $url; no storage for $hash.$format")
-                        return context.reroute("/api" + mountPath + "/jukebox/${context.request().getParam("fallbackID")
-                                ?: "7GhIk7Il098yCjg4BQjzvb"}")
-                    }
+                val hash = url.substringAfter("upl:")
+                if (EternalJukebox.storage.isStored("$hash.$format", EnumStorageType.UPLOADED_AUDIO)) {
+                    if (!EternalJukebox.storage.provide("$hash.$format", EnumStorageType.UPLOADED_AUDIO, context, context.clientInfo)) {
+                        val data = EternalJukebox.storage.provide("$hash.$format", EnumStorageType.UPLOADED_AUDIO, context.clientInfo)
+                        if (data != null)
+                            return context.response().putHeader("X-Client-UID", context.clientInfo.userUID).end(data, AudioAPI.mime)
+                    } else
+                        return
                 } else {
-                    val (_, response, _) = Fuel.head(url).response()
-                    if (response.statusCode < 300) {
-                        val mime = response.headers["Content-Type"]?.firstOrNull()
+                    log("[${context.clientInfo.userUID}] Rerouting external audio request of URL $url; no storage for $hash.$format")
+                    return context.reroute("/api" + mountPath + "/jukebox/${context.request().getParam("fallbackID")
+                            ?: "7GhIk7Il098yCjg4BQjzvb"}")
+                }
+            } else {
+                val (_, response, _) = Fuel.head(url).response()
+                if (response.statusCode < 300) {
+                    val mime = response.headers["Content-Type"]?.firstOrNull()
 
-                        if (mime != null && mime.startsWith("audio"))
-                            return context.response().putHeader("X-Client-UID", context.clientInfo.userUID).redirect(url)
-                        else {
-                            if (EternalJukebox.storage.shouldStore(EnumStorageType.EXTERNAL_AUDIO)) {
-                                val b64 = base64Encoder.encodeToString(url.toByteArray(Charsets.UTF_8)).md5Hash()
+                    if (mime != null && mime.startsWith("audio"))
+                        return context.response().putHeader("X-Client-UID", context.clientInfo.userUID).redirect(url)
+                    else {
+                        if (EternalJukebox.storage.shouldStore(EnumStorageType.EXTERNAL_AUDIO)) {
+                            val b64 = base64Encoder.encodeToString(url.toByteArray(Charsets.UTF_8)).md5Hash()
 
-                                val update = context.request().getParam("update")?.toBoolean() ?: false
-                                if (EternalJukebox.storage.isStored("$b64.$format", EnumStorageType.EXTERNAL_AUDIO) && !update) {
-                                    if (EternalJukebox.storage.provide("$b64.$format", EnumStorageType.EXTERNAL_AUDIO, context, context.clientInfo))
-                                        return
+                            val update = context.request().getParam("update")?.toBoolean() ?: false
+                            if (EternalJukebox.storage.isStored("$b64.$format", EnumStorageType.EXTERNAL_AUDIO) && !update) {
+                                if (EternalJukebox.storage.provide("$b64.$format", EnumStorageType.EXTERNAL_AUDIO, context, context.clientInfo))
+                                    return
 
-                                    val data = EternalJukebox.storage.provide("$b64.$format", EnumStorageType.EXTERNAL_AUDIO, context.clientInfo)
-                                    if (data != null)
-                                        return context.response().putHeader("X-Client-UID", context.clientInfo.userUID).end(data, AudioAPI.mime)
+                                val data = EternalJukebox.storage.provide("$b64.$format", EnumStorageType.EXTERNAL_AUDIO, context.clientInfo)
+                                if (data != null)
+                                    return context.response().putHeader("X-Client-UID", context.clientInfo.userUID).end(data, AudioAPI.mime)
+                            }
+
+                            if (update)
+                                log("[${context.clientInfo.userUID}] ${context.request().connection().remoteAddress()} is requesting an update for $url / $b64")
+
+                            val tmpFile = File("$uuid.tmp")
+                            val tmpLog = File("$b64-$uuid.log")
+                            val ffmpegLog = File("$b64-$uuid.log")
+                            val endGoalTmp = File(tmpFile.absolutePath.replace(".tmp", ".$format"))
+
+                            try {
+                                val downloadProcess = ProcessBuilder().command(ArrayList(YoutubeAudioSource.command).apply {
+                                    add(url)
+                                    add(tmpFile.absolutePath)
+                                    add(YoutubeAudioSource.format)
+                                }).redirectErrorStream(true).redirectOutput(tmpLog).start()
+
+                                if (!downloadProcess.waitFor(90, TimeUnit.SECONDS)) {
+                                    downloadProcess.destroyForcibly().waitFor()
+                                    log("[${context.clientInfo.userUID}] Forcibly destroyed the download process for $url", true)
                                 }
 
-                                if (update)
-                                    log("[${context.clientInfo.userUID}] ${context.request().connection().remoteAddress()} is requesting an update for $url / $b64")
-
-                                val tmpFile = File("$uuid.tmp")
-                                val tmpLog = File("$b64-$uuid.log")
-                                val ffmpegLog = File("$b64-$uuid.log")
-                                val endGoalTmp = File(tmpFile.absolutePath.replace(".tmp", ".$format"))
-
-                                try {
-                                    val downloadProcess = ProcessBuilder().command(ArrayList(YoutubeAudioSource.command).apply {
-                                        add(url)
-                                        add(tmpFile.absolutePath)
-                                        add(YoutubeAudioSource.format)
-                                    }).redirectErrorStream(true).redirectOutput(tmpLog).start()
-
-                                    if (!downloadProcess.waitFor(90, TimeUnit.SECONDS)) {
-                                        downloadProcess.destroyForcibly().waitFor()
-                                        log("[${context.clientInfo.userUID}] Forcibly destroyed the download process for $url", true)
-                                    }
-
-                                    if (!endGoalTmp.exists()) {
+                                if (!endGoalTmp.exists()) {
+                                    try {
                                         log("[${context.clientInfo.userUID}] $endGoalTmp does not exist, attempting to convert with ffmpeg")
 
                                         if (!tmpFile.exists()) {
@@ -205,38 +205,37 @@ object AudioAPI : IAPI {
                                                 return log("[${context.clientInfo.userUID}] $endGoalTmp still does not exist, what happened?", true)
                                         } else
                                             return log("[${context.clientInfo.userUID}] ffmpeg not installed, nothing we can do", true)
+                                    } finally {
+                                        context.response().putHeader("X-Client-UID", context.clientInfo.userUID).setStatusCode(500).end()
                                     }
+                                }
 
-                                    endGoalTmp.useThenDelete {
-                                        EternalJukebox.storage.store("$b64.${YoutubeAudioSource.format}", EnumStorageType.EXTERNAL_AUDIO, FileDataSource(it), YoutubeAudioSource.mimes[YoutubeAudioSource.format]
-                                                ?: "audio/mpeg", context.clientInfo)
-                                    }
+                                endGoalTmp.useThenDelete {
+                                    EternalJukebox.storage.store("$b64.${YoutubeAudioSource.format}", EnumStorageType.EXTERNAL_AUDIO, FileDataSource(it), YoutubeAudioSource.mimes[YoutubeAudioSource.format]
+                                            ?: "audio/mpeg", context.clientInfo)
+                                }
 
-                                    if (EternalJukebox.storage.provide("$b64.$format", EnumStorageType.EXTERNAL_AUDIO, context, context.clientInfo))
-                                        return
+                                if (EternalJukebox.storage.provide("$b64.$format", EnumStorageType.EXTERNAL_AUDIO, context, context.clientInfo))
+                                    return
 
-                                    val data = EternalJukebox.storage.provide("$b64.$format", EnumStorageType.EXTERNAL_AUDIO, context.clientInfo)
-                                    if (data != null)
-                                        return context.response().putHeader("X-Client-UID", context.clientInfo.userUID).end(data, AudioAPI.mime)
-                                } finally {
-                                    tmpFile.guaranteeDelete()
-                                    tmpLog.useThenDelete { EternalJukebox.storage.store(it.name, EnumStorageType.LOG, FileDataSource(it), "text/plain", context.clientInfo) }
-                                    ffmpegLog.useThenDelete { EternalJukebox.storage.store(it.name, EnumStorageType.LOG, FileDataSource(it), "text/plain", context.clientInfo) }
-                                    endGoalTmp.useThenDelete {
-                                        EternalJukebox.storage.store("$b64.$format", EnumStorageType.EXTERNAL_AUDIO, FileDataSource(it), YoutubeAudioSource.mimes[format]
-                                                ?: "audio/mpeg", context.clientInfo)
-                                    }
+                                val data = EternalJukebox.storage.provide("$b64.$format", EnumStorageType.EXTERNAL_AUDIO, context.clientInfo)
+                                if (data != null)
+                                    return context.response().putHeader("X-Client-UID", context.clientInfo.userUID).end(data, AudioAPI.mime)
+                            } finally {
+                                tmpFile.guaranteeDelete()
+                                tmpLog.useThenDelete { EternalJukebox.storage.store(it.name, EnumStorageType.LOG, FileDataSource(it), "text/plain", context.clientInfo) }
+                                ffmpegLog.useThenDelete { EternalJukebox.storage.store(it.name, EnumStorageType.LOG, FileDataSource(it), "text/plain", context.clientInfo) }
+                                endGoalTmp.useThenDelete {
+                                    EternalJukebox.storage.store("$b64.$format", EnumStorageType.EXTERNAL_AUDIO, FileDataSource(it), YoutubeAudioSource.mimes[format]
+                                            ?: "audio/mpeg", context.clientInfo)
                                 }
                             }
                         }
                     }
                 }
-                context.reroute("/api" + mountPath + "/jukebox/${context.request().getParam("fallbackID")
-                        ?: "7GhIk7Il098yCjg4BQjzvb"}")
             }
-        } finally {
-            if (!context.response().closed() && !context.response().ended())
-                context.response().putHeader("X-Client-UID", context.clientInfo.userUID).end()
+            context.reroute("/api" + mountPath + "/jukebox/${context.request().getParam("fallbackID")
+                    ?: "7GhIk7Il098yCjg4BQjzvb"}")
         }
     }
 
