@@ -1,6 +1,8 @@
 package org.abimon.eternalJukebox.handlers.api
 
 import com.github.kittinunf.fuel.Fuel
+import com.github.kittinunf.fuel.core.Request
+import com.github.kittinunf.fuel.core.Response
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.BodyHandler
@@ -148,7 +150,7 @@ object AudioAPI : IAPI {
                             ?: "7GhIk7Il098yCjg4BQjzvb"}")
                 }
             } else {
-                val (_, response, _) = Fuel.head(url).response()
+                val (_, response) = Fuel.headOrGet(url)
                 if (response.statusCode < 300) {
                     val mime = response.headers["Content-Type"]?.firstOrNull()
 
@@ -284,6 +286,21 @@ object AudioAPI : IAPI {
                 context.endWithStatusCode(201) { this["id"] = hash }
             }
         }
+    }
+
+    fun Fuel.Companion.headOrGet(url: String): Pair<Request, Response> {
+        val (headRequest, headResponse) = Fuel.head(url).response()
+
+        if(headResponse.statusCode == 404) {
+            val (getRequest, getResponse) = Fuel.get(url).response()
+
+            if(headResponse.statusCode != getResponse.statusCode)
+                log("Request to $url gave a different response between HEAD and GET request (${headResponse.statusCode} vs ${getResponse.statusCode})")
+
+            return getRequest to getResponse
+        }
+
+        return headRequest to headResponse
     }
 
     init {
