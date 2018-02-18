@@ -45,6 +45,8 @@ There give it a name and description and click create.
 It should send you to the new app's page, the only thing you need from here is your Client ID and Client Secret  
 (Note: Never share these with anyone!)  
 
+You will also need a Youtube Data API key, which you can find about how to obtain [here](https://developers.google.com/youtube/v3/getting-started).
+
 There are a variety of config options (documentation coming soon) that allow most portions of the EternalJukebox to be configured, and these can be entered here.
 
 ## Starting the server:
