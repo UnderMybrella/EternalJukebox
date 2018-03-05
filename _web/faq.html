@@ -1,0 +1,26 @@
+---
+title: 'The Eternal Jukebox'
+layout: default
+type: faq
+app: jukebox
+---
+
+<div id="hero" class="hero-unit">
+<div class="container">
+{% capture x %}
+# The ~~Infinite~~ Eternal Jukebox FAQ
+#### For when your favorite song just isn't long enough
+{% endcapture %}{{ x | markdownify }}
+    <br>
+    <div class="container lead span11">
+      {% for item in site.data.faq.faq %}
+        <b id="{{ item.id }}" class="question">{{ item.question }}</b>
+        <div class="indented">
+{% capture x %}
+{{ item.answer | liquify }}
+{% endcapture %}{{ x | markdownify }}
+        </div>
+        <br>
+     {% endfor %}
+    </div>
+</div>

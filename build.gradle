@@ -1,7 +1,7 @@
 buildscript {
-    ext.kotlin_version = '1.1.2-2'
-    ext.vertx_version = '3.4.1'
-    ext.jackson_version = '2.8.7'
+    ext.kotlin_version = '1.2.21'
+    ext.vertx_version = '3.5.0'
+    ext.jackson_version = '2.9.2'
 
     repositories {
         mavenCentral()
@@ -16,41 +16,64 @@ buildscript {
 plugins {
     id 'java'
     id 'application'
-    id 'com.github.johnrengelman.shadow' version '1.2.4'
+    id 'com.github.johnrengelman.shadow' version '2.0.1'
 }
 
 apply plugin: 'kotlin'
 
-mainClassName = "org.abimon.eternalJukebox.EternalJukeboxKt"
+mainClassName = "org.abimon.eternalJukebox.EternalJukebox"
 
 sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 repositories {
     mavenCentral()
     jcenter()
     maven { url 'https://jitpack.io' }
+    maven { url 'https://maven.abimon.org' }
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
+    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:0.21.2'
 
     compile "io.vertx:vertx-web:$vertx_version"
     compile "io.vertx:vertx-auth-oauth2:$vertx_version"
-    compile "mysql:mysql-connector-java:6.0.6"
-    compile "com.mashape.unirest:unirest-java:1.4.9"
+
+    compile "com.h2database:h2:1.4.196"
+    compile "mysql:mysql-connector-java:5.1.45"
+    compile "com.zaxxer:HikariCP:2.7.7"
+    compile "com.google.cloud.sql:mysql-socket-factory:1.0.5"
+
     compile 'org.jsoup:jsoup:1.10.2'
     compile 'com.auth0:java-jwt:3.2.0'
+    compile 'com.github.kittinunf.fuel:fuel:1.12.0'
 
     compile "com.fasterxml.jackson.core:jackson-core:$jackson_version"
     compile "com.fasterxml.jackson.core:jackson-annotations:$jackson_version"
     compile "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+    compile "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
     compile "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$jackson_version"
     compile "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
     compile "com.fasterxml.jackson.module:jackson-module-kotlin:$jackson_version"
     compile "com.fasterxml.jackson.module:jackson-module-parameter-names:$jackson_version"
 
-    compile 'com.github.undermybrella:Visi:84ef47a'
+    compile 'org.abimon:Visi:34'
+    compile 'org.abimon:UnitsKeptSimple:2'
+    compile "com.jakewharton.fliptables:fliptables:1.0.2"
 
     testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+compileKotlin {
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+}
+
+kotlin {
+    experimental {
+        coroutines "enable"
+    }
 }

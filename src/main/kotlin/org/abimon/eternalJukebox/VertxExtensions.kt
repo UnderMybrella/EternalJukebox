@@ -1,64 +1,71 @@
 package org.abimon.eternalJukebox
 
-import io.netty.handler.codec.http.HttpHeaderNames
+import io.vertx.core.AsyncResult
+import io.vertx.core.Future
+import io.vertx.core.Handler
+import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpServerResponse
+import io.vertx.core.json.JsonArray
+import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.RoutingContext
-import org.abimon.visi.security.sha512Hash
-import org.json.JSONArray
-import org.json.JSONObject
-import java.io.File
-import java.io.FileInputStream
+import org.abimon.eternalJukebox.objects.ClientInfo
+import org.abimon.eternalJukebox.objects.ConstantValues
+import org.abimon.visi.io.DataSource
+import org.abimon.visi.io.readChunked
+import kotlin.reflect.KClass
 
-fun HttpServerResponse.redirect(url: String) = putHeader("Location", url).setStatusCode(302).end()
+fun HttpServerResponse.end(json: JsonArray) = putHeader("Content-Type", "application/json").end(json.toString())
+fun HttpServerResponse.end(json: JsonObject) = putHeader("Content-Type", "application/json").end(json.toString())
 
-fun HttpServerResponse.optionalHeader(headerName: CharSequence, headerValue: CharSequence, addHeader: Boolean): HttpServerResponse {
-    if(addHeader)
-        putHeader(headerName, headerValue)
-    return this
-}
-fun HttpServerResponse.optionalHeader(headerName: CharSequence, headerValue: CharSequence, addHeader: () -> Boolean): HttpServerResponse = optionalHeader(headerName, headerValue, addHeader())
-fun HttpServerResponse.httpsOnly(): HttpServerResponse = this.optionalHeader("Strict-Transport-Security", "max-age=86400", config.enforceHttps)
-fun HttpServerResponse.cache(): HttpServerResponse = this.optionalHeader("Cache-Control", "max-age=86400, public", config.cacheFiles)
-fun HttpServerResponse.sendCachedFile(file: File): HttpServerResponse {
-    if(config.cacheFiles)
-        return this.cache().putHeader("ETag", FileInputStream(file).sha512Hash()).sendFile(file.absolutePath)
-    return this.sendFile(file.absolutePath)
-}
-fun HttpServerResponse.sendCachedData(data: String) {
-    if(config.cacheFiles)
-        return this.cache().putHeader("ETag", data.sha512Hash()).end(data)
-    this.end(data)
+fun HttpServerResponse.end(init: JsonObject.() -> Unit) {
+    val json = JsonObject()
+    json.init()
+
+    putHeader("Content-Type", "application/json").end(json.toString())
 }
 
-fun HttpServerResponse.htmlContent(): HttpServerResponse = this.putHeader(HttpHeaderNames.CONTENT_TYPE, "text/html;charset=UTF-8")
-fun HttpServerResponse.textContent(): HttpServerResponse = this.putHeader(HttpHeaderNames.CONTENT_TYPE, "text/plain;charset=UTF-8")
-fun HttpServerResponse.jsonContent(): HttpServerResponse = this.putHeader(HttpHeaderNames.CONTENT_TYPE, "application/json;charset=UTF-8")
-fun HttpServerResponse.end(json: JSONArray) = this.jsonContent().end(json.toString())
-fun HttpServerResponse.end(json: JSONObject) = this.jsonContent().end(json.toString())
+fun RoutingContext.endWithStatusCode(statusCode: Int, init: JsonObject.() -> Unit) {
+    val json = JsonObject()
+    json.init()
 
-fun RoutingContext.ifFileNotCached(file: File, wasntCached: RoutingContext.(File) -> Unit) {
-    if (config.cacheFiles) {
-        val hashOnDisk = FileInputStream(file).sha512Hash()
-        val hashProvided = this.request().getHeader("If-None-Match") ?: ""
-
-        if(hashOnDisk != hashProvided)
-            wasntCached(file)
-        else
-            response().setStatusCode(304).end()
-    } else
-        wasntCached(file)
-}
-fun RoutingContext.ifDataNotCached(data: String, wasntCached: RoutingContext.(String) -> Unit) {
-    if (config.cacheFiles) {
-        val hashOnDisk = data.sha512Hash()
-        val hashProvided = this.request().getHeader("If-None-Match") ?: ""
-
-        if(hashOnDisk != hashProvided)
-            wasntCached(data)
-        else
-            response().setStatusCode(304).end()
-    } else
-        wasntCached(data)
+    this.response().setStatusCode(statusCode)
+            .putHeader("Content-Type", "application/json")
+            .putHeader("X-Client-UID", clientInfo.userUID)
+            .end(json.toString())
 }
 
-fun Any.returnUnit(): Unit {}
+fun HttpServerResponse.end(data: DataSource, contentType: String = "application/octet-stream") {
+    putHeader("Content-Type", contentType)
+    putHeader("Content-Length", "${data.size}")
+    data.use { stream -> stream.readChunked { chunk -> write(Buffer.buffer(chunk)) } }
+    end()
+}
+
+fun HttpServerResponse.redirect(url: String): Unit = putHeader("Location", url).setStatusCode(307).end()
+fun HttpServerResponse.redirect(builderAction: StringBuilder.() -> Unit): Unit = putHeader("Location", StringBuilder().apply(builderAction).toString()).setStatusCode(307).end()
+
+operator fun RoutingContext.set(key: String, value: Any) = put(key, value)
+operator fun <T : Any> RoutingContext.get(key: String, @Suppress("UNUSED_PARAMETER") klass: KClass<T>): T? = get<T>(key)
+operator fun <T : Any> RoutingContext.get(key: String, default: T): T = get<T>(key) ?: default
+operator fun <T : Any> RoutingContext.get(key: String, default: T, @Suppress("UNUSED_PARAMETER") klass: KClass<T>): T = get<T>(key)
+        ?: default
+
+val RoutingContext.clientInfo: ClientInfo
+    get() {
+        if (ConstantValues.CLIENT_INFO in data() && data()[ConstantValues.CLIENT_INFO] is ClientInfo)
+            return data()[ConstantValues.CLIENT_INFO] as ClientInfo
+
+        val info = ClientInfo(this)
+
+        data()[ConstantValues.CLIENT_INFO] = info
+
+        return info
+    }
+
+fun <T> executeBlocking(operation: () -> T, onComplete: (AsyncResult<T>) -> Unit) {
+    EternalJukebox.vertx.executeBlocking(Handler<Future<T>> { future ->
+        future.complete(operation())
+    }, Handler { result -> onComplete(result) })
+}
+
+operator fun JsonObject.set(key: String, value: Any) = put(key, value)

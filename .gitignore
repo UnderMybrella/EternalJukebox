@@ -41,8 +41,8 @@ fabric.properties
 .vertx/
 EternalJukebox.iml
 audio/
+info/
 config.json
-eternal/
 logs/
 musicmachinery/
 selfSigned.cert
@@ -53,4 +53,6 @@ target/
 trid/
 trid_audio/
 working/
-!/login.html
+!/src/main/kotlin/org/abimon/eternalJukebox/data/audio
+/data/
+web
