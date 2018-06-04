@@ -150,9 +150,9 @@ object YoutubeAudioSource : IAudioSource {
     }
 
     init {
-        apiKey = EternalJukebox.config.audioSourceOptions["API_KEY"] as? String
-        format = EternalJukebox.config.audioSourceOptions["AUDIO_FORMAT"] as? String ?: "m4a"
-        command = (EternalJukebox.config.audioSourceOptions["AUDIO_COMMAND"] as? List<*>)?.map { "$it" } ?: (EternalJukebox.config.audioSourceOptions["AUDIO_COMMAND"] as? String)?.split("\\s+".toRegex()) ?: if (System.getProperty("os.name").toLowerCase().contains("windows")) listOf("yt.bat") else listOf("bash", "yt.sh")
+        apiKey = (EternalJukebox.config.audioSourceOptions["API_KEY"] ?: EternalJukebox.config.audioSourceOptions["apiKey"]) as? String
+        format = (EternalJukebox.config.audioSourceOptions["AUDIO_FORMAT"] ?: EternalJukebox.config.audioSourceOptions["audioFormat"]) as? String ?: "m4a"
+        command = ((EternalJukebox.config.audioSourceOptions["AUDIO_COMMAND"] ?: EternalJukebox.config.audioSourceOptions["audioCommand"]) as? List<*>)?.map { "$it" } ?: ((EternalJukebox.config.audioSourceOptions["AUDIO_COMMAND"] ?: EternalJukebox.config.audioSourceOptions["audioCommand"]) as? String)?.split("\\s+".toRegex()) ?: if (System.getProperty("os.name").toLowerCase().contains("windows")) listOf("yt.bat") else listOf("bash", "yt.sh")
 
         if (apiKey == null)
             log("Warning: No API key provided. We're going to scrape the Youtube search page which is a not great thing to do.\nTo obtain an API key, follow the guide here (https://developers.google.com/youtube/v3/getting-started) or over on the EternalJukebox Github page!", true)
