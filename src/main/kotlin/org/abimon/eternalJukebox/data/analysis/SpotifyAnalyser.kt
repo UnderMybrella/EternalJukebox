@@ -6,21 +6,19 @@ import org.abimon.eternalJukebox.*
 import org.abimon.eternalJukebox.objects.*
 import org.abimon.visi.io.ByteArrayDataSource
 import java.util.*
-import java.util.concurrent.locks.ReentrantLock
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.scheduleAtFixedRate
-import kotlin.concurrent.withLock
 
 object SpotifyAnalyser : IAnalyser {
     private val REAUTH_TIMER = Timer()
-    var token: String = ""
-    val tokenLock = ReentrantLock()
+    val token: AtomicReference<String> = AtomicReference("")
 
     override fun search(query: String, clientInfo: ClientInfo?): Array<JukeboxInfo> {
         var error: SpotifyError? = null
         val array: ArrayList<JukeboxInfo> = arrayListOf()
         val success = exponentiallyBackoff(16000, 8) {
             log("[${clientInfo?.userUID}] Attempting to search Spotify for \"$query\"")
-            val (_, response, _) = tokenLock.withLock { Fuel.get("https://api.spotify.com/v1/search", listOf("q" to query, "type" to "track")).bearer(token).responseString() }
+            val (_, response, _) = Fuel.get("https://api.spotify.com/v1/search", listOf("q" to query, "type" to "track")).bearer(token.get()).responseString()
             val mapResponse = EternalJukebox.jsonMapper.readValue(response.data, Map::class.java)
 
             when (response.statusCode) {
@@ -74,14 +72,14 @@ object SpotifyAnalyser : IAnalyser {
 
         val success = exponentiallyBackoff(16000, 8) {
             log("[${clientInfo?.userUID}] Attempting to analyse $id on Spotify")
-            val (_, response, _) = tokenLock.withLock { Fuel.get("https://api.spotify.com/v1/audio-analysis/$id").bearer(token).responseString() }
+            val (_, response, _) = Fuel.get("https://api.spotify.com/v1/audio-analysis/$id").bearer(token.get()).responseString()
             val mapResponse = EternalJukebox.jsonMapper.tryReadValue(response.data, Map::class)
 
             when (response.statusCode) {
                 200 -> {
-                    if(mapResponse == null) {
+                    if (mapResponse == null) {
                         val name = "SPOTIFY-RESPONSE-200-${UUID.randomUUID()}.txt"
-                        if(EternalJukebox.storage.shouldStore(EnumStorageType.LOG) && EternalJukebox.storage.store(name, EnumStorageType.LOG, ByteArrayDataSource(response.data), "text/plain", clientInfo)) {
+                        if (EternalJukebox.storage.shouldStore(EnumStorageType.LOG) && EternalJukebox.storage.store(name, EnumStorageType.LOG, ByteArrayDataSource(response.data), "text/plain", clientInfo)) {
                             log("[${clientInfo?.userUID}] Got back response code 200; invalid response body however; saved as $name")
                             return@exponentiallyBackoff true
                         } else {
@@ -105,9 +103,9 @@ object SpotifyAnalyser : IAnalyser {
                     return@exponentiallyBackoff false
                 }
                 400 -> {
-                    if(mapResponse == null) {
+                    if (mapResponse == null) {
                         val name = "SPOTIFY-RESPONSE-400-${UUID.randomUUID()}.txt"
-                        if(EternalJukebox.storage.shouldStore(EnumStorageType.LOG) && EternalJukebox.storage.store(name, EnumStorageType.LOG, ByteArrayDataSource(response.data), "text/plain", clientInfo)) {
+                        if (EternalJukebox.storage.shouldStore(EnumStorageType.LOG) && EternalJukebox.storage.store(name, EnumStorageType.LOG, ByteArrayDataSource(response.data), "text/plain", clientInfo)) {
                             log("[${clientInfo?.userUID}] Got back response code 400; invalid response body however; saved as $name")
                             return@exponentiallyBackoff true
                         } else {
@@ -152,7 +150,7 @@ object SpotifyAnalyser : IAnalyser {
 
         val success = exponentiallyBackoff(16000, 8) { attempt ->
             log("[${clientInfo?.userUID}] Attempting to get info for $id on Spotify; Attempt $attempt")
-            val (_, response, _) = tokenLock.withLock { Fuel.get("https://api.spotify.com/v1/tracks/$id").bearer(token).responseString() }
+            val (_, response, _) = Fuel.get("https://api.spotify.com/v1/tracks/$id").bearer(token.get()).responseString()
             val mapResponse = EternalJukebox.jsonMapper.readValue(response.data, Map::class.java)
 
             when (response.statusCode) {
@@ -192,47 +190,46 @@ object SpotifyAnalyser : IAnalyser {
     }
 
     fun reload(): SpotifyError? {
-        tokenLock.withLock {
-            var error: SpotifyError? = null
-            val success = exponentiallyBackoff(64000, 8) { attempt ->
-                log("Attempting to reload Spotify Token; Attempt $attempt")
-                val (_, response, _) =
-                        Fuel.post("https://accounts.spotify.com/api/token").body("grant_type=client_credentials").authenticate(EternalJukebox.config.spotifyClient ?: run {
-                            error = SpotifyError.NO_AUTH_DETAILS
-                            return@exponentiallyBackoff false
-                        }, EternalJukebox.config.spotifySecret ?: run {
-                            error = SpotifyError.NO_AUTH_DETAILS
-                            return@exponentiallyBackoff false
-                        }).responseString()
+        var error: SpotifyError? = null
+        val success = exponentiallyBackoff(64000, 8) { attempt ->
+            log("Attempting to reload Spotify Token; Attempt $attempt")
+            val (_, response, _) =
+                    Fuel.post("https://accounts.spotify.com/api/token").body("grant_type=client_credentials").authenticate(EternalJukebox.config.spotifyClient
+                            ?: run {
+                                error = SpotifyError.NO_AUTH_DETAILS
+                                return@exponentiallyBackoff false
+                            }, EternalJukebox.config.spotifySecret ?: run {
+                        error = SpotifyError.NO_AUTH_DETAILS
+                        return@exponentiallyBackoff false
+                    }).responseString()
 
-                when (response.statusCode) {
-                    200 -> {
-                        token = JsonObject(String(response.data, Charsets.UTF_8)).getString("access_token")
-                        return@exponentiallyBackoff false
-                    }
-                    400 -> {
-                        log("Got back response code 400 with data ${String(response.data)}; returning INVALID_AUTH_DETAILS")
-                        error = SpotifyError.INVALID_AUTH_DETAILS
-                        return@exponentiallyBackoff false
-                    }
-                    401 -> {
-                        log("Got back response code 401  with data ${String(response.data)}; returning INVALID_AUTH_DETAILS")
-                        error = SpotifyError.INVALID_AUTH_DETAILS
-                        return@exponentiallyBackoff false
-                    }
-                    else -> {
-                        log("Got back response code ${response.statusCode} with data ${String(response.data)}; backing off and trying again")
-                        return@exponentiallyBackoff true
-                    }
+            when (response.statusCode) {
+                200 -> {
+                    token.set(JsonObject(String(response.data, Charsets.UTF_8)).getString("access_token"))
+                    return@exponentiallyBackoff false
                 }
-            } && error == null
+                400 -> {
+                    log("Got back response code 400 with data ${String(response.data)}; returning INVALID_AUTH_DETAILS")
+                    error = SpotifyError.INVALID_AUTH_DETAILS
+                    return@exponentiallyBackoff false
+                }
+                401 -> {
+                    log("Got back response code 401  with data ${String(response.data)}; returning INVALID_AUTH_DETAILS")
+                    error = SpotifyError.INVALID_AUTH_DETAILS
+                    return@exponentiallyBackoff false
+                }
+                else -> {
+                    log("Got back response code ${response.statusCode} with data ${String(response.data)}; backing off and trying again")
+                    return@exponentiallyBackoff true
+                }
+            }
+        } && error == null
 
-            if (!success)
-                log("Failed to reload the Spotify token. Error: $error")
-            else
-                log("Successfully reloaded the Spotify token")
-            return error
-        }
+        if (!success)
+            log("Failed to reload the Spotify token. Error: $error")
+        else
+            log("Successfully reloaded the Spotify token")
+        return error
     }
 
     init {

@@ -22,15 +22,18 @@ import java.security.interfaces.RSAPrivateKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.time.Instant
 import java.util.*
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
+import java.util.concurrent.atomic.AtomicReference
 
 object GoogleStorage : IStorage {
     val serviceEmail: String
     val algorithm: Algorithm
 
-    val tokenLock = ReentrantLock()
-    var googleAccessToken: String? = null
+    val backingToken: AtomicReference<String> = AtomicReference("")
+    var googleAccessToken: String?
+        get() = backingToken.get().takeIf(String::isNotBlank)
+        set(value) {
+            backingToken.set(value ?: "")
+        }
 
     val storageBuckets: Map<EnumStorageType, String>
     val storageFolderPaths: Map<EnumStorageType, String>
@@ -60,12 +63,10 @@ object GoogleStorage : IStorage {
 
         val success = exponentiallyBackoff(64000, 8) { attempt ->
             log("[${clientInfo?.userUID}] Attempting to store $name as $type in gs://$bucket/$fullPath; Attempt $attempt")
-            val (_, response) = tokenLock.withLock {
-                Fuel.post("https://www.googleapis.com/upload/storage/v1/b/$bucket/o?uploadType=media&name=${URLEncoder.encode(fullPath, "UTF-8")}")
-                        .header("Content-Type" to mimeType, "Authorization" to "Bearer $googleAccessToken")
-                        .apply { bodyCallback = data.bodyCallback }
-                        .response()
-            }
+            val (_, response) = Fuel.post("https://www.googleapis.com/upload/storage/v1/b/$bucket/o?uploadType=media&name=${URLEncoder.encode(fullPath, "UTF-8")}")
+                    .header("Content-Type" to mimeType, "Authorization" to "Bearer $googleAccessToken")
+                    .apply { bodyCallback = data.bodyCallback }
+                    .response()
 
             when (response.statusCode) {
                 200 -> {
@@ -135,11 +136,9 @@ object GoogleStorage : IStorage {
 
             val success = exponentiallyBackoff(64000, 8) { attempt ->
                 log("[${clientInfo?.userUID}] Attempting to download and stream gs://$bucket/$fullPath exists; Attempt $attempt")
-                val (_, response) = tokenLock.withLock {
-                    Fuel.get("https://www.googleapis.com/storage/v1/b/$bucket/o/${URLEncoder.encode(fullPath, "UTF-8")}?alt=media")
-                            .header("Authorization" to "Bearer $googleAccessToken")
-                            .response()
-                }
+                val (_, response) = Fuel.get("https://www.googleapis.com/storage/v1/b/$bucket/o/${URLEncoder.encode(fullPath, "UTF-8")}?alt=media")
+                        .header("Authorization" to "Bearer $googleAccessToken")
+                        .response()
 
                 when (response.statusCode) {
                     200 -> {
@@ -177,7 +176,7 @@ object GoogleStorage : IStorage {
                 }
             } && data != null
 
-            if(success)
+            if (success)
                 return ByteArrayDataSource(data!!)
             return null
         }
@@ -211,11 +210,9 @@ object GoogleStorage : IStorage {
 
             val success = exponentiallyBackoff(64000, 8) { attempt ->
                 log("[${clientInfo?.userUID}] Attempting to download and stream gs://$bucket/$fullPath exists; Attempt $attempt")
-                val (_, response) = tokenLock.withLock {
-                    Fuel.get("https://www.googleapis.com/storage/v1/b/$bucket/o/${URLEncoder.encode(fullPath, "UTF-8")}?alt=media")
-                            .header("Authorization" to "Bearer $googleAccessToken")
-                            .response()
-                }
+                val (_, response) = Fuel.get("https://www.googleapis.com/storage/v1/b/$bucket/o/${URLEncoder.encode(fullPath, "UTF-8")}?alt=media")
+                        .header("Authorization" to "Bearer $googleAccessToken")
+                        .response()
 
                 when (response.statusCode) {
                     200 -> {
@@ -253,7 +250,7 @@ object GoogleStorage : IStorage {
                 }
             } && data != null
 
-            if(success) {
+            if (success) {
                 context.response().end(Buffer.buffer(data))
                 return true
             }
@@ -302,12 +299,10 @@ object GoogleStorage : IStorage {
 
         return exponentiallyBackoff(64000, 8) { attempt ->
             log("[${clientInfo?.userUID}] Attempting to make gs://$bucket/$path public; Attempt $attempt")
-            val (_, response) = tokenLock.withLock {
-                Fuel.post("https://www.googleapis.com/storage/v1/b/$bucket/o/${URLEncoder.encode(path, "UTF-8")}/acl")
-                        .header("Content-Type" to "application/json", "Authorization" to "Bearer $googleAccessToken")
-                        .body(EternalJukebox.jsonMapper.writeValueAsBytes(mapOf("entity" to "allUsers", "role" to "READER")))
-                        .response()
-            }
+            val (_, response) = Fuel.post("https://www.googleapis.com/storage/v1/b/$bucket/o/${URLEncoder.encode(path, "UTF-8")}/acl")
+                    .header("Content-Type" to "application/json", "Authorization" to "Bearer $googleAccessToken")
+                    .body(EternalJukebox.jsonMapper.writeValueAsBytes(mapOf("entity" to "allUsers", "role" to "READER")))
+                    .response()
 
             when (response.statusCode) {
                 200 -> return@exponentiallyBackoff false
@@ -348,11 +343,9 @@ object GoogleStorage : IStorage {
 
         val success = exponentiallyBackoff(64000, 8) { attempt ->
             log("[${clientInfo?.userUID}] Attempting to check if gs://$bucket/$path exists; Attempt $attempt")
-            val (_, response) = tokenLock.withLock {
-                Fuel.head("https://www.googleapis.com/storage/v1/b/$bucket/o/${URLEncoder.encode(path, "UTF-8")}")
-                        .header("Authorization" to "Bearer $googleAccessToken")
-                        .response()
-            }
+            val (_, response) = Fuel.head("https://www.googleapis.com/storage/v1/b/$bucket/o/${URLEncoder.encode(path, "UTF-8")}")
+                    .header("Authorization" to "Bearer $googleAccessToken")
+                    .response()
 
             when (response.statusCode) {
                 200 -> return@exponentiallyBackoff false
@@ -390,59 +383,57 @@ object GoogleStorage : IStorage {
     }
 
     fun reload() {
-        tokenLock.withLock {
-            val now = Instant.now().toEpochMilli()
-            val token = JWT.create().withIssuer(serviceEmail).withClaim("scope", "https://www.googleapis.com/auth/devstorage.full_control").withAudience("https://www.googleapis.com/oauth2/v4/token").withExpiresAt(Date(now + 1 * 60 * 60 * 1000)).withIssuedAt(Date(now)).sign(algorithm)
-            var error: Boolean = false
+        val now = Instant.now().toEpochMilli()
+        val token = JWT.create().withIssuer(serviceEmail).withClaim("scope", "https://www.googleapis.com/auth/devstorage.full_control").withAudience("https://www.googleapis.com/oauth2/v4/token").withExpiresAt(Date(now + 1 * 60 * 60 * 1000)).withIssuedAt(Date(now)).sign(algorithm)
+        var error: Boolean = false
 
-            val success = exponentiallyBackoff(16000, 8) { attempt ->
-                log("Attempting to reload Google Storage token; Attempt $attempt")
+        val success = exponentiallyBackoff(16000, 8) { attempt ->
+            log("Attempting to reload Google Storage token; Attempt $attempt")
 
-                val (_, response) = Fuel.post(
-                        "https://www.googleapis.com/oauth2/v4/token",
-                        listOf("grant_type" to "urn:ietf:params:oauth:grant-type:jwt-bearer", "assertion" to token)
-                ).response()
+            val (_, response) = Fuel.post(
+                    "https://www.googleapis.com/oauth2/v4/token",
+                    listOf("grant_type" to "urn:ietf:params:oauth:grant-type:jwt-bearer", "assertion" to token)
+            ).response()
 
-                when (response.statusCode) {
-                    200 -> {
-                        val tokenResponse = EternalJukebox.jsonMapper.tryReadValue(response.data, GoogleTokenOAuthResponse::class)
-                                ?: run {
-                                    log("Unable to map Google token response; response data: ${String(response.data)}")
-                                    return@exponentiallyBackoff false
-                                }
+            when (response.statusCode) {
+                200 -> {
+                    val tokenResponse = EternalJukebox.jsonMapper.tryReadValue(response.data, GoogleTokenOAuthResponse::class)
+                            ?: run {
+                                log("Unable to map Google token response; response data: ${String(response.data)}")
+                                return@exponentiallyBackoff false
+                            }
 
-                        googleAccessToken = tokenResponse.access_token
-                        return@exponentiallyBackoff false
-                    }
-                    400 -> {
-                        log("Got back response code 400 with data ${String(response.data)}; returning")
-                        error = true
-                        return@exponentiallyBackoff false
-                    }
-                    401 -> {
-                        log("Got back response code 401 with data ${String(response.data)}; returning and setting token to null")
-                        error = true
-                        googleAccessToken = null
-                        return@exponentiallyBackoff false
-                    }
-                    403 -> {
-                        log("Got back response code 403 with data ${String(response.data)}; returning and setting token to null")
-                        error = true
-                        googleAccessToken = null
-                        return@exponentiallyBackoff false
-                    }
-                    else -> {
-                        log("Got back response code ${response.statusCode} with data ${String(response.data)}; backing off and trying again")
-                        return@exponentiallyBackoff true
-                    }
+                    googleAccessToken = tokenResponse.access_token
+                    return@exponentiallyBackoff false
+                }
+                400 -> {
+                    log("Got back response code 400 with data ${String(response.data)}; returning")
+                    error = true
+                    return@exponentiallyBackoff false
+                }
+                401 -> {
+                    log("Got back response code 401 with data ${String(response.data)}; returning and setting token to null")
+                    error = true
+                    googleAccessToken = null
+                    return@exponentiallyBackoff false
+                }
+                403 -> {
+                    log("Got back response code 403 with data ${String(response.data)}; returning and setting token to null")
+                    error = true
+                    googleAccessToken = null
+                    return@exponentiallyBackoff false
+                }
+                else -> {
+                    log("Got back response code ${response.statusCode} with data ${String(response.data)}; backing off and trying again")
+                    return@exponentiallyBackoff true
                 }
             }
-
-            if (success && !error)
-                log("Successfully reloaded Google Storage token")
-            else
-                log("Failed to reload Google Storage token")
         }
+
+        if (success && !error)
+            log("Successfully reloaded Google Storage token")
+        else
+            log("Failed to reload Google Storage token")
     }
 
     init {
@@ -479,12 +470,10 @@ object GoogleStorage : IStorage {
             var errored = false
             val success = exponentiallyBackoff(64000, 8) { attempt ->
                 log("Attempting to get $bucket to support CORS; Attempt $attempt")
-                val (_, response) = tokenLock.withLock {
-                    Fuel.patch("https://www.googleapis.com/storage/v1/b/$bucket")
-                            .header("Authorization" to "Bearer $googleAccessToken", "Content-Type" to "application/json")
-                            .body(EternalJukebox.jsonMapper.writeValueAsBytes(mapOf("cors" to arrayOf(mapOf("method" to arrayOf("*"), "origin" to arrayOf("*"))))))
-                            .response()
-                }
+                val (_, response) = Fuel.patch("https://www.googleapis.com/storage/v1/b/$bucket")
+                        .header("Authorization" to "Bearer $googleAccessToken", "Content-Type" to "application/json")
+                        .body(EternalJukebox.jsonMapper.writeValueAsBytes(mapOf("cors" to arrayOf(mapOf("method" to arrayOf("*"), "origin" to arrayOf("*"))))))
+                        .response()
 
                 when (response.statusCode) {
                     200 -> return@exponentiallyBackoff false
@@ -523,7 +512,7 @@ object GoogleStorage : IStorage {
     }
 
     val DataSource.bodyCallback: (Request, OutputStream?, Long) -> Long
-        get() = callback@ { request, outputStream, length ->
+        get() = callback@{ request, outputStream, length ->
             if (outputStream == null)
                 return@callback size
             else {
