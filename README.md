@@ -34,9 +34,7 @@ ffmpeg is available to download in most distributions using `sudo apt-get instal
 ## Getting the project files:
 The whole process of obtaining project files is much easier now, as the build process is streamlined through Jenkins.
 
-~~The project site is over [here](https://jenkins-ci.abimon.org/job/Eternal%20Jukebox%20-%20Rewrite/), and contains the individual files to download, or an all-in-one zip for all the files.~~
-
-Currently, the Jenkins server is down (See [here](https://abimon.org/downtime.html)) but the project files can be obtained all in one file [here](https://eternal.abimon.org/files/all.zip) or just the jar file over [here](https://eternal.abimon.org/files/EternalJukebox.jar).
+The project site is over [here](http://jenkins-ci.abimon.org:8666/job/EternalJukebox/), and contains the individual files to download, or an all-in-one zip for all the files. Alternatively, the files can be found over at a permanent server [here](https://abimon.org/eternal_jukebox)
 
 ## Configuring
 First thing to do is create a new file called either `config.yaml` or `config.json` (YAML tends to be easier to write, but takes up slightly more space), then open it with notepad/notepad++ on Windows and whatever text editor you like on Linux (for example nano: `nano config.json`)
