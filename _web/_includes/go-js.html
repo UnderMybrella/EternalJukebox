@@ -1729,6 +1729,18 @@
             }
         );
 
+        $("#volume-slider").slider({
+            min: 0,
+            max: 100,
+            value: 50,
+            range: "min",
+            slide: function(event, ui) {
+                $("#volume").text(ui.value);
+                player.audioGain.gain.value = ui.value / 100;
+                //setVolume(ui.value / 100);
+            }
+        });
+
         watch(jukeboxData, 'addLastEdge',
             function () {
                 $("#last-branch").attr('checked', jukeboxData.addLastEdge);

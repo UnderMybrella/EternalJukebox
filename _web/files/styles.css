@@ -340,6 +340,12 @@ a:link {text-decoration: none; }
     margin-bottom:10px;
 }
 
+#svolume {
+    text-align:left;
+    font-weight:bold;
+    margin-bottom:10px;
+}
+
 #probability-div {
     margin-top: 20px;
 }

@@ -201,7 +201,7 @@ function createJRemixer(context, jquery) {
             var audioGain = context.createGain();
             var curAudioSource = null;
             var curQ = null;
-            audioGain.gain.value = 1;
+            audioGain.gain.value = 0.5;
             audioGain.connect(context.destination);
 
             function queuePlay(when, q) {
@@ -260,6 +260,8 @@ function createJRemixer(context, jquery) {
             }
 
             var player = {
+                audioGain: audioGain,
+
                 play: function (when, q) {
                     return playQuantum(when, q);
                     //queuePlay(0, q);
