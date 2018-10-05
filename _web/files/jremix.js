@@ -206,7 +206,7 @@ function createJRemixer(context, jquery) {
 
             function queuePlay(when, q) {
                 // console.log('qp', when, q);
-                audioGain.gain.value = 1;
+                //audioGain.gain.value = 1;
                 if (isAudioBuffer(q)) {
                     var audioSource = context.createBufferSource();
                     audioSource.buffer = q;
@@ -240,7 +240,7 @@ function createJRemixer(context, jquery) {
                     // let it ride
                 } else {
                     var audioSource = context.createBufferSource();
-                    audioGain.gain.value = 1;
+                    //audioGain.gain.value = 1;
                     audioSource.buffer = q.track.buffer;
                     audioSource.connect(audioGain);
                     var duration = track.audio_summary.duration - q.start;
