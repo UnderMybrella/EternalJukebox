@@ -1,6 +1,6 @@
 buildscript {
-    ext.kotlin_version = '1.2.21'
-    ext.vertx_version = '3.5.0'
+    ext.kotlin_version = '1.2.51'
+    ext.vertx_version = '3.5.4'
     ext.jackson_version = '2.9.2'
 
     repositories {
@@ -49,6 +49,8 @@ dependencies {
     compile 'org.jsoup:jsoup:1.10.2'
     compile 'com.auth0:java-jwt:3.2.0'
     compile 'com.github.kittinunf.fuel:fuel:1.12.0'
+
+    compile 'com.google.cloud:google-cloud-storage:1.48.0'
 
     compile "com.fasterxml.jackson.core:jackson-core:$jackson_version"
     compile "com.fasterxml.jackson.core:jackson-annotations:$jackson_version"
