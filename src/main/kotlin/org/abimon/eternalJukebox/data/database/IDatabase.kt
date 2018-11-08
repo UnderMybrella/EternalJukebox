@@ -25,6 +25,9 @@ interface IDatabase {
     fun provideShortURL(params: Array<String>, clientInfo: ClientInfo?): String
     fun expandShortURL(id: String, clientInfo: ClientInfo?): Array<String>?
 
+    fun provideAudioLocation(id: String, clientInfo: ClientInfo?): String?
+    fun storeAudioLocation(id: String, location: String, clientInfo: ClientInfo?)
+
     fun storeOAuthState(path: String, clientInfo: ClientInfo?): String
     fun retrieveOAuthState(state: String, clientInfo: ClientInfo?): String?
 }

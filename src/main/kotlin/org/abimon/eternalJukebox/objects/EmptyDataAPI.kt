@@ -37,4 +37,6 @@ object EmptyDataAPI: IAnalyser, IAudioSource, IDatabase, IStorage, IAnalyticsSto
     override fun setupWebAnalytics(router: Router) {}
     override fun storeOAuthState(path: String, clientInfo: ClientInfo?): String = ""
     override fun retrieveOAuthState(state: String, clientInfo: ClientInfo?): String? = null
+    override fun provideAudioLocation(id: String, clientInfo: ClientInfo?): String? = null
+    override fun storeAudioLocation(id: String, location: String, clientInfo: ClientInfo?) {}
 }

@@ -40,6 +40,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentSkipListSet
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
 
 object EternalJukebox {
@@ -100,6 +101,8 @@ object EternalJukebox {
     })
 
     val hourlyVisitorsAddress: ConcurrentSkipListSet<String> = ConcurrentSkipListSet()
+    val referrers: ConcurrentSkipListSet<String> = ConcurrentSkipListSet()
+    val referrersFile = File("referrers.txt")
 
     fun start() {
         webserver.listen(config.port)
@@ -125,6 +128,9 @@ object EternalJukebox {
             log("Loaded config: $config")
         else
             log("Loaded config")
+
+        if (referrersFile.exists())
+            referrers.addAll(referrersFile.readLines())
 
         // Config Handling
 
@@ -157,6 +163,8 @@ object EternalJukebox {
                     it.data()[ConstantValues.HOURLY_UNIQUE_VISITOR] = true
                     hourlyVisitorsAddress.add(ip)
             }
+
+            it.request().getHeader("Referer")?.let(referrers::add)
 
             it.data()[ConstantValues.USER_UID] = UUID.randomUUID().toString()
 
@@ -246,6 +254,8 @@ object EternalJukebox {
             StaticResources.setup(mainRouter)
 
         webserver.requestHandler(mainRouter::accept)
+
+        schedule.scheduleAtFixedRate(0, 1, TimeUnit.HOURS) { referrersFile.writeText(referrers.joinToString("\n")) }
 
 //        if(runSiteAPI)
 //            schedule.scheduleAtFixedRate(0, 1000 * 60 * 60) { hourlyRequests.set(0); hourlyUniqueVisitors.set(0); hourlyVisitorsAddress.clear() }

@@ -230,6 +230,28 @@ abstract class HikariDatabase : IDatabase {
         return@use id
     }
 
+    override fun provideAudioLocation(id: String, clientInfo: ClientInfo?): String? = use location@{ connection ->
+        val select = connection.prepareStatement("SELECT location FROM audio_locations WHERE id=?;")
+        select.setString(1, id)
+        select.execute()
+
+        return@location select.resultSet.use { resultSet ->
+            if (resultSet.next())
+                return@use resultSet.getString("location")
+            return@use null
+        }
+    }
+
+    override fun storeAudioLocation(id: String, location: String, clientInfo: ClientInfo?) {
+        use { connection ->
+            val insert = connection.prepareStatement("INSERT INTO audio_locations (id, location) VALUES (?, ?) ON DUPLICATE KEY UPDATE location=VALUES(location);")
+            insert.setString(1, id)
+            insert.setString(2, location)
+
+            insert.execute()
+        }
+    }
+
     fun obtainNewShortID(connection: Connection, table: String = "short_urls", range: IntRange = (0 until 4)): String {
         val preparedSelect = connection.prepareStatement("SELECT * FROM $table WHERE id=?")
         (0 until 4096).forEach {
@@ -258,7 +280,8 @@ abstract class HikariDatabase : IDatabase {
             connection.createStatement().execute("CREATE TABLE IF NOT EXISTS overrides (id VARCHAR(64) PRIMARY KEY NOT NULL, url VARCHAR(8192) NOT NULL);")
             connection.createStatement().execute("CREATE TABLE IF NOT EXISTS short_urls (id VARCHAR(16) PRIMARY KEY NOT NULL, params VARCHAR(4096) NOT NULL);")
             connection.createStatement().execute("CREATE TABLE IF NOT EXISTS accounts (eternal_id VARCHAR(64) PRIMARY KEY NOT NULL, google_id VARCHAR(64) NOT NULL, google_access_token VARCHAR(255), google_refresh_token VARCHAR(255), eternal_access_token VARCHAR(255));")
-            connection.createStatement().execute("CREATE TABLE IF NOT EXISTS popular (id INT PRIMARY KEY AUTO_INCREMENT, song_id VARCHAR(64) NOT NULL, service VARCHAR(64) NOT NULL, hits BIGINT NOT NULL)")
+            connection.createStatement().execute("CREATE TABLE IF NOT EXISTS popular (id INT PRIMARY KEY AUTO_INCREMENT, song_id VARCHAR(64) NOT NULL, service VARCHAR(64) NOT NULL, hits BIGINT NOT NULL);")
+            connection.createStatement().execute("CREATE TABLE IF NOT EXISTS audio_locations (id VARCHAR(64) PRIMARY KEY NOT NULL, location VARCHAR(8192) NOT NULL);")
 
             connection.createStatement().execute("DROP TABLE IF EXISTS oauth_state;")
             connection.createStatement().execute("CREATE TABLE oauth_state (id VARCHAR(32) PRIMARY KEY NOT NULL, path VARCHAR(8192) NOT NULL);")

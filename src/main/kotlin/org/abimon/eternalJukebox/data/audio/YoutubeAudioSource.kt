@@ -7,8 +7,10 @@ import org.abimon.visi.io.DataSource
 import org.abimon.visi.io.FileDataSource
 import java.io.File
 import java.net.URL
+import java.time.Instant
 import java.util.*
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 object YoutubeAudioSource : IAudioSource {
     val apiKey: String?
@@ -24,6 +26,9 @@ object YoutubeAudioSource : IAudioSource {
             "ogg" to "audio/ogg",
             "wav" to "audio/wav"
     )
+
+    val hitQuota = AtomicLong(-1)
+    val QUOTA_TIMEOUT = TimeUnit.MILLISECONDS.convert(10, TimeUnit.MINUTES)
 
     override fun provide(info: JukeboxInfo, clientInfo: ClientInfo?): DataSource? {
         if (apiKey == null)
@@ -76,7 +81,10 @@ object YoutubeAudioSource : IAudioSource {
                     return logNull("[${clientInfo?.userUID}] ffmpeg not installed, nothing we can do", true)
             }
 
-            endGoalTmp.useThenDelete { EternalJukebox.storage.store("${info.id}.$format", EnumStorageType.AUDIO, FileDataSource(it), mimes[format] ?: "audio/mpeg", clientInfo) }
+            endGoalTmp.useThenDelete {
+                EternalJukebox.storage.store("${info.id}.$format", EnumStorageType.AUDIO, FileDataSource(it), mimes[format]
+                        ?: "audio/mpeg", clientInfo)
+            }
 
             return EternalJukebox.storage.provide("${info.id}.$format", EnumStorageType.AUDIO, clientInfo)
         } finally {
@@ -84,11 +92,21 @@ object YoutubeAudioSource : IAudioSource {
             File(tmpFile.absolutePath + ".part").guaranteeDelete()
             tmpLog.useThenDelete { EternalJukebox.storage.store(it.name, EnumStorageType.LOG, FileDataSource(it), "text/plain", clientInfo) }
             ffmpegLog.useThenDelete { EternalJukebox.storage.store(it.name, EnumStorageType.LOG, FileDataSource(it), "text/plain", clientInfo) }
-            endGoalTmp.useThenDelete { EternalJukebox.storage.store("${info.id}.$format", EnumStorageType.AUDIO, FileDataSource(it), mimes[format] ?: "audio/mpeg", clientInfo) }
+            endGoalTmp.useThenDelete {
+                EternalJukebox.storage.store("${info.id}.$format", EnumStorageType.AUDIO, FileDataSource(it), mimes[format]
+                        ?: "audio/mpeg", clientInfo)
+            }
         }
     }
 
     override fun provideLocation(info: JukeboxInfo, clientInfo: ClientInfo?): URL? {
+        val dbLocation = EternalJukebox.database.provideAudioLocation(info.id, clientInfo)
+
+        if (dbLocation != null) {
+            log("[${clientInfo?.userUID}] Using cached location for $info")
+            return URL(dbLocation)
+        }
+
         if (apiKey == null)
             return null
 
@@ -104,10 +122,19 @@ object YoutubeAudioSource : IAudioSource {
         val closest = both.firstOrNull()
                 ?: return logNull("[${clientInfo?.userUID}] Searches for both \"${info.artist} - ${info.title}\" and \"${info.artist} - ${info.title} lyrics\" turned up nothing")
 
+        EternalJukebox.database.storeAudioLocation(info.id, "https://youtu.be/${closest.id}", clientInfo)
         return URL("https://youtu.be/${closest.id}")
     }
 
     fun getContentDetailsWithKey(id: String): YoutubeContentItem? {
+        val lastQuota = hitQuota.get()
+
+        if (lastQuota != -1L) {
+            if ((Instant.now().toEpochMilli() - lastQuota) < QUOTA_TIMEOUT)
+                return null
+            hitQuota.set(-1)
+        }
+
         val (_, _, r) = Fuel.get("https://www.googleapis.com/youtube/v3/videos", listOf("part" to "contentDetails,snippet", "id" to id, "key" to (apiKey
                 ?: return null)))
                 .header("User-Agent" to "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0")
@@ -115,13 +142,26 @@ object YoutubeAudioSource : IAudioSource {
 
         val (result, error) = r
 
-        if (error != null)
+        if (error != null) {
+            if (error.response.statusCode == 403) {
+                println("Hit quota!")
+                hitQuota.set(Instant.now().toEpochMilli())
+            }
             return null
+        }
 
         return EternalJukebox.jsonMapper.readValue(result, YoutubeContentResults::class.java).items.firstOrNull()
     }
 
     fun getMultiContentDetailsWithKey(ids: List<String>): List<YoutubeContentItem> {
+        val lastQuota = hitQuota.get()
+
+        if (lastQuota != -1L) {
+            if ((Instant.now().toEpochMilli() - lastQuota) < QUOTA_TIMEOUT)
+                return emptyList()
+            hitQuota.set(-1)
+        }
+
         val (_, _, r) = Fuel.get("https://www.googleapis.com/youtube/v3/videos", listOf("part" to "contentDetails,snippet", "id" to ids.joinToString(), "key" to (apiKey
                 ?: return emptyList())))
                 .header("User-Agent" to "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0")
@@ -129,13 +169,26 @@ object YoutubeAudioSource : IAudioSource {
 
         val (result, error) = r
 
-        if (error != null)
+        if (error != null) {
+            if (error.response.statusCode == 403) {
+                println("Hit quota!")
+                hitQuota.set(Instant.now().toEpochMilli())
+            }
             return emptyList()
+        }
 
         return EternalJukebox.jsonMapper.readValue(result, YoutubeContentResults::class.java).items
     }
 
     fun searchYoutubeWithKey(query: String, maxResults: Int = 5): List<YoutubeSearchItem> {
+        val lastQuota = hitQuota.get()
+
+        if (lastQuota != -1L) {
+            if ((Instant.now().toEpochMilli() - lastQuota) < QUOTA_TIMEOUT)
+                return emptyList()
+            hitQuota.set(-1)
+        }
+
         val (_, _, r) = Fuel.get("https://www.googleapis.com/youtube/v3/search", listOf("part" to "snippet", "q" to query, "maxResults" to "$maxResults", "key" to (apiKey
                 ?: return emptyList()), "type" to "video"))
                 .header("User-Agent" to "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0")
@@ -143,16 +196,25 @@ object YoutubeAudioSource : IAudioSource {
 
         val (result, error) = r
 
-        if (error != null)
+        if (error != null) {
+            if (error.response.statusCode == 403) {
+                println("Hit quota!")
+                hitQuota.set(Instant.now().toEpochMilli())
+            }
             return ArrayList()
+        }
 
         return EternalJukebox.jsonMapper.readValue(result, YoutubeSearchResults::class.java).items
     }
 
     init {
-        apiKey = (EternalJukebox.config.audioSourceOptions["API_KEY"] ?: EternalJukebox.config.audioSourceOptions["apiKey"]) as? String
-        format = (EternalJukebox.config.audioSourceOptions["AUDIO_FORMAT"] ?: EternalJukebox.config.audioSourceOptions["audioFormat"]) as? String ?: "m4a"
-        command = ((EternalJukebox.config.audioSourceOptions["AUDIO_COMMAND"] ?: EternalJukebox.config.audioSourceOptions["audioCommand"]) as? List<*>)?.map { "$it" } ?: ((EternalJukebox.config.audioSourceOptions["AUDIO_COMMAND"] ?: EternalJukebox.config.audioSourceOptions["audioCommand"]) as? String)?.split("\\s+".toRegex()) ?: if (System.getProperty("os.name").toLowerCase().contains("windows")) listOf("yt.bat") else listOf("bash", "yt.sh")
+        apiKey = (EternalJukebox.config.audioSourceOptions["API_KEY"]
+                ?: EternalJukebox.config.audioSourceOptions["apiKey"]) as? String
+        format = (EternalJukebox.config.audioSourceOptions["AUDIO_FORMAT"]
+                ?: EternalJukebox.config.audioSourceOptions["audioFormat"]) as? String ?: "m4a"
+        command = ((EternalJukebox.config.audioSourceOptions["AUDIO_COMMAND"]
+                ?: EternalJukebox.config.audioSourceOptions["audioCommand"]) as? List<*>)?.map { "$it" } ?: ((EternalJukebox.config.audioSourceOptions["AUDIO_COMMAND"]
+                ?: EternalJukebox.config.audioSourceOptions["audioCommand"]) as? String)?.split("\\s+".toRegex()) ?: if (System.getProperty("os.name").toLowerCase().contains("windows")) listOf("yt.bat") else listOf("bash", "yt.sh")
 
         if (apiKey == null)
             log("Warning: No API key provided. We're going to scrape the Youtube search page which is a not great thing to do.\nTo obtain an API key, follow the guide here (https://developers.google.com/youtube/v3/getting-started) or over on the EternalJukebox Github page!", true)
