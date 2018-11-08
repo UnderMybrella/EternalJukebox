@@ -68,7 +68,7 @@ object EternalJukebox {
     val webserver: HttpServer
 
     val storage: IStorage
-    val audio: IAudioSource
+    val audio: IAudioSource?
 
     val spotify: IAnalyser
 
@@ -213,7 +213,7 @@ object EternalJukebox {
         if (isEnabled("audioAPI")) {
             apis.add(AudioAPI)
 
-            audio = config.audioSourceType.audio.objectInstance!!
+            audio = config.audioSourceType?.audio?.objectInstance
         } else {
             audio = EmptyDataAPI
         }

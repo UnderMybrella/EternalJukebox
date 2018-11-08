@@ -77,7 +77,7 @@ object AudioAPI : IAPI {
                 ))
             }
 
-            val audio = EternalJukebox.audio.provide(track, context.clientInfo)
+            val audio = EternalJukebox.audio?.provide(track, context.clientInfo)
 
             if (audio == null)
                 context.response().putHeader("X-Client-UID", context.clientInfo.userUID).setStatusCode(400).end(jsonObjectOf(
@@ -119,7 +119,7 @@ object AudioAPI : IAPI {
             ))
         }
 
-        val url = EternalJukebox.audio.provideLocation(track, context.clientInfo)
+        val url = EternalJukebox.audio?.provideLocation(track, context.clientInfo)
 
         context.endWithStatusCode(200) { if (url != null) this["url"] = url.toExternalForm() }
     }
