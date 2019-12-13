@@ -1,4 +1,4 @@
-package dev.eternalbox.eternaljukebox
+package dev.eternalbox.eternaljukebox.data
 
 object ProgramReturnCodes {
     const val NO_CONFIG_DETECTED = 3

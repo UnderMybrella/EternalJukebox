@@ -1,14 +1,22 @@
 package dev.eternalbox.eternaljukebox
 
+import dev.eternalbox.eternaljukebox.data.ProgramReturnCodes
+import io.vertx.core.logging.SLF4JLogDelegateFactory
 import java.io.File
+import kotlin.contracts.ExperimentalContracts
 import kotlin.system.exitProcess
+
 
 const val CONFIG_FILE_NAME = "new_config"
 
 val JSON_CONFIG_FILE = File("$CONFIG_FILE_NAME.json")
 val YAML_CONFIG_FILE = File("$CONFIG_FILE_NAME.yaml")
 
+@ExperimentalContracts
 fun main(args: Array<String>) {
+    println(SLF4JLogDelegateFactory::class.java.name)
+    System.setProperty(io.vertx.core.logging.LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, SLF4JLogDelegateFactory::class.java.name)
+
     println("==Eternal Jukebox==")
     println("Attempting to load config...")
 
@@ -109,6 +117,8 @@ fun main(args: Array<String>) {
             }
         }*/
     }
+
+    val jukebox = EternalJukebox(config)
 }
 
 fun loadConfig(): Unit? {
