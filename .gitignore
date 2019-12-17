@@ -26,3 +26,4 @@ selfSigned.key
 new_config.yaml
 src/main/resources/logback.xml
 uploads/
+static_data/

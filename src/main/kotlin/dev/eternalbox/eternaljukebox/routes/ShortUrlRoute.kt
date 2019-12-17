@@ -6,16 +6,21 @@ import io.vertx.ext.web.RoutingContext
 import kotlin.contracts.ExperimentalContracts
 
 @ExperimentalContracts
-class ShortUrlRoute(jukebox: EternalJukebox): EternalboxRoute(jukebox) {
+class ShortUrlRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
     companion object {
         private const val MOUNT_POINT = "/quark"
 
         private const val SHRINK_PATH = "/shrink"
         private const val GET_INFO_PATH = "/:id/info"
         private const val REDIRECT_PATH = "/:id/redirect"
+
+        private const val ALPHABET =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" //Base64 alphabet for now
     }
 
     val router = Router.router(vertx)
+
+    suspend fun newShortUrl(): String = buildString { repeat(8) { append(ALPHABET.random()) } }
 
     suspend fun shrinkUrl(context: RoutingContext) = apiNotImplemented(context)
     suspend fun getUrlInfo(context: RoutingContext) = apiNotImplemented(context)

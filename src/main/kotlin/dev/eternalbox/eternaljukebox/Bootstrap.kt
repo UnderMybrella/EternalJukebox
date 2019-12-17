@@ -1,5 +1,6 @@
 package dev.eternalbox.eternaljukebox
 
+import com.fasterxml.jackson.databind.JsonNode
 import dev.eternalbox.eternaljukebox.data.ProgramReturnCodes
 import io.vertx.core.logging.SLF4JLogDelegateFactory
 import java.io.File
@@ -121,11 +122,11 @@ fun main(args: Array<String>) {
     val jukebox = EternalJukebox(config)
 }
 
-fun loadConfig(): Unit? {
+fun loadConfig(): JsonNode? {
     if (JSON_CONFIG_FILE.exists())
-        return Unit
+        return JSON_MAPPER.readTree(JSON_CONFIG_FILE)
     else if (YAML_CONFIG_FILE.exists())
-        return Unit
+        return YAML_MAPPER.readTree(YAML_CONFIG_FILE)
 
     return null
 }

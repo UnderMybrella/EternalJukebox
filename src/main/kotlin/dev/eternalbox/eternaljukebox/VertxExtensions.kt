@@ -6,6 +6,7 @@ import dev.eternalbox.eternaljukebox.routes.EternalboxRoute
 import dev.eternalbox.ytmusicapi.MutableUnknownJsonObj
 import dev.eternalbox.ytmusicapi.UnknownJsonObj
 import io.vertx.core.Handler
+import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.http.HttpServerResponse
 import io.vertx.core.json.JsonObject
@@ -13,10 +14,8 @@ import io.vertx.ext.web.Route
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.kotlin.core.http.endAwait
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.ReceiveChannel
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.contracts.ExperimentalContracts
@@ -92,6 +91,8 @@ suspend fun HttpServerResponse.endJsonAwait(build: JsonObjectBuilder.() -> Unit)
     putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
     endAwait(withContext(Dispatchers.IO) { JSON_MAPPER.writeValueAsString(json) })
 }
+@ExperimentalCoroutinesApi
+suspend fun HttpServerResponse.endAwait(channel: ReceiveChannel<Buffer>) = channel.copyTo(this)
 
 @ExperimentalContracts
 public inline fun <R> EternalboxRoute.withContext(receiver: RoutingContext, block: JukeboxRoutingContext.() -> R): R {

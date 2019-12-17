@@ -1,11 +1,8 @@
 package dev.eternalbox.eternaljukebox.routes
 
 import dev.eternalbox.eternaljukebox.EternalJukebox
-import dev.eternalbox.eternaljukebox.data.HttpResponseCodes
-import dev.eternalbox.eternaljukebox.endJsonAwait
 import dev.eternalbox.eternaljukebox.withContext
 import dev.eternalbox.ytmusicapi.YoutubeMusicApi
-import dev.eternalbox.ytmusicapi.getSongs
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import kotlinx.coroutines.Dispatchers
@@ -30,17 +27,17 @@ class SearchRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
             val query = withContext(Dispatchers.IO) { URLDecoder.decode(queryParam("q").first(), "UTF-8") }
 
             when (service.toLowerCase()) {
-                "ytm" -> {
-                    val (_, response, search) = ytmApi.search(query)
-                    if (response.statusCode == 200) {
-                        response()
-                            .setStatusCode(HttpResponseCodes.OK)
-                            .endJsonAwait {
-                                "songs" .. search.getSongs()
-                                "video_urls" .. search.getSongs().map { (id) -> "https://youtu.be/$id" }
-                            }
-                    }
-                }
+//                "ytm" -> {
+//                    val (_, response, search) = ytmApi.search(query)
+//                    if (response.statusCode == 200) {
+//                        response()
+//                            .setStatusCode(HttpResponseCodes.OK)
+//                            .endJsonAwait {
+//                                "songs" .. search.getSongs()
+//                                "video_urls" .. search.getSongs().map { (id) -> "https://youtu.be/$id" }
+//                            }
+//                    }
+//                }
                 else -> apiNotImplemented(context)
             }
         }

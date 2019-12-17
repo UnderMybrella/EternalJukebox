@@ -11,6 +11,9 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
+import java.io.ByteArrayOutputStream
+import java.io.PrintStream
+import kotlin.reflect.jvm.jvmName
 
 val VERTX_MODULE: Module = SimpleModule().apply {
     // custom types
@@ -24,6 +27,20 @@ val VERTX_MODULE: Module = SimpleModule().apply {
         override fun handledType(): Class<JsonArray> = JsonArray::class.java
         override fun serialize(value: JsonArray, gen: JsonGenerator, serializers: SerializerProvider) {
             gen.writeObject(value.list)
+        }
+    })
+
+    addSerializer(Exception::class.java, object: JsonSerializer<Exception>() {
+        override fun handledType(): Class<Exception> = java.lang.Exception::class.java
+        override fun serialize(value: Exception, gen: JsonGenerator, serializers: SerializerProvider) {
+            gen.writeStartObject()
+            gen.writeObjectField("type", value::class.qualifiedName ?: value::class.jvmName)
+            gen.writeObjectField("message", value.message)
+            gen.writeObjectField("localised_message", value.localizedMessage)
+            val baos = ByteArrayOutputStream()
+            PrintStream(baos).use(value::printStackTrace)
+            gen.writeObjectField("stacktrace", String(baos.toByteArray()))
+            gen.writeEndObject()
         }
     })
 }
