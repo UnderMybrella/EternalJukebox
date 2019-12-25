@@ -30,7 +30,7 @@ abstract class EternalboxRoute(val jukebox: EternalJukebox) {
     suspend fun apiRouteNotFound(context: RoutingContext) {
         withContext(context) {
             response().setStatusCode(HttpResponseCodes.NOT_FOUND).endJsonAwait {
-                "error" .. WebApiResponseCodes.ROUTE_NOT_FOUND
+                "error" .. WebApiResponseCodes.NOT_FOUND
                 "message" .. errorMessage(WebApiResponseMessages.API_ROUTE_NOT_FOUND, request().path())
             }
         }

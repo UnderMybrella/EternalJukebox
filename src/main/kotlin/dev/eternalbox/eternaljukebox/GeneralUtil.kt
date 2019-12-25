@@ -14,8 +14,10 @@ import kotlinx.coroutines.channels.receiveOrNull
 import java.io.InputStream
 import kotlin.coroutines.CoroutineContext
 
+typealias FuelResult<V, E> = com.github.kittinunf.result.Result<V, E>
+
 @ExperimentalCoroutinesApi
-suspend fun <T: Any> ReceiveChannel<T>.copyTo(sendChannel: SendChannel<T>) {
+suspend fun <T : Any> ReceiveChannel<T>.copyTo(sendChannel: SendChannel<T>) {
     while (!this.isClosedForReceive) {
         val buffer = this.receiveOrNull() ?: break
         if (sendChannel.isClosedForSend)
@@ -25,7 +27,7 @@ suspend fun <T: Any> ReceiveChannel<T>.copyTo(sendChannel: SendChannel<T>) {
 }
 
 @ExperimentalCoroutinesApi
-suspend fun <T: Any> ReceiveChannel<T>.copyTo(writeStream: WriteStream<T>) {
+suspend fun <T : Any> ReceiveChannel<T>.copyTo(writeStream: WriteStream<T>) {
     while (!this.isClosedForReceive) {
         writeStream.writeAwait(this.receiveOrNull() ?: break)
     }
@@ -35,7 +37,11 @@ suspend fun <T: Any> ReceiveChannel<T>.copyTo(writeStream: WriteStream<T>) {
 
 @Suppress("BlockingMethodInNonBlockingContext")
 @ExperimentalCoroutinesApi
-suspend fun InputStream.asVertxChannel(coroutineScope: CoroutineScope = GlobalScope, context: CoroutineContext = Dispatchers.IO, capacity: Int = 1): ReceiveChannel<Buffer> =
+suspend fun InputStream.asVertxChannel(
+    coroutineScope: CoroutineScope = GlobalScope,
+    context: CoroutineContext = Dispatchers.IO,
+    capacity: Int = 1
+): ReceiveChannel<Buffer> =
     coroutineScope.produce(context, capacity = capacity) {
         use { stream ->
             invokeOnClose { stream.close() }

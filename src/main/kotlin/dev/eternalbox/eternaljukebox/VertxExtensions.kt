@@ -1,10 +1,14 @@
 package dev.eternalbox.eternaljukebox
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import dev.eternalbox.eternaljukebox.data.DataResponse
+import dev.eternalbox.eternaljukebox.data.JukeboxResult
 import dev.eternalbox.eternaljukebox.data.JukeboxRoutingContext
+import dev.eternalbox.eternaljukebox.data.WebApiResponseCodes
 import dev.eternalbox.eternaljukebox.routes.EternalboxRoute
 import dev.eternalbox.ytmusicapi.MutableUnknownJsonObj
 import dev.eternalbox.ytmusicapi.UnknownJsonObj
+import io.netty.handler.codec.http.HttpHeaderNames
 import io.vertx.core.Handler
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
@@ -91,8 +95,47 @@ suspend fun HttpServerResponse.endJsonAwait(build: JsonObjectBuilder.() -> Unit)
     putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
     endAwait(withContext(Dispatchers.IO) { JSON_MAPPER.writeValueAsString(json) })
 }
+
 @ExperimentalCoroutinesApi
 suspend fun HttpServerResponse.endAwait(channel: ReceiveChannel<Buffer>) = channel.copyTo(this)
+
+suspend fun HttpServerResponse.endAwait(result: JukeboxResult.Failure<*>) {
+    when (result) {
+        is JukeboxResult.KnownFailure<*, *> ->
+            setStatusCode(WebApiResponseCodes getHttpStatusCode result.errorCode)
+                .endJsonAwait {
+                    "error" .. result.errorCode
+                    "message" .. result.errorMessage
+                    if (result.additionalInfo != null)
+                        "additional" .. result.additionalInfo
+                }
+        is JukeboxResult.UnknownFailure ->
+            setStatusCode(500)
+                .endJsonAwait {
+                    "error" .. 0
+                    "message" .. "An unknown error occurred"
+                }
+    }
+}
+
+@ExperimentalCoroutinesApi
+suspend fun HttpServerResponse.endAwait(data: DataResponse, coroutineScope: CoroutineScope) {
+    when (data) {
+        is DataResponse.ExternalUrl ->
+            putHeader("Location", data.url)
+                .setStatusCode(data.redirectCode)
+                .endAwait()
+
+        is DataResponse.DataSource ->
+            putHeader(HttpHeaderNames.CONTENT_LENGTH, data.size.toString())
+                .putHeader(HttpHeaderNames.CONTENT_TYPE, data.contentType)
+                .endAwait(data.source().asVertxChannel(coroutineScope, Dispatchers.IO))
+
+        is DataResponse.Data ->
+            putHeader(HttpHeaderNames.CONTENT_TYPE, data.contentType)
+                .endAwait(Buffer.buffer(data.data))
+    }
+}
 
 @ExperimentalContracts
 public inline fun <R> EternalboxRoute.withContext(receiver: RoutingContext, block: JukeboxRoutingContext.() -> R): R {

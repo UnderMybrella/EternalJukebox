@@ -15,12 +15,16 @@ object WebApiResponseMessages {
     const val ANALYSIS_MISSING_SECTIONS = "analysis_missing_sections"
     const val ANALYSIS_MISSING_TATUMS = "analysis_missing_tatums"
 
+    const val INVALID_AUDIO_SERVICE = "invalid_audio_service"
+
     //5xx
     const val API_NOT_IMPLEMENTED = "api_not_implemented"
 
     const val NO_ANALYSIS_PROVIDER = "no_analysis_provider"
-
     const val ANALYSIS_NOT_STORED = "analysis_not_stored"
+
+    const val NO_AUDIO_PROVIDER = "no_audio_provider"
+    const val AUDIO_NOT_STORED = "audio_not_stored"
 
     const val NO_CONFIGURE_FILE = "no_configure_file"
 }

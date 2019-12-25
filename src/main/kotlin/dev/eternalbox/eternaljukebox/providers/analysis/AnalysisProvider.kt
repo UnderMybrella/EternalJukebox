@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import dev.eternalbox.eternaljukebox.JSON_MAPPER
 import dev.eternalbox.eternaljukebox.data.*
+import dev.eternalbox.eternaljukebox.data.spotify.SpotifyTrackAnalysis
 import dev.eternalbox.eternaljukebox.json
 
 interface AnalysisProvider {
@@ -51,14 +52,26 @@ interface AnalysisProvider {
                     WebApiResponseMessages.ANALYSIS_MISSING_TATUMS
                 )
 
-            return JukeboxResult.Success(JSON_MAPPER.valueToTree(json {
+            return collectAnalysisData(bars, beats, tatums, segments, sections)
+        }
+
+        fun parseAnalysisData(track: SpotifyTrackAnalysis): JukeboxResult<JsonNode> =
+            collectAnalysisData(track.bars, track.beats, track.tatums, track.segments, track.sections)
+
+        private fun collectAnalysisData(
+            bars: Any,
+            beats: Any,
+            tatums: Any,
+            segments: Any,
+            sections: Any
+        ): JukeboxResult<JsonNode> =
+            JukeboxResult.Success(JSON_MAPPER.valueToTree(json {
                 "bars" .. bars
                 "beats" .. beats
                 "tatums" .. tatums
                 "segments" .. segments
                 "sections" .. sections
             }))
-        }
 
         private fun findBars(tree: JsonNode): ArrayNode? {
             for (bars in tree.findValues("bars").filterIsInstance(ArrayNode::class.java)) {
@@ -132,6 +145,5 @@ interface AnalysisProvider {
     }
 
     suspend fun supportsAnalysis(service: EnumAnalysisService): Boolean
-    suspend fun getAnalysisFor(service: EnumAnalysisService, id: String): DataResponse?
     suspend fun retrieveAnalysisFor(service: EnumAnalysisService, id: String): JukeboxResult<DataResponse>
 }

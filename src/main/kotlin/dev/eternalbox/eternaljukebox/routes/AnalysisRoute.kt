@@ -51,40 +51,17 @@ class AnalysisRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
             } else {
                 val songID = pathParam("id")
 
-                for (provider in providers) {
-                    if (provider.supportsAnalysis(service)) {
-                        val result = provider.getAnalysisFor(service, songID) ?: continue
-                        when (result) {
-                            is DataResponse.ExternalUrl ->
-                                response()
-                                    .putHeader("Location", result.url)
-                                    .setStatusCode(result.redirectCode)
-                                    .endAwait()
-
-                            is DataResponse.DataSource ->
-                                response()
-                                    .putHeader(HttpHeaderNames.CONTENT_LENGTH, result.size.toString())
-                                    .putHeader(HttpHeaderNames.CONTENT_TYPE, result.contentType)
-                                    .endAwait(result.source().asVertxChannel(coroutineScope, Dispatchers.IO))
-
-                            is DataResponse.Data ->
-                                response()
-                                    .putHeader(HttpHeaderNames.CONTENT_TYPE, result.contentType)
-                                    .endAwait(Buffer.buffer(result.data))
-                        }
-
-                        return@withContext
-                    } else {
-                        continue
-                    }
+                when (val result = jukebox.analysisDataStore.getAnalysis(service, songID)) {
+                    is JukeboxResult.Success -> response().endAwait(result.result, coroutineScope)
+                    is JukeboxResult.Failure -> response().endAwait(result)
                 }
 
-                response()
-                    .setStatusCode(404)
-                    .endJsonAwait {
-                        "error" .. WebApiResponseCodes.NO_ANALYSIS_PROVIDER
-                        "message" .. errorMessage(WebApiResponseMessages.NO_ANALYSIS_PROVIDER, service, songID)
-                    }
+//                response()
+//                    .setStatusCode(404)
+//                    .endJsonAwait {
+//                        "error" .. WebApiResponseCodes.NO_ANALYSIS_PROVIDER
+//                        "message" .. errorMessage(WebApiResponseMessages.NO_ANALYSIS_PROVIDER, service, songID)
+//                    }
             }
         }
     }
@@ -251,15 +228,7 @@ class AnalysisRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
                         "id" .. result.result
                     }
                 is JukeboxResult.KnownFailure<*, *> -> response()
-                    .setStatusCode(
-                        when {
-                            WebApiResponseCodes isHttpClientResponseCode result.errorCode -> WebApiResponseCodes asHttpResponseCode result.errorCode
-                            WebApiResponseCodes isHttpServerResponseCode result.errorCode -> WebApiResponseCodes asHttpResponseCode result.errorCode
-                            WebApiResponseCodes isJukeboxClientResponseCode result.errorCode -> 400
-                            WebApiResponseCodes isJukeboxServerResponseCode result.errorCode -> 500
-                            else -> 500
-                        }
-                    )
+                    .setStatusCode(WebApiResponseCodes getHttpStatusCode result.errorCode)
                     .endJsonAwait {
                         "error" .. result.errorCode
                         "message" .. result.errorMessage
