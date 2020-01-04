@@ -48,6 +48,7 @@ dependencies {
     implementation "io.vertx:vertx-web:$vertx_version" //Web based routing support
     implementation "io.vertx:vertx-lang-kotlin:$vertx_version" //Suspending extensions
     implementation "io.vertx:vertx-lang-kotlin-coroutines:$vertx_version" //Kotlin coroutine support
+    implementation "io.vertx:vertx-auth-oauth2:$vertx_version" //OAuth2 support
 
     // Web client
     implementation "com.github.kittinunf.fuel:fuel:$fuel_version"
