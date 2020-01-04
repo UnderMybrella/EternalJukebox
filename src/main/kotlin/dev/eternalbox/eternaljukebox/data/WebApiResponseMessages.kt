@@ -22,9 +22,15 @@ object WebApiResponseMessages {
 
     const val NO_ANALYSIS_PROVIDER = "no_analysis_provider"
     const val ANALYSIS_NOT_STORED = "analysis_not_stored"
+    const val ANALYSIS_NOT_SUPPORTED = "analysis_not_supported"
 
     const val NO_AUDIO_PROVIDER = "no_audio_provider"
     const val AUDIO_NOT_STORED = "audio_not_stored"
+    const val AUDIO_NOT_SUPPORTED = "audio_not_supported"
+
+    const val NO_INFO_PROVIDER = "no_info_provider"
+    const val INFO_NOT_STORED = "info_not_stored"
+    const val INFO_NOT_SUPPORTED = "info_not_supported"
 
     const val NO_CONFIGURE_FILE = "no_configure_file"
 }

@@ -1,5 +1,9 @@
 package dev.eternalbox.eternaljukebox
 
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.github.kittinunf.fuel.Fuel
+import com.github.kittinunf.fuel.coroutines.awaitByteArray
+import dev.eternalbox.eternaljukebox.data.DataResponse
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.streams.WriteStream
 import io.vertx.kotlin.core.streams.writeAwait
@@ -12,6 +16,7 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.channels.receiveOrNull
 import java.io.InputStream
+import kotlin.contracts.ExperimentalContracts
 import kotlin.coroutines.CoroutineContext
 
 typealias FuelResult<V, E> = com.github.kittinunf.result.Result<V, E>
@@ -70,3 +75,27 @@ fun bytesToHex(bytes: ByteArray): String {
     }
     return String(hexChars)
 }
+
+@ExperimentalContracts
+@ExperimentalCoroutinesApi
+suspend inline fun <reified T> DataResponse.retrieve(jukebox: EternalJukebox): T =
+    if (this is DataResponse.ExternalUrl && this.localData != null)
+        localData._retrieve(jukebox.host)
+    else
+        _retrieve(jukebox.host)
+suspend inline fun <reified T> DataResponse.retrieve(host: String): T =
+    if (this is DataResponse.ExternalUrl && this.localData != null)
+        localData._retrieve(host)
+    else
+        _retrieve(host)
+suspend inline fun <reified T> DataResponse._retrieve(host: String): T =
+    when (this) {
+        is DataResponse.Data -> JSON_MAPPER.readValue(this.data)
+        is DataResponse.DataSource -> JSON_MAPPER.readValue(this.source().use(InputStream::readBytes))
+        is DataResponse.ExternalUrl -> Fuel.get(
+            if (this.url.startsWith("/"))
+                "${host}${this.url}"
+            else
+                this.url
+        ).awaitByteArray().let { data -> JSON_MAPPER.readValue<T>(data) }
+    }

@@ -65,7 +65,7 @@ data class SpotifyTrackAnalysis(
         val mode: Int,
         @JsonProperty("mode_confidence") val modeConfidence: Double,
         @JsonProperty("time_signature") val timeSignature: Int,
-        @JsonProperty("time-Signature_confidence") val timeSignatureConfidence: Double
+        @JsonProperty("time_signature_confidence") val timeSignatureConfidence: Double
     )
 
     data class Segment(

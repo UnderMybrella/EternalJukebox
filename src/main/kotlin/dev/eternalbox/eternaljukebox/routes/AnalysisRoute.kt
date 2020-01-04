@@ -16,6 +16,7 @@ import io.vertx.kotlin.core.file.readFileAwait
 import io.vertx.kotlin.core.http.endAwait
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.withContext
 import java.io.InputStream
 import java.security.MessageDigest
 import kotlin.contracts.ExperimentalContracts
@@ -34,7 +35,7 @@ class AnalysisRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
 
     @ExperimentalCoroutinesApi
     suspend fun getAnalysis(context: RoutingContext) {
-        withContext(context) {
+        routeWith(context) {
             val rawService = pathParam("service")
             val service = EnumAnalysisService.values().firstOrNull { service -> service.name.equals(rawService, true) }
             if (service == null) {
@@ -67,7 +68,7 @@ class AnalysisRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
     }
 
     suspend fun retrieveAnalysis(context: RoutingContext) {
-        withContext(context) {
+        routeWith(context) {
             val rawService = pathParam("service")
             val service = EnumAnalysisService.values().firstOrNull { service -> service.name.equals(rawService, true) }
             if (service == null) {
@@ -107,7 +108,7 @@ class AnalysisRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
                                         .putHeader(HttpHeaderNames.CONTENT_TYPE, data.contentType)
                                         .endAwait(Buffer.buffer(data.data))
                             }
-                            return@withContext
+                            return@routeWith
                         } else if (result is JukeboxResult.Failure) {
                             errors.add(result)
                         }
@@ -141,7 +142,7 @@ class AnalysisRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
     }
 
     suspend fun uploadAnalysis(context: RoutingContext) {
-        withContext(context) {
+        routeWith(context) {
             val analysisFileUpload =
                 context.fileUploads().firstOrNull { upload -> upload.contentType() == "application/json" }
             val analysisString =
@@ -149,7 +150,7 @@ class AnalysisRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
                 else context.bodyAsString
 
             val analysisJson = try {
-                kotlinx.coroutines.withContext(Dispatchers.IO) { JSON_MAPPER.readTree(analysisString) }
+                withContext(Dispatchers.IO) { JSON_MAPPER.readTree(analysisString) }
             } catch (jsonException: JsonParseException) {
                 return response()
                     .setStatusCode(400)
@@ -161,65 +162,65 @@ class AnalysisRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
                     }
             }
 
-            val result = AnalysisProvider.parseAnalysisData(analysisJson)
-                .flatMapAwait { node ->
-                    val analysisData =
-                        kotlinx.coroutines.withContext(Dispatchers.IO) { JSON_MAPPER.writeValueAsBytes(node) }
+            val md = MessageDigest.getInstance("SHA-256")
+            val hashBytes = md.digest(analysisString.toByteArray(Charsets.UTF_8))
+            val hash = bytesToHex(hashBytes)
 
-                    val md = MessageDigest.getInstance("SHA-256")
-                    val hashBytes = md.digest(analysisData)
-                    val hash = bytesToHex(hashBytes)
+            //Replace this fuckery with a database call
+            val result: JukeboxResult<String>
 
-                    //Replace this fuckery with a database call
-                    if (jukebox.analysisDataStore.hasAnalysisStored(EnumAnalysisService.JSON, hash)) {
-                        jukebox.analysisDataStore.getAnalysis(EnumAnalysisService.JSON, hash)
-                            .flatMapAwait { response ->
-                                when (response) {
-                                    is DataResponse.ExternalUrl ->
-                                        try {
-                                            val properURL = if (response.url.startsWith("/"))
-                                                request().absoluteURI().replace(request().uri(), response.url)
-                                            else
-                                                response.url
-                                            JukeboxResult.Success(Fuel.get(properURL).awaitString())
-                                        } catch (fuel: FuelError) {
-                                            if (fuel.response.statusCode == -1)
-                                                JukeboxResult.KnownFailure<String, Throwable>(
-                                                    0,
-                                                    fuel.message ?: "(no message)",
-                                                    fuel.exception
-                                                )
-                                            else {
-                                                JukeboxResult.KnownFailure<String, ByteArray>(
-                                                    fuel.response.statusCode,
-                                                    fuel.response.responseMessage,
-                                                    fuel.response.data
-                                                )
-                                            }
-                                        }
-                                    is DataResponse.DataSource -> JukeboxResult.Success(
-                                        String(
-                                            response.source().use(InputStream::readBytes)
+            if (jukebox.analysisDataStore.hasAnalysisStored(EnumAnalysisService.JSON, hash)) {
+                result = jukebox.analysisDataStore.getAnalysis(EnumAnalysisService.JSON, hash)
+                    .flatMapAwait { response ->
+                        when (response) {
+                            is DataResponse.ExternalUrl ->
+                                try {
+                                    val properURL = if (response.url.startsWith("/"))
+                                        request().absoluteURI().replace(request().uri(), response.url)
+                                    else
+                                        response.url
+                                    JukeboxResult.Success(Fuel.get(properURL).awaitString())
+                                } catch (fuel: FuelError) {
+                                    if (fuel.response.statusCode == -1)
+                                        JukeboxResult.KnownFailure<String, Throwable>(
+                                            0,
+                                            fuel.message ?: "(no message)",
+                                            fuel.exception
                                         )
-                                    )
-                                    is DataResponse.Data -> JukeboxResult.Success(String(response.data))
+                                    else {
+                                        JukeboxResult.KnownFailure<String, ByteArray>(
+                                            fuel.response.statusCode,
+                                            fuel.response.responseMessage,
+                                            fuel.response.data
+                                        )
+                                    }
                                 }
-                            }
-                    } else {
-                        val newID = jukebox.shortUrlRoute.newShortUrl()
+                            is DataResponse.DataSource -> JukeboxResult.Success(
+                                String(
+                                    response.source().use(InputStream::readBytes)
+                                )
+                            )
+                            is DataResponse.Data -> JukeboxResult.Success(String(response.data))
+                        }
+                    }
+            } else {
+                val newID = jukebox.shortUrlRoute.newShortUrl()
+
+                result = AnalysisProvider.parseAnalysisData(analysisJson, EnumAnalysisService.JSON, newID)
+                    .flatMapAwait { node ->
                         jukebox.analysisDataStore.storeAnalysis(
                             EnumAnalysisService.JSON,
                             newID,
-                            analysisData
-                        ).flatMapAwait {
-                            jukebox.analysisDataStore.storeAnalysis(
-                                EnumAnalysisService.JSON,
-                                hash,
-                                newID.toByteArray()
-                            )
-                        }.map { newID }
-                    }
-                }
+                            withContext(Dispatchers.IO) { JSON_MAPPER.writeValueAsBytes(node) }
+                        )
+                    }.flatMapAwait {
+                        jukebox.analysisDataStore.storeAnalysis(
+                            EnumAnalysisService.JSON,
+                            hash,
+                            newID.toByteArray()
+                        )
+                    }.map { newID }
+            }
 
             when (result) {
                 is JukeboxResult.Success -> response()

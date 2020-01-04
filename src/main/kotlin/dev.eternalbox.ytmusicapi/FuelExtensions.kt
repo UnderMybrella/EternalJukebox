@@ -1,20 +1,6 @@
 package dev.eternalbox.ytmusicapi
 
-import com.fasterxml.jackson.module.kotlin.readValue
-import com.github.kittinunf.fuel.core.Deserializable
-import com.github.kittinunf.fuel.core.Response
 import dev.eternalbox.eternaljukebox.JSON_MAPPER
-
-
-object YoutubeMusicSearchResponseDeserialiser : Deserializable<YoutubeMusicSearchResponse> {
-    /**
-     * Deserialize [response] into [T]
-     *
-     * @param response [Response] the incoming response
-     * @return [T] the instance of [T]
-     */
-    override fun deserialize(response: Response): YoutubeMusicSearchResponse = JSON_MAPPER.readValue(response.data)
-}
 
 fun YoutubeMusicSearchResponse.getSongs(): Array<YTMSong> {
     return contents.sectionListRenderer.contents.filter { content -> content.musicShelfRenderer.title.runs.any { run -> run.text == "Songs" } }

@@ -5,7 +5,8 @@ import dev.eternalbox.eternaljukebox.data.*
 import dev.eternalbox.eternaljukebox.endAwait
 import dev.eternalbox.eternaljukebox.endJsonAwait
 import dev.eternalbox.eternaljukebox.providers.audio.AudioProvider
-import dev.eternalbox.eternaljukebox.withContext
+import dev.eternalbox.eternaljukebox.providers.audio.YtdlAudioProvider
+import dev.eternalbox.eternaljukebox.routeWith
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,10 +22,10 @@ class AudioRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
     }
 
     val router: Router = Router.router(vertx)
-    val providers: Array<AudioProvider> = arrayOf()
+    val providers: Array<AudioProvider> = arrayOf(YtdlAudioProvider(jukebox))
 
     suspend fun getAudio(context: RoutingContext) {
-        withContext(context) {
+        routeWith(context) {
             val rawAudioService = pathParam("audio_service")
             val audioService =
                 EnumAudioService.values().firstOrNull { service -> service.name.equals(rawAudioService, true) }
@@ -68,7 +69,81 @@ class AudioRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
         }
     }
 
-    suspend fun retrieveAudio(context: RoutingContext) = apiNotImplemented(context)
+    suspend fun retrieveAudio(context: RoutingContext) {
+        routeWith(context) {
+            val rawAudioService = pathParam("audio_service")
+            val audioService =
+                EnumAudioService.values().firstOrNull { service -> service.name.equals(rawAudioService, true) }
+            if (audioService == null) {
+                response()
+                    .setStatusCode(HttpResponseCodes.BAD_REQUEST)
+                    .endJsonAwait {
+                        "error" .. WebApiResponseCodes.INVALID_AUDIO_SERVICE
+                        "message" .. errorMessage(
+                            WebApiResponseMessages.INVALID_AUDIO_SERVICE,
+                            rawAudioService,
+                            EnumAudioService.values().joinToString { it.name.capitalize() }
+                        )
+                        "audio_services" .. EnumAudioService.values()
+                    }
+            } else {
+                val rawAnalysisService = pathParam("analysis_service")
+                val analysisService = EnumAnalysisService.values()
+                    .firstOrNull { service -> service.name.equals(rawAnalysisService, true) }
+                if (analysisService == null) {
+                    response()
+                        .setStatusCode(HttpResponseCodes.BAD_REQUEST)
+                        .endJsonAwait {
+                            "error" .. WebApiResponseCodes.INVALID_ANALYSIS_SERVICE
+                            "message" .. errorMessage(
+                                WebApiResponseMessages.INVALID_ANALYSIS_SERVICE,
+                                rawAnalysisService,
+                                EnumAnalysisService.values().joinToString { it.name.capitalize() }
+                            )
+                            "analysis_services" .. EnumAnalysisService.values()
+                        }
+                } else {
+                    val songID = pathParam("id")
+
+                    val errors: MutableList<JukeboxResult.Failure<DataResponse>> = ArrayList()
+                    for (provider in providers) {
+                        if (provider.supportsAudio(audioService, analysisService)) {
+                            val result = provider.retrieveAudioFor(audioService, analysisService, songID)
+                            if (result is JukeboxResult.Success) {
+                                return@routeWith response().endAwait(result.result, coroutineScope)
+                            } else if (result is JukeboxResult.Failure) {
+                                errors.add(result)
+                            }
+
+                            continue
+                        } else {
+                            continue
+                        }
+                    }
+
+                    response()
+                        .setStatusCode(400)
+                        .endJsonAwait {
+                            "errors" .. errors.map { failure ->
+                                when (failure) {
+                                    is JukeboxResult.KnownFailure<*, *> -> json {
+                                        "code" .. failure.errorCode
+                                        "message" .. failure.errorMessage
+                                        if (failure.additionalInfo != null)
+                                            "additional" .. failure.additionalInfo
+                                    }
+                                    else -> json {
+                                        "code" .. 0
+                                        "message" .. "An unknown error occurred"
+                                    }
+                                }
+                            }
+                        }
+                }
+            }
+        }
+    }
+
     suspend fun uploadAudio(context: RoutingContext) = apiNotImplemented(context)
 
     init {

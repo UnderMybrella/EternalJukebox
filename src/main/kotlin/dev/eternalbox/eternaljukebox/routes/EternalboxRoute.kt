@@ -28,7 +28,7 @@ abstract class EternalboxRoute(val jukebox: EternalJukebox) {
     open val context: CoroutineContext = vertx.dispatcher()
 
     suspend fun apiRouteNotFound(context: RoutingContext) {
-        withContext(context) {
+        routeWith(context) {
             response().setStatusCode(HttpResponseCodes.NOT_FOUND).endJsonAwait {
                 "error" .. WebApiResponseCodes.NOT_FOUND
                 "message" .. errorMessage(WebApiResponseMessages.API_ROUTE_NOT_FOUND, request().path())
@@ -37,7 +37,7 @@ abstract class EternalboxRoute(val jukebox: EternalJukebox) {
     }
 
     suspend fun apiMethodNotAllowedForRoute(context: RoutingContext) {
-        withContext(context) {
+        routeWith(context) {
             response().setStatusCode(HttpResponseCodes.METHOD_NOT_ALLOWED).endJsonAwait {
                 "error" .. WebApiResponseCodes.METHOD_NOT_ALLOWED
                 "message" .. errorMessage(WebApiResponseMessages.API_METHOD_NOT_ALLOWED_FOR_ROUTE, request().rawMethod(), request().path())
@@ -46,7 +46,7 @@ abstract class EternalboxRoute(val jukebox: EternalJukebox) {
     }
 
     suspend fun apiMethodNotAllowedRouteSupportsGet(context: RoutingContext) {
-        withContext(context) {
+        routeWith(context) {
             response()
                     .setStatusCode(HttpResponseCodes.METHOD_NOT_ALLOWED)
                     .putHeader(HttpHeaderNames.ALLOW, "GET")
@@ -58,7 +58,7 @@ abstract class EternalboxRoute(val jukebox: EternalJukebox) {
     }
 
     suspend fun apiNotImplemented(context: RoutingContext) {
-        withContext(context) {
+        routeWith(context) {
             response()
                     .setStatusCode(HttpResponseCodes.NOT_IMPLEMENTED)
                     .endJsonAwait {

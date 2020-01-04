@@ -11,7 +11,7 @@ import dev.eternalbox.eternaljukebox.json
 
 interface AnalysisProvider {
     companion object {
-        fun parseAnalysisData(data: ByteArray): JukeboxResult<JsonNode> {
+        fun parseAnalysisData(data: ByteArray, service: EnumAnalysisService, id: String): JukeboxResult<JsonNode> {
             val jsonNode = try {
                 JSON_MAPPER.readTree(data)
             } catch (jsonError: JsonParseException) {
@@ -22,10 +22,10 @@ interface AnalysisProvider {
                 )
             }
 
-            return parseAnalysisData(jsonNode)
+            return parseAnalysisData(jsonNode, service, id)
         }
 
-        fun parseAnalysisData(jsonNode: JsonNode): JukeboxResult<JsonNode> {
+        fun parseAnalysisData(jsonNode: JsonNode, service: EnumAnalysisService, id: String): JukeboxResult<JsonNode> {
             val bars = findBars(jsonNode)
                 ?: return JukeboxResult.KnownFailure(
                     WebApiResponseCodes.ANALYSIS_MISSING_BARS,
@@ -52,18 +52,23 @@ interface AnalysisProvider {
                     WebApiResponseMessages.ANALYSIS_MISSING_TATUMS
                 )
 
-            return collectAnalysisData(bars, beats, tatums, segments, sections)
+            val duration = jsonNode.findValue("duration").asDouble()
+
+            return collectAnalysisData(bars, beats, tatums, segments, sections, duration, service, id)
         }
 
-        fun parseAnalysisData(track: SpotifyTrackAnalysis): JukeboxResult<JsonNode> =
-            collectAnalysisData(track.bars, track.beats, track.tatums, track.segments, track.sections)
+        fun parseAnalysisData(track: SpotifyTrackAnalysis, id: String): JukeboxResult<JsonNode> =
+            collectAnalysisData(track.bars, track.beats, track.tatums, track.segments, track.sections, track.track.duration, EnumAnalysisService.SPOTIFY, id)
 
         private fun collectAnalysisData(
             bars: Any,
             beats: Any,
             tatums: Any,
             segments: Any,
-            sections: Any
+            sections: Any,
+            duration: Double,
+            service: EnumAnalysisService,
+            id: String
         ): JukeboxResult<JsonNode> =
             JukeboxResult.Success(JSON_MAPPER.valueToTree(json {
                 "bars" .. bars
@@ -71,6 +76,9 @@ interface AnalysisProvider {
                 "tatums" .. tatums
                 "segments" .. segments
                 "sections" .. sections
+                "duration" .. duration
+                "service" .. service.name.toLowerCase()
+                "id" .. id
             }))
 
         private fun findBars(tree: JsonNode): ArrayNode? {

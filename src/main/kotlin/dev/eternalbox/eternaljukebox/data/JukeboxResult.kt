@@ -1,5 +1,8 @@
 package dev.eternalbox.eternaljukebox.data
 
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
+
 sealed class JukeboxResult<T> {
     data class Success<T>(val result: T) : JukeboxResult<T>() {
         override fun <R> map(mapper: (T) -> R): Success<R> = Success(mapper(result))
@@ -81,5 +84,22 @@ sealed class JukeboxResult<T> {
 
     abstract fun run(block: (T) -> Unit): JukeboxResult<T>
     abstract suspend fun runAwait(block: suspend (T) -> Unit): JukeboxResult<T>
+}
 
+@ExperimentalContracts
+fun <T> JukeboxResult<T>.isUnauthenticatedFailure(): Boolean {
+    contract {
+        returns(true) implies (this@isUnauthenticatedFailure is JukeboxResult.KnownFailure<*, *>)
+    }
+
+    return this is JukeboxResult.KnownFailure<*, *> && this.errorCode == 401
+}
+
+@ExperimentalContracts
+fun <T> JukeboxResult<T>.isGatewayTimeout(): Boolean {
+    contract {
+        returns(true) implies (this@isGatewayTimeout is JukeboxResult.KnownFailure<*, *>)
+    }
+
+    return this is JukeboxResult.KnownFailure<*, *> && this.errorCode == 504
 }

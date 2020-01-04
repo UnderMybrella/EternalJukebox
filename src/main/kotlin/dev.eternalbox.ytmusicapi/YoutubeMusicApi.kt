@@ -1,11 +1,15 @@
 package dev.eternalbox.ytmusicapi
 
 import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.awaitResponse
 import com.github.kittinunf.fuel.core.extensions.jsonBody
+import com.github.kittinunf.fuel.coroutines.awaitByteArrayResult
+import dev.eternalbox.eternaljukebox.EternalJukebox
 import dev.eternalbox.eternaljukebox.JSON_MAPPER
+import dev.eternalbox.eternaljukebox.asResult
+import dev.eternalbox.eternaljukebox.data.JukeboxResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.contracts.ExperimentalContracts
 
 class YoutubeMusicApi(
     var userAgent: String = DEFAULT_USER_AGENT,
@@ -28,9 +32,12 @@ class YoutubeMusicApi(
 
         const val API_BASE_URL: String = "https://music.youtube.com/youtubei/v1"
         const val API_SEARCH_URL: String = "$API_BASE_URL/search"
+
+        @ExperimentalContracts
+        operator fun invoke(jukebox: EternalJukebox): YoutubeMusicApi = YoutubeMusicApi()
     }
 
-    suspend fun search(query: String) =
+    suspend fun search(query: String): JukeboxResult<YoutubeMusicSearchResponse> =
         Fuel.post(API_SEARCH_URL, listOf("alt" to "json", "key" to apiKey))
             .jsonBody(
                 withContext(Dispatchers.IO) { JSON_MAPPER.writeValueAsString(YoutubeMusicSearchRequest.default(query)) }
@@ -46,6 +53,7 @@ class YoutubeMusicApi(
             .header("Origin", "https://music.youtube.com")
             .header("DNT", 1)
             .header("Referer", "https://music.youtube.com/")
-            .awaitResponse(YoutubeMusicSearchResponseDeserialiser)
+            .awaitByteArrayResult()
+            .asResult()
 //            .awaitString()
 }

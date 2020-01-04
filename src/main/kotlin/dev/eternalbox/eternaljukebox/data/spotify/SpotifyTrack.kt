@@ -5,7 +5,7 @@ import dev.eternalbox.ytmusicapi.UnknownJsonObj
 
 data class SpotifyTrack(
     val album: SpotifySimplifiedAlbum,
-    val artists: SpotifySimplifiedArtist,
+    val artists: Array<SpotifySimplifiedArtist>,
     @JsonProperty("available_markets") val availableMarkets: Array<String>,
     @JsonProperty("disc_number") val discNumber: Int,
     @JsonProperty("duration_ms") val durationMs: Int,

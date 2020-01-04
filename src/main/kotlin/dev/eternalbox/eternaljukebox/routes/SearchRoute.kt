@@ -1,7 +1,7 @@
 package dev.eternalbox.eternaljukebox.routes
 
 import dev.eternalbox.eternaljukebox.EternalJukebox
-import dev.eternalbox.eternaljukebox.withContext
+import dev.eternalbox.eternaljukebox.routeWith
 import dev.eternalbox.ytmusicapi.YoutubeMusicApi
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
@@ -22,7 +22,7 @@ class SearchRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
     val ytmApi = YoutubeMusicApi()
 
     suspend fun search(context: RoutingContext) {
-        withContext(context) {
+        routeWith(context) {
             val service = pathParam("service")
             val query = withContext(Dispatchers.IO) { URLDecoder.decode(queryParam("q").first(), "UTF-8") }
 

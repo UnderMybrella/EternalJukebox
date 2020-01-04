@@ -17,6 +17,7 @@ val YAML_CONFIG_FILE = File("$CONFIG_FILE_NAME.yaml")
 fun main(args: Array<String>) {
     println(SLF4JLogDelegateFactory::class.java.name)
     System.setProperty(io.vertx.core.logging.LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, SLF4JLogDelegateFactory::class.java.name)
+    System.setProperty("vertxweb.environment", "dev")
 
     println("==Eternal Jukebox==")
     println("Attempting to load config...")

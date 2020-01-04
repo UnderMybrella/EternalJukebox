@@ -8,9 +8,14 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
+import com.github.kittinunf.fuel.core.FuelError
+import dev.eternalbox.eternaljukebox.data.JukeboxResult
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import kotlin.reflect.jvm.jvmName
@@ -65,3 +70,25 @@ val YAML_MAPPER: ObjectMapper = ObjectMapper(YAMLFactory())
     .setSerializationInclusion(JsonInclude.Include.NON_ABSENT)
 
 fun jsonStringOfObject(vararg pairs: Pair<String, Any>): String = JSON_MAPPER.writeValueAsString(pairs.toMap())
+
+suspend inline fun <reified T> FuelResult<ByteArray, FuelError>.asResult(): JukeboxResult<T> =
+    getResponseFromResult(this)
+
+suspend inline fun <reified T> getResponseFromResult(result: FuelResult<ByteArray, FuelError>): JukeboxResult<T> =
+    getResponseFromResult(result.component1(), result.component2())
+
+suspend inline fun <reified T> getResponseFromResult(
+    data: ByteArray?,
+    error: FuelError?
+): JukeboxResult<T> =
+    when {
+        data != null -> JukeboxResult.Success(JSON_MAPPER.readValue(data))
+        error != null -> {
+            JukeboxResult.KnownFailure(
+                error.response.statusCode,
+                error.response.responseMessage,
+                withContext(Dispatchers.IO) { JSON_MAPPER.readTree(error.response.data) }
+            )
+        }
+        else -> JukeboxResult.UnknownFailure()
+    }

@@ -138,7 +138,7 @@ suspend fun HttpServerResponse.endAwait(data: DataResponse, coroutineScope: Coro
 }
 
 @ExperimentalContracts
-public inline fun <R> EternalboxRoute.withContext(receiver: RoutingContext, block: JukeboxRoutingContext.() -> R): R {
+public inline fun <R> EternalboxRoute.routeWith(receiver: RoutingContext, block: JukeboxRoutingContext.() -> R): R {
     contract {
         callsInPlace(block, InvocationKind.EXACTLY_ONCE)
     }
@@ -146,7 +146,7 @@ public inline fun <R> EternalboxRoute.withContext(receiver: RoutingContext, bloc
 }
 
 @ExperimentalContracts
-public inline fun <R> EternalJukebox.withContext(receiver: RoutingContext, block: JukeboxRoutingContext.() -> R): R {
+public inline fun <R> EternalJukebox.routeWith(receiver: RoutingContext, block: JukeboxRoutingContext.() -> R): R {
     contract {
         callsInPlace(block, InvocationKind.EXACTLY_ONCE)
     }

@@ -1,76 +1,57 @@
 package dev.eternalbox.eternaljukebox.apis
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.kittinunf.fuel.Fuel
-import com.github.kittinunf.fuel.core.FuelError
 import com.github.kittinunf.fuel.core.extensions.authentication
 import com.github.kittinunf.fuel.coroutines.awaitByteArrayResult
 import dev.eternalbox.eternaljukebox.EternalJukebox
-import dev.eternalbox.eternaljukebox.FuelResult
 import dev.eternalbox.eternaljukebox.JSON_MAPPER
+import dev.eternalbox.eternaljukebox.asResult
 import dev.eternalbox.eternaljukebox.data.JukeboxResult
+import dev.eternalbox.eternaljukebox.data.isGatewayTimeout
+import dev.eternalbox.eternaljukebox.data.isUnauthenticatedFailure
 import dev.eternalbox.eternaljukebox.data.spotify.SpotifyTrack
 import dev.eternalbox.eternaljukebox.data.spotify.SpotifyTrackAnalysis
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
+import kotlin.math.pow
+import kotlin.random.Random
 
+@ExperimentalCoroutinesApi
 @ExperimentalContracts
 class SpotifyApi(jukebox: EternalJukebox) {
     val spotifyClientID: String = requireNotNull(jukebox["spotify_client_id"]).asText()
     val spotifyClientSecret: String = requireNotNull(jukebox["spotify_client_secret"]).asText()
 
-    var spotifyToken: String? = null
+    lateinit var spotifyToken: String
     val spotifyTokenMutex = Mutex()
     var spotifyTokenJob = spotifyTokenJob()
 
-    private suspend inline fun <reified T> FuelResult<ByteArray, FuelError>.asResult(): JukeboxResult<T> =
-        getResponseFromResult(this)
-
-    private suspend inline fun <reified T> getResponseFromResult(result: FuelResult<ByteArray, FuelError>): JukeboxResult<T> =
-        getResponseFromResult(result.component1(), result.component2())
-
-    private suspend inline fun <reified T> getResponseFromResult(
-        data: ByteArray?,
-        error: FuelError?
-    ): JukeboxResult<T> =
-        when {
-            data != null -> JukeboxResult.Success(JSON_MAPPER.readValue(data))
-            error != null -> {
-                if (error.response.statusCode == 401) {
-                    invalidateToken()
-                }
-
-                JukeboxResult.KnownFailure(
-                    error.response.statusCode,
-                    error.response.responseMessage,
-                    withContext(Dispatchers.IO) { JSON_MAPPER.readTree(error.response.data) }
-                )
+    suspend fun getTrack(trackID: String): JukeboxResult<SpotifyTrack> =
+        exponentialBackoff {
+            withSpotifyToken { token ->
+                Fuel.get("https://api.spotify.com/v1/tracks/$trackID")
+                    .authentication()
+                    .bearer(token)
+                    .awaitByteArrayResult()
+                    .asResult<SpotifyTrack>()
             }
-            else -> JukeboxResult.UnknownFailure()
         }
 
-    suspend fun getTrack(trackID: String): JukeboxResult<SpotifyTrack> {
-        return spotifyTokenMutex.withLock {
-            Fuel.get("https://api.spotify.com/v1/tracks/$trackID")
-                .authentication()
-                .bearer(requireNotNull(spotifyToken))
-                .awaitByteArrayResult()
-                .asResult()
+    suspend fun getTrackAnalysis(trackID: String): JukeboxResult<SpotifyTrackAnalysis> =
+        exponentialBackoff {
+            withSpotifyToken { token ->
+                Fuel.get("https://api.spotify.com/v1/audio-analysis/$trackID")
+                    .authentication()
+                    .bearer(token)
+                    .awaitByteArrayResult()
+                    .asResult<SpotifyTrackAnalysis>()
+                    .also { result -> if (result.isUnauthenticatedFailure()) invalidateToken() }
+            }
         }
-    }
-
-    suspend fun getTrackAnalysis(trackID: String): JukeboxResult<SpotifyTrackAnalysis> {
-        return spotifyTokenMutex.withLock {
-            Fuel.get("https://api.spotify.com/v1/audio-analysis/$trackID")
-                .authentication()
-                .bearer(requireNotNull(spotifyToken))
-                .awaitByteArrayResult()
-                .asResult()
-        }
-    }
 
     private fun invalidateToken() {
         spotifyTokenJob.cancel()
@@ -96,18 +77,58 @@ class SpotifyApi(jukebox: EternalJukebox) {
         }
     }
 
-    private suspend fun retrieveToken(): JukeboxResult<JsonNode> {
-        val (data, error) = Fuel.post("https://accounts.spotify.com/api/token")
-            .authentication()
-            .basic(spotifyClientID, spotifyClientSecret)
-            .body("grant_type=client_credentials")
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .awaitByteArrayResult()
+    private suspend fun retrieveToken(): JukeboxResult<JsonNode> =
+        exponentialBackoff<JsonNode> {
+            val (data, error) = Fuel.post("https://accounts.spotify.com/api/token")
+                .authentication()
+                .basic(spotifyClientID, spotifyClientSecret)
+                .body("grant_type=client_credentials")
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .awaitByteArrayResult()
 
-        return when {
-            data != null -> withContext(Dispatchers.IO) { JukeboxResult.Success(JSON_MAPPER.readTree(data)) }
-            error != null -> JukeboxResult.KnownFailure(error.response.statusCode, error.response.responseMessage)
-            else -> JukeboxResult.UnknownFailure()
+            when {
+                data != null -> withContext(Dispatchers.IO) { JukeboxResult.Success(JSON_MAPPER.readTree(data)) }
+                error != null -> JukeboxResult.KnownFailure(error.response.statusCode, error.response.responseMessage)
+                else -> JukeboxResult.UnknownFailure()
+            }
         }
+
+    private suspend fun <R> exponentialBackoff(
+        maximumBackoff: Int = 4,
+        block: suspend () -> JukeboxResult<R>
+    ): JukeboxResult<R> {
+        var response: JukeboxResult<R>? = null
+        var invalidated = false
+        for (i in 0 until maximumBackoff) {
+            response = block()
+            if (response.isUnauthenticatedFailure() && !invalidated) {
+                invalidateToken()
+                invalidated = true
+
+                delay(2.0.pow(i.toDouble()).toLong() * 1000 + Random.nextLong(500))
+                continue
+            } else if (response.isGatewayTimeout()) {
+                delay(2.0.pow(i.toDouble()).toLong() * 1000 + Random.nextLong(500))
+                continue
+            }
+
+            return response
+        }
+
+        return response!!
+    }
+}
+
+@ExperimentalCoroutinesApi
+@ExperimentalContracts
+private suspend inline fun <R> SpotifyApi.withSpotifyToken(block: (String) -> R): R {
+    contract {
+        callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+    }
+    spotifyTokenMutex.lock()
+    try {
+        return block(spotifyToken)
+    } finally {
+        spotifyTokenMutex.unlock()
     }
 }

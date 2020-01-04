@@ -7,11 +7,13 @@ import kotlin.contracts.ExperimentalContracts
 @ExperimentalContracts
 class ApiRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
     init {
-        apiRouter.post().handler(
-            BodyHandler.create()
-                .setBodyLimit(10_000_000)
-                .setDeleteUploadedFilesOnEnd(true)
-        )
+        apiRouter.post()
+            .order(-1_000_000)
+            .handler(
+                BodyHandler.create()
+                    .setBodyLimit(10_000_000)
+                    .setDeleteUploadedFilesOnEnd(true)
+            )
         apiRouter.route().last().suspendHandler(this::apiRouteNotFound)
 
         baseRouter.mountSubRouter("/api", apiRouter)

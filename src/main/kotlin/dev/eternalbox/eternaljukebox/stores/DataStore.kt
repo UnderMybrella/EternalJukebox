@@ -15,4 +15,9 @@ interface DataStore {
     suspend fun canStoreAudio(audioService: EnumAudioService, analysisService: EnumAnalysisService, id: String): Boolean
     suspend fun storeAudio(audioService: EnumAudioService, analysisService: EnumAnalysisService, id: String, data: ByteArray): JukeboxResult<DataResponse>
     suspend fun getAudio(audioService: EnumAudioService, analysisService: EnumAnalysisService, id: String): JukeboxResult<DataResponse>
+
+    suspend fun hasTrackInfoStored(service: EnumAnalysisService, id: String): Boolean
+    suspend fun canStoreTrackInfo(service: EnumAnalysisService, id: String): Boolean
+    suspend fun storeTrackInfo(service: EnumAnalysisService, id: String, data: ByteArray): JukeboxResult<DataResponse>
+    suspend fun getTrackInfo(service: EnumAnalysisService, id: String): JukeboxResult<DataResponse>
 }
