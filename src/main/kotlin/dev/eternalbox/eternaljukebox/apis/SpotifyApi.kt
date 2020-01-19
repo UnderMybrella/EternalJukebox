@@ -1,12 +1,14 @@
 package dev.eternalbox.eternaljukebox.apis
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.module.kotlin.convertValue
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.extensions.authentication
 import com.github.kittinunf.fuel.coroutines.awaitByteArrayResult
 import dev.eternalbox.eternaljukebox.EternalJukebox
 import dev.eternalbox.eternaljukebox.JSON_MAPPER
 import dev.eternalbox.eternaljukebox.asResult
+import dev.eternalbox.eternaljukebox.asTree
 import dev.eternalbox.eternaljukebox.data.JukeboxResult
 import dev.eternalbox.eternaljukebox.data.isGatewayTimeout
 import dev.eternalbox.eternaljukebox.data.isUnauthenticatedFailure
@@ -49,7 +51,20 @@ class SpotifyApi(jukebox: EternalJukebox) {
                     .bearer(token)
                     .awaitByteArrayResult()
                     .asResult<SpotifyTrackAnalysis>()
-                    .also { result -> if (result.isUnauthenticatedFailure()) invalidateToken() }
+            }
+        }
+
+    suspend fun searchTracks(query: String, limit: Int = 20, offset: Int = 0): JukeboxResult<Array<SpotifyTrack>> =
+        exponentialBackoff {
+            withSpotifyToken { token ->
+                Fuel.get(
+                    "https://api.spotify.com/v1/search",
+                    listOf("q" to query, "type" to "track", "limit" to limit, "offset" to offset)
+                ).authentication()
+                    .bearer(token)
+                    .awaitByteArrayResult()
+                    .asTree()
+                    .mapAwait { json -> withContext(Dispatchers.IO) { JSON_MAPPER.convertValue<Array<SpotifyTrack>>(json["tracks"]["items"]) } }
             }
         }
 

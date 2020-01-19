@@ -1,24 +1,44 @@
 package dev.eternalbox.eternaljukebox.stores
 
+import dev.eternalbox.eternaljukebox.EternalJukebox
 import dev.eternalbox.eternaljukebox.data.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import kotlin.contracts.ExperimentalContracts
 
 class LocalDataStore(
-    val mountPoint: File,
-    val analysisSupported: Boolean = true,
-    val audioSupported: Boolean = true,
-    val infoSupported: Boolean = true
-) : DataStore {
+    analysisMountPath: String,
+    audioMountPath: String,
+    infoMountPath: String
+) : AnalysisDataStore, AudioDataStore, InfoDataStore {
     companion object {
         private const val MINIMUM_SPACE_REQUIRED = 1_000_000_000 //Min 1 GB
     }
 
-    val analysisMount = File(mountPoint, "analysis")
-    val audioMount = File(mountPoint, "audio")
-    val infoMount = File(mountPoint, "info")
+    @ExperimentalCoroutinesApi
+    @ExperimentalContracts
+    class Factory : DataStoreFactory<LocalDataStore> {
+        override val name: String = "LocalDataStore"
+
+        var mountPointPath: String = "data"
+        var analysisMountPath: String? = null
+        var audioMountPath: String? = null
+        var infoMountPath: String? = null
+
+        override fun configure(jukebox: EternalJukebox) {}
+        override fun build(jukebox: EternalJukebox) = LocalDataStore(
+            analysisMountPath ?: "$mountPointPath${File.separator}analysis",
+            audioMountPath ?: "${mountPointPath}${File.separator}audio",
+            infoMountPath ?: "${mountPointPath}${File.separator}info"
+        )
+    }
+
+    val analysisMount = File(analysisMountPath)
+    val audioMount = File(audioMountPath)
+    val infoMount = File(infoMountPath)
 
     private fun analysisFile(service: EnumAnalysisService, id: String): File =
         File(analysisMount, "${service.name.toLowerCase()}${File.separator}$id.json")
@@ -33,10 +53,10 @@ class LocalDataStore(
         File(infoMount, "${service.name.toLowerCase()}${File.separator}$id.json")
 
     override suspend fun hasAnalysisStored(service: EnumAnalysisService, id: String): Boolean =
-        analysisSupported && analysisFile(service, id).exists()
+        analysisFile(service, id).exists()
 
     override suspend fun canStoreAnalysis(service: EnumAnalysisService, id: String): Boolean =
-        analysisSupported && analysisMount.freeSpace > MINIMUM_SPACE_REQUIRED
+        analysisMount.freeSpace > MINIMUM_SPACE_REQUIRED
 
     override suspend fun storeAnalysis(
         service: EnumAnalysisService,
@@ -56,12 +76,7 @@ class LocalDataStore(
     }
 
     override suspend fun getAnalysis(service: EnumAnalysisService, id: String): JukeboxResult<DataResponse> {
-        if (!analysisSupported) {
-            return JukeboxResult.KnownFailure(
-                WebApiResponseCodes.ANALYSIS_NOT_SUPPORTED,
-                WebApiResponseMessages.ANALYSIS_NOT_SUPPORTED
-            )
-        } else if (hasAnalysisStored(service, id)) {
+        if (hasAnalysisStored(service, id)) {
             val analysisFile = analysisFile(service, id)
             return JukeboxResult.Success(
                 DataResponse.ExternalUrl(
@@ -85,13 +100,13 @@ class LocalDataStore(
         audioService: EnumAudioService,
         analysisService: EnumAnalysisService,
         id: String
-    ): Boolean = audioSupported && audioFile(audioService, analysisService, id).exists()
+    ): Boolean = audioFile(audioService, analysisService, id).exists()
 
     override suspend fun canStoreAudio(
         audioService: EnumAudioService,
         analysisService: EnumAnalysisService,
         id: String
-    ): Boolean = audioSupported && audioMount.freeSpace > MINIMUM_SPACE_REQUIRED
+    ): Boolean = audioMount.freeSpace > MINIMUM_SPACE_REQUIRED
 
     override suspend fun storeAudio(
         audioService: EnumAudioService,
@@ -117,12 +132,7 @@ class LocalDataStore(
         analysisService: EnumAnalysisService,
         id: String
     ): JukeboxResult<DataResponse> {
-        if (!audioSupported) {
-            return JukeboxResult.KnownFailure(
-                WebApiResponseCodes.AUDIO_NOT_SUPPORTED,
-                WebApiResponseMessages.AUDIO_NOT_SUPPORTED
-            )
-        } else if (hasAudioStored(audioService, analysisService, id)) {
+        if (hasAudioStored(audioService, analysisService, id)) {
             val audioFile = audioFile(audioService, analysisService, id)
             return JukeboxResult.Success(
                 DataResponse.ExternalUrl(
@@ -139,23 +149,16 @@ class LocalDataStore(
     }
 
     override suspend fun hasTrackInfoStored(service: EnumAnalysisService, id: String): Boolean =
-        infoSupported && infoFile(service, id).exists()
+        infoFile(service, id).exists()
 
     override suspend fun canStoreTrackInfo(service: EnumAnalysisService, id: String): Boolean =
-        infoSupported && infoMount.freeSpace > MINIMUM_SPACE_REQUIRED
+        infoMount.freeSpace > MINIMUM_SPACE_REQUIRED
 
     override suspend fun storeTrackInfo(
         service: EnumAnalysisService,
         id: String,
         data: ByteArray
     ): JukeboxResult<DataResponse> {
-        if (!infoSupported) {
-            return JukeboxResult.KnownFailure(
-                WebApiResponseCodes.INFO_NOT_SUPPORTED,
-                WebApiResponseMessages.INFO_NOT_SUPPORTED
-            )
-        }
-
         val serviceMount = File(infoMount, service.name.toLowerCase())
         if (!serviceMount.exists()) serviceMount.mkdirs()
 
@@ -169,12 +172,7 @@ class LocalDataStore(
     }
 
     override suspend fun getTrackInfo(service: EnumAnalysisService, id: String): JukeboxResult<DataResponse> {
-        if (!infoSupported) {
-            return JukeboxResult.KnownFailure(
-                WebApiResponseCodes.INFO_NOT_SUPPORTED,
-                WebApiResponseMessages.INFO_NOT_SUPPORTED
-            )
-        } else if (hasTrackInfoStored(service, id)) {
+        if (hasTrackInfoStored(service, id)) {
             val infoFile = infoFile(service, id)
             return JukeboxResult.Success(
                 DataResponse.ExternalUrl(

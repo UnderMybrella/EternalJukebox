@@ -11,11 +11,13 @@ data class SpotifySimplifiedAlbum(
     @JsonProperty("external_urls") val externalUrls: UnknownJsonObj,
     val href: String,
     val id: String,
-    val images: Array<UnknownJsonObj>,
+    val images: Array<Image>,
     val name: String,
     @JsonProperty("release_date") val releaseDate: String,
     @JsonProperty("release_date_precision") val releaseDatePrecision: String,
     val restrictions: UnknownJsonObj? = null,
     val type: String,
     val uri: String
-)
+) {
+    data class Image(val url: String, val width: Int? = null, val height: Int? = null)
+}

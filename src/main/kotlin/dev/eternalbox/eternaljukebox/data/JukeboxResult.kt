@@ -59,13 +59,22 @@ sealed class JukeboxResult<T> {
             KnownFailure(errorCode, errorMessage, additionalInfo)
     }
 
-    class UnknownFailure<T> : Failure<T>() {
-        override fun <R> flatMap(mapper: (T) -> JukeboxResult<R>): JukeboxResult<R> = UnknownFailure()
-        override suspend fun <R> flatMapAwait(mapper: suspend (T) -> JukeboxResult<R>): JukeboxResult<R> =
-            UnknownFailure()
+    abstract class BlankFailure<T> : Failure<T>() {
+        override fun <R> flatMap(mapper: (T) -> JukeboxResult<R>): JukeboxResult<R> = new()
+        override suspend fun <R> flatMapAwait(mapper: suspend (T) -> JukeboxResult<R>): JukeboxResult<R> = new()
 
-        override fun <R> map(mapper: (T) -> R): JukeboxResult<R> = UnknownFailure()
-        override suspend fun <R> mapAwait(mapper: suspend (T) -> R): JukeboxResult<R> = UnknownFailure()
+        override fun <R> map(mapper: (T) -> R): JukeboxResult<R> = new()
+        override suspend fun <R> mapAwait(mapper: suspend (T) -> R): JukeboxResult<R> = new()
+
+        abstract fun <R> new(): BlankFailure<R>
+    }
+
+    class UnknownFailure<T> : BlankFailure<T>() {
+        override fun <R> new(): BlankFailure<R> = UnknownFailure()
+    }
+
+    class NullableFailure<T> : BlankFailure<T>() {
+        override fun <R> new(): BlankFailure<R> = NullableFailure()
     }
 
     val didSucceed: Boolean
@@ -103,3 +112,9 @@ fun <T> JukeboxResult<T>.isGatewayTimeout(): Boolean {
 
     return this is JukeboxResult.KnownFailure<*, *> && this.errorCode == 504
 }
+
+val <T : Any> JukeboxResult<T>.nullableResult: T?
+    get() = if (this is JukeboxResult.Success) result else null
+
+inline fun <reified T> resultForNullable(t: T?): JukeboxResult<T> =
+    if (t == null) JukeboxResult.NullableFailure() else JukeboxResult.Success(t)

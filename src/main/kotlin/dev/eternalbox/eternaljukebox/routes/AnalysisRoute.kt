@@ -7,7 +7,6 @@ import com.github.kittinunf.fuel.coroutines.awaitString
 import dev.eternalbox.eternaljukebox.*
 import dev.eternalbox.eternaljukebox.data.*
 import dev.eternalbox.eternaljukebox.providers.analysis.AnalysisProvider
-import dev.eternalbox.eternaljukebox.providers.analysis.SpotifyAnalysisProvider
 import io.netty.handler.codec.http.HttpHeaderNames
 import io.vertx.core.buffer.Buffer
 import io.vertx.ext.web.Router
@@ -31,7 +30,6 @@ class AnalysisRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
     }
 
     val router: Router = Router.router(vertx)
-    val providers: Array<AnalysisProvider> = arrayOf(SpotifyAnalysisProvider(jukebox))
 
     @ExperimentalCoroutinesApi
     suspend fun getAnalysis(context: RoutingContext) {
@@ -86,7 +84,7 @@ class AnalysisRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
                 val songID = pathParam("id")
 
                 val errors: MutableList<JukeboxResult.Failure<DataResponse>> = ArrayList()
-                for (provider in providers) {
+                for (provider in jukebox.analysisProviders) {
                     if (provider.supportsAnalysis(service)) {
                         val result = provider.retrieveAnalysisFor(service, songID)
                         if (result is JukeboxResult.Success) {

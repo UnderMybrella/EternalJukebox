@@ -7,6 +7,7 @@ import dev.eternalbox.eternaljukebox.EternalJukebox
 import dev.eternalbox.eternaljukebox.JSON_MAPPER
 import dev.eternalbox.eternaljukebox.bytesToHex
 import dev.eternalbox.eternaljukebox.data.HttpResponseCodes
+import dev.eternalbox.eternaljukebox.data.SecurityUser
 import dev.eternalbox.eternaljukebox.routeWith
 import io.vertx.ext.auth.User
 import io.vertx.ext.auth.oauth2.AccessToken
@@ -22,6 +23,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.security.SecureRandom
 import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -49,6 +51,8 @@ class PatreonRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
     val secretKey = SecretKeySpec(requireNotNull(jukebox["patreon_webhook_secret"]).asText().toByteArray(), "HmacMD5")
     val hmac = Mac.getInstance("HmacMD5")
 
+    val securityToken: String
+
     fun updatePatreon(context: RoutingContext) {
         try {
             val signature = context.request().getHeader("X-Patreon-Signature")
@@ -74,10 +78,12 @@ class PatreonRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
 
     suspend fun checkAuth(context: RoutingContext): Unit =
         routeWith(context) {
-            if (user() == null) {
+            val user = user()
+            if (user == null) {
                 return fail(401)
-            } else {
-                val user = user() as AccessToken
+            } else if (user is SecurityUser) {
+                return next()
+            } else if (user is AccessToken) {
                 if (user !in authorisation) {
                     authorisationLocks.computeIfAbsent(user) { Mutex() }.withLock {
                         if (user.expired()) {
@@ -160,7 +166,16 @@ class PatreonRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
 
     init {
         hmac.init(secretKey)
+        securityToken = bytesToHex(hmac.doFinal(ByteArray(8192).apply { SecureRandom.getInstanceStrong().nextBytes(this) }))
+        println("Security Token: $securityToken")
         jukebox.sessionHandler.setAuthProvider(authProvider)
+
+        jukebox.baseRouter.route().order(Int.MIN_VALUE).handler { context ->
+            if (context.request().getHeader("X-Security-Token") == securityToken)
+                context.setUser(SecurityUser)
+
+            context.next()
+        }
 
         jukebox.baseRouter.post("/api/patreon/update").order(-4_000_000).handler(BodyHandler.create().setBodyLimit(10_000).setDeleteUploadedFilesOnEnd(true))
         jukebox.baseRouter.post("/api/patreon/update").order(-4_000_000).handler(this::updatePatreon)

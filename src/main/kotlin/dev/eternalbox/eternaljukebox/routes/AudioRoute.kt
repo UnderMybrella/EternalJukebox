@@ -4,8 +4,6 @@ import dev.eternalbox.eternaljukebox.EternalJukebox
 import dev.eternalbox.eternaljukebox.data.*
 import dev.eternalbox.eternaljukebox.endAwait
 import dev.eternalbox.eternaljukebox.endJsonAwait
-import dev.eternalbox.eternaljukebox.providers.audio.AudioProvider
-import dev.eternalbox.eternaljukebox.providers.audio.YtdlAudioProvider
 import dev.eternalbox.eternaljukebox.routeWith
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
@@ -22,7 +20,6 @@ class AudioRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
     }
 
     val router: Router = Router.router(vertx)
-    val providers: Array<AudioProvider> = arrayOf(YtdlAudioProvider(jukebox))
 
     suspend fun getAudio(context: RoutingContext) {
         routeWith(context) {
@@ -106,7 +103,7 @@ class AudioRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
                     val songID = pathParam("id")
 
                     val errors: MutableList<JukeboxResult.Failure<DataResponse>> = ArrayList()
-                    for (provider in providers) {
+                    for (provider in jukebox.audioProviders) {
                         if (provider.supportsAudio(audioService, analysisService)) {
                             val result = provider.retrieveAudioFor(audioService, analysisService, songID)
                             if (result is JukeboxResult.Success) {

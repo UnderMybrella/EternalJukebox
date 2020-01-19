@@ -12,6 +12,13 @@ import kotlin.contracts.ExperimentalContracts
 @ExperimentalCoroutinesApi
 @ExperimentalContracts
 class SpotifyAnalysisProvider(val jukebox: EternalJukebox) : AnalysisProvider {
+    class Factory: AnalysisProviderFactory<SpotifyAnalysisProvider> {
+        override val name: String = "SpotifyAnalysisProvider"
+
+        override fun configure(jukebox: EternalJukebox) {}
+        override fun build(jukebox: EternalJukebox): SpotifyAnalysisProvider = SpotifyAnalysisProvider(jukebox)
+    }
+
     override suspend fun supportsAnalysis(service: EnumAnalysisService): Boolean =
         service == EnumAnalysisService.SPOTIFY
 

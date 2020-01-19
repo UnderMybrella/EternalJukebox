@@ -96,6 +96,11 @@ suspend fun HttpServerResponse.endJsonAwait(build: JsonObjectBuilder.() -> Unit)
     endAwait(withContext(Dispatchers.IO) { JSON_MAPPER.writeValueAsString(json) })
 }
 
+suspend fun HttpServerResponse.endSerialisedJsonAwait(obj: Any) {
+    putHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+    endAwait(withContext(Dispatchers.IO) { JSON_MAPPER.writeValueAsString(obj) })
+}
+
 @ExperimentalCoroutinesApi
 suspend fun HttpServerResponse.endAwait(channel: ReceiveChannel<Buffer>) = channel.copyTo(this)
 

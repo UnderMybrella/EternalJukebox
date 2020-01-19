@@ -70,7 +70,7 @@ class InfoRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
                 val songID = pathParam("id")
 
                 val errors: MutableList<JukeboxResult.Failure<DataResponse>> = ArrayList()
-                for (provider in providers) {
+                for (provider in jukebox.infoProviders) {
                     if (provider.supportsTrackInfo(service)) {
                         val result = provider.retrieveTrackInfo(service, songID)
                         if (result is JukeboxResult.Success) {

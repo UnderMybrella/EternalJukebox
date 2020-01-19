@@ -21,6 +21,9 @@ import kotlin.coroutines.CoroutineContext
 
 typealias FuelResult<V, E> = com.github.kittinunf.result.Result<V, E>
 
+public inline fun <T, reified R> Array<out T>.mapArray(transform: (T) -> R): Array<R> = Array(size) { transform(this[it]) }
+
+
 @ExperimentalCoroutinesApi
 suspend fun <T : Any> ReceiveChannel<T>.copyTo(sendChannel: SendChannel<T>) {
     while (!this.isClosedForReceive) {

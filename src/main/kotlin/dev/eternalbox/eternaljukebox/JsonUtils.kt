@@ -82,7 +82,29 @@ suspend inline fun <reified T> getResponseFromResult(
     error: FuelError?
 ): JukeboxResult<T> =
     when {
-        data != null -> JukeboxResult.Success(JSON_MAPPER.readValue(data))
+        data != null -> JukeboxResult.Success(withContext(Dispatchers.IO) { JSON_MAPPER.readValue<T>(data) })
+        error != null -> {
+            JukeboxResult.KnownFailure(
+                error.response.statusCode,
+                error.response.responseMessage,
+                withContext(Dispatchers.IO) { JSON_MAPPER.readTree(error.response.data) }
+            )
+        }
+        else -> JukeboxResult.UnknownFailure()
+    }
+
+suspend inline fun FuelResult<ByteArray, FuelError>.asTree(): JukeboxResult<JsonNode> =
+    getTreeResponseFromResult(this)
+
+suspend inline fun getTreeResponseFromResult(result: FuelResult<ByteArray, FuelError>): JukeboxResult<JsonNode> =
+    getTreeResponseFromResult(result.component1(), result.component2())
+
+suspend inline fun getTreeResponseFromResult(
+    data: ByteArray?,
+    error: FuelError?
+): JukeboxResult<JsonNode> =
+    when {
+        data != null -> JukeboxResult.Success(withContext(Dispatchers.IO) { JSON_MAPPER.readTree(data) })
         error != null -> {
             JukeboxResult.KnownFailure(
                 error.response.statusCode,
