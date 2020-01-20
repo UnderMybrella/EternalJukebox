@@ -2,7 +2,7 @@ package dev.eternalbox.eternaljukebox.providers.audio
 
 import dev.eternalbox.eternaljukebox.EternalJukebox
 import dev.eternalbox.eternaljukebox.data.*
-import dev.eternalbox.eternaljukebox.providers.info.getTrackInfo
+import dev.eternalbox.eternaljukebox.getOrRetrieveTrackInfo
 import dev.eternalbox.eternaljukebox.retrieve
 import dev.eternalbox.ytmusicapi.YoutubeMusicSearchResponse
 import dev.eternalbox.ytmusicapi.getSongs
@@ -60,7 +60,7 @@ class YtdlAudioProvider(cacheDirPath: String, val jukebox: EternalJukebox) : Aud
         )
         for (provider in jukebox.infoProviders) {
             if (provider.supportsTrackInfo(analysisService)) {
-                return provider.getTrackInfo(jukebox, analysisService, id)
+                return jukebox.getOrRetrieveTrackInfo(analysisService, id)
                     .mapAwait { response -> response.retrieve<EternalboxTrackInfo>(jukebox) }
                     .flatMapAwait { track ->
                         jukebox.youtubeMusicApi.search("${track.title} by ${track.artists.joinToString()}")

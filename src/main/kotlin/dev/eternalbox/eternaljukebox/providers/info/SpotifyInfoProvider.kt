@@ -24,7 +24,7 @@ class SpotifyInfoProvider(val jukebox: EternalJukebox) : InfoProvider {
     override suspend fun supportsTrackInfo(service: EnumAnalysisService): Boolean =
         service == EnumAnalysisService.SPOTIFY
 
-    override suspend fun retrieveTrackInfo(service: EnumAnalysisService, id: String): JukeboxResult<DataResponse> {
+    override suspend fun retrieveTrackInfoFor(service: EnumAnalysisService, id: String): JukeboxResult<DataResponse> {
         when (service) {
             EnumAnalysisService.SPOTIFY -> return jukebox.spotifyApi.getTrack(id)
                 .map { track ->

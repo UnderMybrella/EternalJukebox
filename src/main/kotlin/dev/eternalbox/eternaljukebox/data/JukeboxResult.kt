@@ -59,6 +59,18 @@ sealed class JukeboxResult<T> {
             KnownFailure(errorCode, errorMessage, additionalInfo)
     }
 
+    data class ListFailure<T, U>(val errors: List<U>) : Failure<T>() {
+        override fun <R> flatMap(mapper: (T) -> JukeboxResult<R>): JukeboxResult<R> =
+            ListFailure(errors)
+
+        override suspend fun <R> flatMapAwait(mapper: suspend (T) -> JukeboxResult<R>): JukeboxResult<R> =
+            ListFailure(errors)
+
+        override fun <R> map(mapper: (T) -> R): JukeboxResult<R> = ListFailure(errors)
+        override suspend fun <R> mapAwait(mapper: suspend (T) -> R): JukeboxResult<R> =
+            ListFailure(errors)
+    }
+
     abstract class BlankFailure<T> : Failure<T>() {
         override fun <R> flatMap(mapper: (T) -> JukeboxResult<R>): JukeboxResult<R> = new()
         override suspend fun <R> flatMapAwait(mapper: suspend (T) -> JukeboxResult<R>): JukeboxResult<R> = new()
