@@ -11,12 +11,12 @@ version '0.1.0'
 sourceCompatibility = 1.8
 
 ext {
-    coroutines_version  = "1.3.2"
-    slf4j_version       = "1.7.9"
-    logback_version     = "1.2.3"
-    jackson_version     = "2.10.1"
-    vertx_version       = "3.8.4"
-    fuel_version        = "2.2.1"
+    coroutines_version = "1.3.2"
+    slf4j_version = "1.7.9"
+    logback_version = "1.2.3"
+    jackson_version = "2.10.1"
+    vertx_version = "3.8.4"
+    fuel_version = "2.2.1"
 }
 
 repositories {
@@ -32,7 +32,7 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
 
     // Logging
-    implementation "org.slf4j:slf4j-api:$slf4j_version"
+    api "org.slf4j:slf4j-api:$slf4j_version"
     implementation "ch.qos.logback:logback-classic:$logback_version"
 
     // Json / Yaml support
@@ -46,11 +46,11 @@ dependencies {
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jackson_version"
 
     // Web Server
-    implementation "io.vertx:vertx-core:$vertx_version" //Core Vert.x Components
-    implementation "io.vertx:vertx-web:$vertx_version" //Web based routing support
-    implementation "io.vertx:vertx-lang-kotlin:$vertx_version" //Suspending extensions
-    implementation "io.vertx:vertx-lang-kotlin-coroutines:$vertx_version" //Kotlin coroutine support
-    implementation "io.vertx:vertx-auth-oauth2:$vertx_version" //OAuth2 support
+    api "io.vertx:vertx-core:$vertx_version" //Core Vert.x Components
+    api "io.vertx:vertx-web:$vertx_version" //Web based routing support
+    api "io.vertx:vertx-lang-kotlin:$vertx_version" //Suspending extensions
+    api "io.vertx:vertx-lang-kotlin-coroutines:$vertx_version" //Kotlin coroutine support
+    api "io.vertx:vertx-auth-oauth2:$vertx_version" //OAuth2 support
 
     // Web client
     implementation "com.github.kittinunf.fuel:fuel:$fuel_version"
@@ -66,26 +66,26 @@ compileTestKotlin {
     kotlinOptions.jvmTarget = "1.8"
 }
 
-    task sourcesJar(type: Jar, dependsOn: classes) {
-        classifier = 'sources'
-        baseName = jar.baseName
-        appendix = jar.appendix
-        version = jar.version
-        from sourceSets.main.allSource
-    }
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    baseName = jar.baseName
+    appendix = jar.appendix
+    version = jar.version
+    from sourceSets.main.allSource
+}
 
-    task javadocJar(type: Jar, dependsOn: javadoc) {
-        classifier = 'javadoc'
-        baseName = jar.baseName
-        appendix = jar.appendix
-        version = jar.version
-        from javadoc.destinationDir
-    }
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    baseName = jar.baseName
+    appendix = jar.appendix
+    version = jar.version
+    from javadoc.destinationDir
+}
 
-    artifacts {
-        archives sourcesJar
-        archives javadocJar
-    }
+artifacts {
+    archives sourcesJar
+    archives javadocJar
+}
 
 publishing {
     repositories {
@@ -98,8 +98,8 @@ publishing {
     publications {
         maven(MavenPublication) {
             from components.java
-                artifact sourcesJar
-                artifact javadocJar
+            artifact sourcesJar
+            artifact javadocJar
         }
     }
 }
