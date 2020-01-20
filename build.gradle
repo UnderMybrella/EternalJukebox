@@ -3,8 +3,10 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.3.60'
 }
 
+apply plugin: 'maven-publish'
+
 group 'dev.eternalbox'
-version '1.0.0'
+version '0.1.0'
 
 sourceCompatibility = 1.8
 
