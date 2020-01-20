@@ -65,3 +65,41 @@ compileKotlin {
 compileTestKotlin {
     kotlinOptions.jvmTarget = "1.8"
 }
+
+    task sourcesJar(type: Jar, dependsOn: classes) {
+        classifier = 'sources'
+        baseName = jar.baseName
+        appendix = jar.appendix
+        version = jar.version
+        from sourceSets.main.allSource
+    }
+
+    task javadocJar(type: Jar, dependsOn: javadoc) {
+        classifier = 'javadoc'
+        baseName = jar.baseName
+        appendix = jar.appendix
+        version = jar.version
+        from javadoc.destinationDir
+    }
+
+    artifacts {
+        archives sourcesJar
+        archives javadocJar
+    }
+
+publishing {
+    repositories {
+        maven {
+            // change to point to your repo, e.g. http://my.org/repo
+            url = "$buildDir/repo"
+        }
+    }
+
+    publications {
+        maven(MavenPublication) {
+            from components.java
+                artifact sourcesJar
+                artifact javadocJar
+        }
+    }
+}
