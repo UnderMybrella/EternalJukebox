@@ -55,8 +55,10 @@ class LocalDataStore(
     override suspend fun hasAnalysisStored(service: EnumAnalysisService, id: String): Boolean =
         analysisFile(service, id).exists()
 
-    override suspend fun canStoreAnalysis(service: EnumAnalysisService, id: String): Boolean =
-        analysisMount.freeSpace > MINIMUM_SPACE_REQUIRED
+    override suspend fun canStoreAnalysis(service: EnumAnalysisService, id: String): Boolean {
+        if (!analysisMount.exists()) analysisMount.mkdirs()
+        return analysisMount.freeSpace > MINIMUM_SPACE_REQUIRED
+    }
 
     override suspend fun storeAnalysis(
         service: EnumAnalysisService,
@@ -106,7 +108,10 @@ class LocalDataStore(
         audioService: EnumAudioService,
         analysisService: EnumAnalysisService,
         id: String
-    ): Boolean = audioMount.freeSpace > MINIMUM_SPACE_REQUIRED
+    ): Boolean {
+        if (!audioMount.exists()) audioMount.mkdirs()
+        return audioMount.freeSpace > MINIMUM_SPACE_REQUIRED
+    }
 
     override suspend fun storeAudio(
         audioService: EnumAudioService,
@@ -151,8 +156,11 @@ class LocalDataStore(
     override suspend fun hasTrackInfoStored(service: EnumAnalysisService, id: String): Boolean =
         infoFile(service, id).exists()
 
-    override suspend fun canStoreTrackInfo(service: EnumAnalysisService, id: String): Boolean =
-        infoMount.freeSpace > MINIMUM_SPACE_REQUIRED
+    override suspend fun canStoreTrackInfo(service: EnumAnalysisService, id: String): Boolean {
+        if (!infoMount.exists()) infoMount.mkdirs()
+        
+        return infoMount.freeSpace > MINIMUM_SPACE_REQUIRED
+    }
 
     override suspend fun storeTrackInfo(
         service: EnumAnalysisService,

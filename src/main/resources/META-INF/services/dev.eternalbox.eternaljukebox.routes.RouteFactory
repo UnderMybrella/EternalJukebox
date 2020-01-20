@@ -1,1 +1,9 @@
+dev.eternalbox.eternaljukebox.routes.AudioRoute$Factory
 dev.eternalbox.eternaljukebox.routes.AnalysisRoute$Factory
+dev.eternalbox.eternaljukebox.routes.PopularRoute$Factory
+dev.eternalbox.eternaljukebox.routes.ApiRoute$Factory
+dev.eternalbox.eternaljukebox.routes.InfoRoute$Factory
+dev.eternalbox.eternaljukebox.routes.MetaRoute$Factory
+dev.eternalbox.eternaljukebox.routes.PatreonRoute$Factory
+dev.eternalbox.eternaljukebox.routes.SearchRoute$Factory
+dev.eternalbox.eternaljukebox.routes.ShortUrlRoute$Factory
