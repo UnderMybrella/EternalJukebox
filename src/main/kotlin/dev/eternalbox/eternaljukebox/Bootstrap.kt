@@ -18,7 +18,7 @@ fun main(args: Array<String>) {
     println(SLF4JLogDelegateFactory::class.java.name)
     System.setProperty(io.vertx.core.logging.LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, SLF4JLogDelegateFactory::class.java.name)
     System.setProperty("vertxweb.environment", "dev")
-
+    System.setProperty("io.vertx.ext.web.TemplateEngine.disableCache", "true")
     println("==Eternal Jukebox==")
     println("Attempting to load config...")
 

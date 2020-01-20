@@ -23,10 +23,17 @@ import kotlin.contracts.ExperimentalContracts
 @ExperimentalCoroutinesApi
 @ExperimentalContracts
 class AnalysisRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
+    class Factory : EternalboxRoute.Factory<AnalysisRoute>("AnalysisRoute") {
+        override fun build(jukebox: EternalJukebox): AnalysisRoute = AnalysisRoute(jukebox)
+    }
+
     companion object {
         private const val MOUNT_POINT = "/analysis"
         private const val ANALYSIS_PATH = "/:service/:id"
         private const val UPLOAD_ANALYSIS_PATH = "/upload"
+
+        private const val ALPHABET =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" //Base64 alphabet for now
     }
 
     val router: Router = Router.router(vertx)
@@ -202,7 +209,7 @@ class AnalysisRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
                         }
                     }
             } else {
-                val newID = jukebox.shortUrlRoute.newShortUrl()
+                val newID = buildString { repeat(8) { append(ALPHABET.random()) } }
 
                 result = AnalysisProvider.parseAnalysisData(analysisJson, EnumAnalysisService.JSON, newID)
                     .flatMapAwait { node ->

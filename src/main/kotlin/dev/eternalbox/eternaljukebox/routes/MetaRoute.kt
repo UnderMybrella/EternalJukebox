@@ -4,13 +4,19 @@ import dev.eternalbox.eternaljukebox.EternalJukebox
 import dev.eternalbox.eternaljukebox.endJsonAwait
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlin.contracts.ExperimentalContracts
 
+@ExperimentalCoroutinesApi
 @ExperimentalContracts
-class MetaRoute(jukebox: EternalJukebox): EternalboxRoute(jukebox) {
+class MetaRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
+    class Factory : EternalboxRoute.Factory<MetaRoute>("MetaRoute") {
+        override fun build(jukebox: EternalJukebox): MetaRoute = MetaRoute(jukebox)
+    }
+
     companion object {
-        private const val MOUNT_POINT   = "/meta"
-        private const val VERSION_PATH  = "/version"
+        private const val MOUNT_POINT = "/meta"
+        private const val VERSION_PATH = "/version"
 
     }
 

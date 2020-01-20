@@ -16,6 +16,10 @@ import kotlin.contracts.ExperimentalContracts
 @ExperimentalCoroutinesApi
 @ExperimentalContracts
 class InfoRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
+    class Factory : EternalboxRoute.Factory<InfoRoute>("InfoRoute") {
+        override fun build(jukebox: EternalJukebox): InfoRoute = InfoRoute(jukebox)
+    }
+
     companion object {
         private const val MOUNT_POINT = "/info"
         private const val INFO_PATH = "/:service/:id"

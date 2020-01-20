@@ -3,10 +3,16 @@ package dev.eternalbox.eternaljukebox.routes
 import dev.eternalbox.eternaljukebox.EternalJukebox
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlin.contracts.ExperimentalContracts
 
+@ExperimentalCoroutinesApi
 @ExperimentalContracts
 class ShortUrlRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
+    class Factory : EternalboxRoute.Factory<ShortUrlRoute>("ShortUrlRoute") {
+        override fun build(jukebox: EternalJukebox): ShortUrlRoute = ShortUrlRoute(jukebox)
+    }
+
     companion object {
         private const val MOUNT_POINT = "/quark"
 

@@ -7,7 +7,6 @@ import dev.eternalbox.eternaljukebox.EternalJukebox
 import dev.eternalbox.eternaljukebox.JSON_MAPPER
 import dev.eternalbox.eternaljukebox.bytesToHex
 import dev.eternalbox.eternaljukebox.data.HttpResponseCodes
-import dev.eternalbox.eternaljukebox.data.SecurityUser
 import dev.eternalbox.eternaljukebox.routeWith
 import io.vertx.ext.auth.User
 import io.vertx.ext.auth.oauth2.AccessToken
@@ -32,6 +31,10 @@ import kotlin.contracts.ExperimentalContracts
 @ExperimentalCoroutinesApi
 @ExperimentalContracts
 class PatreonRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
+    class Factory : EternalboxRoute.Factory<PatreonRoute>("PatreonRoute") {
+        override fun build(jukebox: EternalJukebox): PatreonRoute = PatreonRoute(jukebox)
+    }
+
     val authProvider = OAuth2Auth.create(
         jukebox.vertx, OAuth2ClientOptions()
             .setFlow(OAuth2FlowType.AUTH_CODE)
@@ -81,8 +84,6 @@ class PatreonRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
             val user = user()
             if (user == null) {
                 return fail(401)
-            } else if (user is SecurityUser) {
-                return next()
             } else if (user is AccessToken) {
                 if (user !in authorisation) {
                     authorisationLocks.computeIfAbsent(user) { Mutex() }.withLock {
@@ -166,18 +167,13 @@ class PatreonRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
 
     init {
         hmac.init(secretKey)
-        securityToken = bytesToHex(hmac.doFinal(ByteArray(8192).apply { SecureRandom.getInstanceStrong().nextBytes(this) }))
+        securityToken =
+            bytesToHex(hmac.doFinal(ByteArray(8192).apply { SecureRandom.getInstanceStrong().nextBytes(this) }))
         println("Security Token: $securityToken")
         jukebox.sessionHandler.setAuthProvider(authProvider)
 
-        jukebox.baseRouter.route().order(Int.MIN_VALUE).handler { context ->
-            if (context.request().getHeader("X-Security-Token") == securityToken)
-                context.setUser(SecurityUser)
-
-            context.next()
-        }
-
-        jukebox.baseRouter.post("/api/patreon/update").order(-4_000_000).handler(BodyHandler.create().setBodyLimit(10_000).setDeleteUploadedFilesOnEnd(true))
+        jukebox.baseRouter.post("/api/patreon/update").order(-4_000_000)
+            .handler(BodyHandler.create().setBodyLimit(10_000).setDeleteUploadedFilesOnEnd(true))
         jukebox.baseRouter.post("/api/patreon/update").order(-4_000_000).handler(this::updatePatreon)
 
         val callbackRoute = jukebox.baseRouter.route().order(-4_000_000)

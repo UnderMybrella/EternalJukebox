@@ -7,6 +7,10 @@ import kotlin.contracts.ExperimentalContracts
 @ExperimentalCoroutinesApi
 @ExperimentalContracts
 class ApiRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
+    class Factory : EternalboxRoute.Factory<ApiRoute>("ApiRoute") {
+        override fun build(jukebox: EternalJukebox): ApiRoute = ApiRoute(jukebox)
+    }
+
     init {
         apiRouter.route().last().suspendHandler(this::apiRouteNotFound)
 

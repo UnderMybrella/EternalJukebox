@@ -11,7 +11,7 @@ import dev.eternalbox.eternaljukebox.providers.audio.AudioProvider
 import dev.eternalbox.eternaljukebox.providers.audio.AudioProviderFactory
 import dev.eternalbox.eternaljukebox.providers.info.InfoProvider
 import dev.eternalbox.eternaljukebox.providers.info.InfoProviderFactory
-import dev.eternalbox.eternaljukebox.routes.*
+import dev.eternalbox.eternaljukebox.routes.RouteFactory
 import dev.eternalbox.eternaljukebox.stores.*
 import dev.eternalbox.ytmusicapi.YoutubeMusicApi
 import io.vertx.core.Vertx
@@ -38,17 +38,7 @@ class EternalJukebox(val config: JsonNode) {
 
     val sessionHandler = SessionHandler.create(LocalSessionStore.create(vertx))
 
-    val patreonRoute = PatreonRoute(this)
-
-    val apiRoute = ApiRoute(this)
-    val metaRoute = MetaRoute(this)
-    val analysisRoute = AnalysisRoute(this)
-    val audioRoute = AudioRoute(this)
-    val searchRoute = SearchRoute(this)
-    val shortUrlRoute = ShortUrlRoute(this)
-    val popularRoute = PopularRoute(this)
-    val infoRoute = InfoRoute(this)
-
+    val routeFactories get() = ServiceLoader.load(RouteFactory::class.java).toList()
     val analysisProviderFactories get() = ServiceLoader.load(AnalysisProviderFactory::class.java).toList()
     val audioProviderFactories get() = ServiceLoader.load(AudioProviderFactory::class.java).toList()
     val infoProviderFactories get() = ServiceLoader.load(InfoProviderFactory::class.java).toList()
@@ -121,6 +111,11 @@ class EternalJukebox(val config: JsonNode) {
             factory.build(this)
         } ?: NoOpDataStore
 
+    val routeNames = requireNotNull(
+        (config["api_routes"] as? ArrayNode)?.map(JsonNode::asText)
+            ?: (config["api_route"]?.asText()?.let(::listOf))
+    )
+
     val spotifyApi: SpotifyApi by lazy { SpotifyApi(this) }
     val youtubeApi: YoutubeApi by lazy { YoutubeApi(this) }
     val youtubeMusicApi: YoutubeMusicApi by lazy { YoutubeMusicApi(this) }
@@ -147,6 +142,16 @@ class EternalJukebox(val config: JsonNode) {
         baseRouter.route().order(Int.MIN_VALUE).handler(sessionHandler)
         baseRouter.route().order(Int.MIN_VALUE)
             .handler(CorsHandler.create("*").allowedMethods(setOf(HttpMethod.GET, HttpMethod.PUT, HttpMethod.POST)))
+
+        routeNames.forEach { name ->
+            val factory = routeFactories.firstOrNull { factory -> factory.name == name }
+            if (factory == null) {
+                println("ERR: $name not found")
+                return@forEach
+            }
+
+            factory.build(this)
+        }
 
         baseRouter.route("/static/*").handler(StaticHandler.create("static_data"))
 

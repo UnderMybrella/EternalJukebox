@@ -11,12 +11,16 @@ import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.kotlin.coroutines.dispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlin.contracts.ExperimentalContracts
 import kotlin.coroutines.CoroutineContext
 
 @ExperimentalContracts
+@ExperimentalCoroutinesApi
 abstract class EternalboxRoute(val jukebox: EternalJukebox) {
+    abstract class Factory<T: EternalboxRoute>(override val name: String): RouteFactory<T>
+
     val vertx: Vertx
         get() = jukebox.vertx
     val baseRouter: Router

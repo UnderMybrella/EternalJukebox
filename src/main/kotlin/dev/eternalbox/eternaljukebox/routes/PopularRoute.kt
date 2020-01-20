@@ -3,10 +3,16 @@ package dev.eternalbox.eternaljukebox.routes
 import dev.eternalbox.eternaljukebox.EternalJukebox
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlin.contracts.ExperimentalContracts
 
+@ExperimentalCoroutinesApi
 @ExperimentalContracts
-class PopularRoute(jukebox: EternalJukebox): EternalboxRoute(jukebox) {
+class PopularRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
+    class Factory : EternalboxRoute.Factory<PopularRoute>("PopularRoute") {
+        override fun build(jukebox: EternalJukebox): PopularRoute = PopularRoute(jukebox)
+    }
+
     companion object {
         private const val MOUNT_POINT = "/popular"
 

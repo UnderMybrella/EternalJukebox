@@ -19,6 +19,10 @@ import kotlin.contracts.ExperimentalContracts
 @ExperimentalCoroutinesApi
 @ExperimentalContracts
 class SearchRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
+    class Factory : EternalboxRoute.Factory<SearchRoute>("SearchRoute") {
+        override fun build(jukebox: EternalJukebox): SearchRoute = SearchRoute(jukebox)
+    }
+
     companion object {
         private const val MOUNT_POINT = "/search"
 

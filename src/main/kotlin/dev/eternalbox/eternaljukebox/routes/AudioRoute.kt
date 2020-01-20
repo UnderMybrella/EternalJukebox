@@ -13,6 +13,10 @@ import kotlin.contracts.ExperimentalContracts
 @ExperimentalCoroutinesApi
 @ExperimentalContracts
 class AudioRoute(jukebox: EternalJukebox) : EternalboxRoute(jukebox) {
+    class Factory : EternalboxRoute.Factory<AudioRoute>("AudioRoute") {
+        override fun build(jukebox: EternalJukebox): AudioRoute = AudioRoute(jukebox)
+    }
+
     companion object {
         private const val MOUNT_POINT = "/audio"
         private const val AUDIO_PATH = "/:audio_service/:analysis_service/:id"
