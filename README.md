@@ -3,7 +3,7 @@
 The source files for the EternalJukebox, a rehosting of the Infinite Jukebox.  
 This repo contains everything you need to host the EternalJukebox on your own server!  
 
-You can visit the official site [here](https://eternal.abimon.org/), in case you want to mess around with it without doing all the hard stuff.  
+You can visit the official site [here](https://eternalbox.dev/), in case you want to mess around with it without doing all the hard stuff.  
 
 # Documentation
 
@@ -34,7 +34,7 @@ ffmpeg is available to download in most distributions using `sudo apt-get instal
 ## Getting the project files:
 The whole process of obtaining project files is much easier now, as the build process is streamlined through Jenkins.
 
-The project site is over [here](http://jenkins-ci.abimon.org:8666/job/EternalJukebox/), and contains the individual files to download, or an all-in-one zip for all the files. Alternatively, the files can be found over at a permanent server [here](https://abimon.org/eternal_jukebox)
+The project site is over [here](https://jenkins.abimon.org/job/EternalJukebox/), and contains the individual files to download, or an all-in-one zip for all the files. Alternatively, the files can be found over at a permanent server [here](https://abimon.org/eternal_jukebox)
 
 ## Configuring
 First thing to do is create a new file called either `config.yaml` or `config.json` (YAML tends to be easier to write, but takes up slightly more space), then open it with notepad/notepad++ on Windows and whatever text editor you like on Linux (for example nano: `nano config.json`)
