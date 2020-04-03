@@ -3,7 +3,7 @@
   "baseDomain": "<domain>",
   "portComment": "What port we're running on",
   "port": "<port>",
-  "spotifyClientComment": "Spotify Client / Secret; make an application over here: https: //developer.spotify.com/my-applications/",
+  "spotifyClientComment": "Spotify Client / Secret; make an application over here: https://developer.spotify.com/my-applications/",
   "spotifyClient": "<spotifyClient>",
   "spotifySecret": "<spotifySecret>",
   "googleClientComment": "Only needed if you're doing oauth logins",
@@ -22,8 +22,8 @@
   "audioSourceComment": "If not provided, local audio should work",
   "audioSourceType": "YOUTUBE",
   "audioSourceOptions": {
-    "apiKeyComment": "This can be obtained from here: https: //developers.google.com/youtube/v3/getting-started",
-    "apiKEY": "<API_KEY>"
+    "apiKeyComment": "This can be obtained from here: https://developers.google.com/youtube/v3/getting-started",
+    "apiKey": "<API_KEY>"
   },
   "workerExecuteTimeComment": "How long blocking workers can go for (in ns)",
   "workerExecuteTime": 1200000000000
