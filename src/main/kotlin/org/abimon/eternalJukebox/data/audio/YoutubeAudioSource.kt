@@ -173,12 +173,12 @@ object YoutubeAudioSource : IAudioSource {
         }
     }
 
-    override fun provideLocation(info: JukeboxInfo, clientInfo: ClientInfo?): URL? {
-        val dbLocation = EternalJukebox.database.provideAudioLocation(info.id, clientInfo)
+    override suspend fun provideLocation(info: JukeboxInfo, clientInfo: ClientInfo?): URL? {
+        val dbLocation = withContext(Dispatchers.IO) { EternalJukebox.database.provideAudioLocation(info.id, clientInfo) }
 
         if (dbLocation != null) {
             logger.trace("[{}] Using cached location for {}", clientInfo?.userUID, info.id)
-            return URL(dbLocation)
+            return withContext(Dispatchers.IO) { URL(dbLocation) }
         }
 
         if (apiKey == null)
@@ -217,8 +217,10 @@ object YoutubeAudioSource : IAudioSource {
                 return null
             }
 
-        EternalJukebox.database.storeAudioLocation(info.id, "https://youtu.be/${closest.id}", clientInfo)
-        return URL("https://youtu.be/${closest.id}")
+        return withContext(Dispatchers.IO) {
+            EternalJukebox.database.storeAudioLocation(info.id, "https://youtu.be/${closest.id}", clientInfo)
+            URL("https://youtu.be/${closest.id}")
+        }
     }
 
     fun getContentDetailsWithKey(id: String): YoutubeContentItem? {

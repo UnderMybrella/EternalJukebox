@@ -36,7 +36,7 @@ object SiteAPI: IAPI {
 
         router.get("/expand/:id").suspendingHandler(SiteAPI::expand)
         router.get("/expand/:id/redirect").suspendingHandler(SiteAPI::expandAndRedirect)
-        router.post("/shrink").handler(SiteAPI::shrink)
+        router.post("/shrink").suspendingHandler(SiteAPI::shrink)
 
         router.get("/popular/:service").suspendingHandler(this::popular)
     }
@@ -77,7 +77,7 @@ object SiteAPI: IAPI {
     }
 
     suspend fun expand(id: String, clientInfo: ClientInfo): JsonObject? {
-        val params = EternalJukebox.database.expandShortURL(id, clientInfo) ?: return null
+        val params = withContext(Dispatchers.IO) { EternalJukebox.database.expandShortURL(id, clientInfo) } ?: return null
         val paramsMap = params.map { pair -> pair.split('=', limit = 2) }.filter { pair -> pair.size == 2 }.map { pair -> Pair(pair[0], pair[1]) }.toMap(HashMap())
 
         val service = paramsMap.remove("service") ?: "jukebox"
@@ -98,9 +98,9 @@ object SiteAPI: IAPI {
         return response
     }
 
-    fun shrink(context: RoutingContext) {
+    suspend fun shrink(context: RoutingContext) {
         val params = context.bodyAsString.split('&').toTypedArray()
-        val id = EternalJukebox.database.provideShortURL(params, context.clientInfo)
+        val id = withContext(Dispatchers.IO) { EternalJukebox.database.provideShortURL(params, context.clientInfo) }
         context.response().putHeader("X-Client-UID", context.clientInfo.userUID).end(jsonObjectOf("id" to id, "params" to params))
     }
 

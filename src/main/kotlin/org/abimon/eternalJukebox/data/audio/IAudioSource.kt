@@ -21,5 +21,5 @@ interface IAudioSource {
      * The provided location may not be a direct download link, and may not contain valid audio data.
      * The provided location, however, should be a link to said song where possible, or return null if nothing could be found.
      */
-    fun provideLocation(info: JukeboxInfo, clientInfo: ClientInfo?): URL? = null
+    suspend fun provideLocation(info: JukeboxInfo, clientInfo: ClientInfo?): URL? = null
 }

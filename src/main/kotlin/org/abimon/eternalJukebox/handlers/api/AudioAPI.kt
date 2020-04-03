@@ -58,7 +58,7 @@ object AudioAPI : IAPI {
         if (EternalJukebox.storage.shouldStore(EnumStorageType.AUDIO)) {
             val id = context.pathParam("id")
 
-            val audioOverride = EternalJukebox.database.provideAudioTrackOverride(id, context.clientInfo)
+            val audioOverride = withContext(Dispatchers.IO) { EternalJukebox.database.provideAudioTrackOverride(id, context.clientInfo) }
             if (audioOverride != null)
                 return context.response().redirect("/api/audio/external?url=${withContext(Dispatchers.IO) {
                     URLEncoder.encode(
@@ -135,7 +135,7 @@ object AudioAPI : IAPI {
     suspend fun jukeboxLocation(context: RoutingContext) {
         val id = context.pathParam("id")
 
-        val audioOverride = EternalJukebox.database.provideAudioTrackOverride(id, context.clientInfo)
+        val audioOverride = withContext(Dispatchers.IO) { EternalJukebox.database.provideAudioTrackOverride(id, context.clientInfo) }
         if (audioOverride != null)
             return context.endWithStatusCode(200) { if (!audioOverride.startsWith("upl")) this["url"] = audioOverride }
 
