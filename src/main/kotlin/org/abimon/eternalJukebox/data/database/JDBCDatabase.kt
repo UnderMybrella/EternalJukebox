@@ -11,7 +11,7 @@ object JDBCDatabase: HikariDatabase() {
             .getDeclaredConstructor()
             .newInstance()
 
-        val config = HikariConfig()
+        val config = HikariConfig("hikari.properties")
         config.jdbcUrl = databaseOptions["jdbcUrl"]?.toString() ?: throw IllegalStateException("jdbcUrl was not provided!")
 
         config.username = databaseOptions["username"]?.toString()
@@ -24,16 +24,16 @@ object JDBCDatabase: HikariDatabase() {
             config.addDataSourceProperty("cloudSqlInstance", cloudSqlInstance)
         }
 
-        config.addDataSourceProperty("useServerPrepStmts", databaseOptions["userServerPrepStmts"]?.toString() ?: "true")
-        config.addDataSourceProperty("cachePrepStmts", databaseOptions["cachePrepStmts"]?.toString() ?: "true")
-        config.addDataSourceProperty("prepStmtCacheSize", databaseOptions["prepStmtCacheSize"]?.toString() ?: "250")
-        config.addDataSourceProperty("prepStmtCacheSqlLimit", databaseOptions["prepStmtCacheSqlLimit"]?.toString() ?: "2048")
-        config.addDataSourceProperty("useLocalSessionState", "true")
-        config.addDataSourceProperty("rewriteBatchedStatements", "true")
-        config.addDataSourceProperty("cacheResultSetMetadata", "true")
-        config.addDataSourceProperty("cacheServerConfiguration", "true")
-        config.addDataSourceProperty("elideSetAutoCommits", "true")
-        config.addDataSourceProperty("maintainTimeStats", "false")
+//        config.addDataSourceProperty("useServerPrepStmts", databaseOptions["userServerPrepStmts"]?.toString() ?: "true")
+//        config.addDataSourceProperty("cachePrepStmts", databaseOptions["cachePrepStmts"]?.toString() ?: "true")
+//        config.addDataSourceProperty("prepStmtCacheSize", databaseOptions["prepStmtCacheSize"]?.toString() ?: "250")
+//        config.addDataSourceProperty("prepStmtCacheSqlLimit", databaseOptions["prepStmtCacheSqlLimit"]?.toString() ?: "2048")
+//        config.addDataSourceProperty("useLocalSessionState", "true")
+//        config.addDataSourceProperty("rewriteBatchedStatements", "true")
+//        config.addDataSourceProperty("cacheResultSetMetadata", "true")
+//        config.addDataSourceProperty("cacheServerConfiguration", "true")
+//        config.addDataSourceProperty("elideSetAutoCommits", "true")
+//        config.addDataSourceProperty("maintainTimeStats", "false")
 
         ds = HikariDataSource(config)
 
