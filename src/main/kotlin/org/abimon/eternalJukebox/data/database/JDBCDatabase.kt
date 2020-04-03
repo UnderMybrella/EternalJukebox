@@ -24,9 +24,16 @@ object JDBCDatabase: HikariDatabase() {
             config.addDataSourceProperty("cloudSqlInstance", cloudSqlInstance)
         }
 
+        config.addDataSourceProperty("useServerPrepStmts", databaseOptions["userServerPrepStmts"]?.toString() ?: "true")
         config.addDataSourceProperty("cachePrepStmts", databaseOptions["cachePrepStmts"]?.toString() ?: "true")
         config.addDataSourceProperty("prepStmtCacheSize", databaseOptions["prepStmtCacheSize"]?.toString() ?: "250")
         config.addDataSourceProperty("prepStmtCacheSqlLimit", databaseOptions["prepStmtCacheSqlLimit"]?.toString() ?: "2048")
+        config.addDataSourceProperty("useLocalSessionState", "true")
+        config.addDataSourceProperty("rewriteBatchedStatements", "true")
+        config.addDataSourceProperty("cacheResultSetMetadata", "true")
+        config.addDataSourceProperty("cacheServerConfiguration", "true")
+        config.addDataSourceProperty("elideSetAutoCommits", "true")
+        config.addDataSourceProperty("maintainTimeStats", "false")
 
         ds = HikariDataSource(config)
 
