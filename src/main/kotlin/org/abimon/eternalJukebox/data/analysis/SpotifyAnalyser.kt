@@ -2,7 +2,6 @@ package org.abimon.eternalJukebox.data.analysis
 
 import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.extensions.authentication
-import com.github.kittinunf.fuel.coroutines.awaitStringResponse
 import com.github.kittinunf.fuel.coroutines.awaitStringResponseResult
 import io.vertx.core.json.JsonObject
 import kotlinx.coroutines.*
@@ -116,7 +115,7 @@ object SpotifyAnalyser : IAnalyser {
             logger.trace("[{}] Attempting to analyse {} on Spotify", clientInfo?.userUID, id)
             val (_, response, _) = Fuel.get("https://api.spotify.com/v1/audio-analysis/$id")
                 .bearer(token.get())
-                .awaitStringResponse()
+                .awaitStringResponseResult()
             val mapResponse =
                 withContext(Dispatchers.IO) { EternalJukebox.jsonMapper.tryReadValue(response.data, Map::class) }
 
@@ -334,7 +333,7 @@ object SpotifyAnalyser : IAnalyser {
                         }, EternalJukebox.config.spotifySecret ?: run {
                         error = SpotifyError.NO_AUTH_DETAILS
                         return@exponentiallyBackoff false
-                    }).awaitStringResponse()
+                    }).awaitStringResponseResult()
 
             when (response.statusCode) {
                 200 -> {
