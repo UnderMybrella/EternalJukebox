@@ -7,10 +7,7 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.BodyHandler
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import org.abimon.eternalJukebox.*
 import org.abimon.eternalJukebox.objects.ClientInfo
 import org.abimon.eternalJukebox.objects.EnumAnalyticType
@@ -41,14 +38,14 @@ object SiteAPI: IAPI {
         router.get("/expand/:id/redirect").suspendingHandler(SiteAPI::expandAndRedirect)
         router.post("/shrink").handler(SiteAPI::shrink)
 
-        router.get("/popular/:service").handler(this::popular)
+        router.get("/popular/:service").suspendingHandler(this::popular)
     }
 
-    fun popular(context: RoutingContext) {
+    suspend fun popular(context: RoutingContext) {
         val service = context.pathParam("service")
         val count = context.request().getParam("count")?.toIntOrNull() ?: context.request().getParam("limit")?.toIntOrNull() ?: 10
 
-        context.response().putHeader("X-Client-UID", context.clientInfo.userUID).end(JsonArray(EternalJukebox.database.providePopularSongs(service, count, context.clientInfo)))
+        context.response().putHeader("X-Client-UID", context.clientInfo.userUID).end(JsonArray(withContext(Dispatchers.IO) { EternalJukebox.database.providePopularSongs(service, count, context.clientInfo) }))
     }
 
     fun usage(context: RoutingContext) {
