@@ -28,7 +28,7 @@ object SpotifyAnalyser : IAnalyser {
             val (_, response, _) = Fuel.get(
                 "https://api.spotify.com/v1/search",
                 listOf("q" to query, "type" to "track")
-            ).bearer(token.get()).responseString()
+            ).bearer(token.get()).awaitStringResponseResult()
             val mapResponse =
                 withContext(Dispatchers.IO) { EternalJukebox.jsonMapper.readValue(response.data, Map::class.java) }
 

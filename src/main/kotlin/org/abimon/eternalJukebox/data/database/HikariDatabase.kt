@@ -182,28 +182,12 @@ abstract class HikariDatabase : IDatabase {
 
     override fun makeSongPopular(service: String, id: String, clientInfo: ClientInfo?) {
         use { connection ->
-            val select =
-                connection.prepareStatement("SELECT id, hits FROM popular WHERE service=? AND song_id=? ORDER BY hits DESC;")
-            select.setString(1, service)
-            select.setString(2, id)
-            select.execute()
+            val insertUpdate =
+                connection.prepareStatement("INSERT INTO popular (song_id, service, hits) VALUES(?, ?, 1) ON DUPLICATE KEY UPDATE hits = hits + 1")
 
-            val results = select.resultSet
-            if (results.next()) {
-                val update = connection.prepareStatement("UPDATE popular SET hits=? WHERE id=?;")
-                update.setLong(1, results.getLong("hits") + 1)
-                update.setLong(2, results.getLong("id"))
-
-                update.execute()
-            } else {
-                val insert =
-                    connection.prepareStatement("INSERT INTO popular (song_id, service, hits) VALUES (?, ?, ?);")
-                insert.setString(1, id)
-                insert.setString(2, service)
-                insert.setLong(3, 1)
-
-                insert.execute()
-            }
+            insertUpdate.setString(1, id)
+            insertUpdate.setString(2, service)
+            insertUpdate.execute()
 
             Unit
         }
