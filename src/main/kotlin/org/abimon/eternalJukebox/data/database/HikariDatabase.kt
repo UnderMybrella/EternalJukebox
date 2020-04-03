@@ -25,7 +25,8 @@ abstract class HikariDatabase : IDatabase {
 
     override fun storeAudioTrackOverride(id: String, newURL: String, clientInfo: ClientInfo?) {
         use { connection ->
-            val insert = connection.prepareStatement("INSERT INTO overrides (id, url) VALUES (?, ?) ON DUPLICATE KEY UPDATE url=VALUES(url);")
+            val insert =
+                connection.prepareStatement("INSERT INTO overrides (id, url) VALUES (?, ?) ON DUPLICATE KEY UPDATE url=VALUES(url);")
             insert.setString(1, id)
             insert.setString(2, newURL)
 
@@ -40,52 +41,54 @@ abstract class HikariDatabase : IDatabase {
 
         val results = select.resultSet
 
-        if(results.next())
+        if (results.next())
             return@use JukeboxAccount(
+                results.getString("eternal_id"),
+                results.getString("google_id"),
+                results.getString("google_access_token"),
+                results.getString("google_refresh_token"),
+                results.getString("eternal_access_token")
+            )
+        return@use null
+    }
+
+    override fun provideAccountForGoogleID(googleID: String, clientInfo: ClientInfo?): JukeboxAccount? =
+        use { connection ->
+            val select = connection.prepareStatement("SELECT * FROM accounts WHERE google_id=?;")
+            select.setString(1, googleID)
+            select.execute()
+
+            val results = select.resultSet
+
+            if (results.next())
+                return@use JukeboxAccount(
                     results.getString("eternal_id"),
                     results.getString("google_id"),
                     results.getString("google_access_token"),
                     results.getString("google_refresh_token"),
                     results.getString("eternal_access_token")
-            )
-        return@use null
-    }
+                )
+            return@use null
+        }
 
-    override fun provideAccountForGoogleID(googleID: String, clientInfo: ClientInfo?): JukeboxAccount? = use { connection ->
-        val select = connection.prepareStatement("SELECT * FROM accounts WHERE google_id=?;")
-        select.setString(1, googleID)
-        select.execute()
+    override fun provideAccountForEternalAuth(eternalAuth: String, clientInfo: ClientInfo?): JukeboxAccount? =
+        use { connection ->
+            val select = connection.prepareStatement("SELECT * FROM accounts WHERE eternal_access_token=?;")
+            select.setString(1, eternalAuth)
+            select.execute()
 
-        val results = select.resultSet
+            val results = select.resultSet
 
-        if(results.next())
-            return@use JukeboxAccount(
+            if (results.next())
+                return@use JukeboxAccount(
                     results.getString("eternal_id"),
                     results.getString("google_id"),
                     results.getString("google_access_token"),
                     results.getString("google_refresh_token"),
                     results.getString("eternal_access_token")
-            )
-        return@use null
-    }
-
-    override fun provideAccountForEternalAuth(eternalAuth: String, clientInfo: ClientInfo?): JukeboxAccount? = use { connection ->
-        val select = connection.prepareStatement("SELECT * FROM accounts WHERE eternal_access_token=?;")
-        select.setString(1, eternalAuth)
-        select.execute()
-
-        val results = select.resultSet
-
-        if(results.next())
-            return@use JukeboxAccount(
-                    results.getString("eternal_id"),
-                    results.getString("google_id"),
-                    results.getString("google_access_token"),
-                    results.getString("google_refresh_token"),
-                    results.getString("eternal_access_token")
-            )
-        return@use null
-    }
+                )
+            return@use null
+        }
 
     override fun storeAccount(account: JukeboxAccount, clientInfo: ClientInfo?) {
         use { connection ->
@@ -93,8 +96,9 @@ abstract class HikariDatabase : IDatabase {
             select.setString(1, account.eternalID)
             select.execute()
 
-            if(select.resultSet.next()) {
-                val update = connection.prepareStatement("UPDATE accounts SET google_access_token=?, google_refresh_token=?, eternal_access_token=? WHERE eternal_id=?;")
+            if (select.resultSet.next()) {
+                val update =
+                    connection.prepareStatement("UPDATE accounts SET google_access_token=?, google_refresh_token=?, eternal_access_token=? WHERE eternal_id=?;")
 
                 update.setString(1, account.googleAccessToken)
                 update.setString(2, account.googleRefreshToken)
@@ -103,7 +107,8 @@ abstract class HikariDatabase : IDatabase {
 
                 update.execute()
             } else {
-                val insert = connection.prepareStatement("INSERT INTO accounts (eternal_id, google_id, google_access_token, google_refresh_token, eternal_access_token) VALUES (?, ?, ?, ?, ?);")
+                val insert =
+                    connection.prepareStatement("INSERT INTO accounts (eternal_id, google_id, google_access_token, google_refresh_token, eternal_access_token) VALUES (?, ?, ?, ?, ?);")
 
                 insert.setString(1, account.eternalID)
                 insert.setString(2, account.googleID)
@@ -115,29 +120,31 @@ abstract class HikariDatabase : IDatabase {
         }
     }
 
-    override fun providePopularSongs(service: String, count: Int, clientInfo: ClientInfo?): List<JukeboxInfo> = use { connection ->
-        val select = connection.prepareStatement("SELECT song_id, hits FROM popular WHERE service=? ORDER BY hits DESC LIMIT $count;")
-        select.setString(1, service)
-        select.execute()
-
-        val results = select.resultSet
-        val popular: MutableList<JukeboxInfo> = ArrayList()
-
-        while (results.next()) {
-            val songID = results.getString("song_id")
-            popular.add(getInfo(songID, clientInfo) ?: continue)
-        }
-
-        return@use popular
-    }
-
-    fun getInfo(songID: String, clientInfo: ClientInfo?): JukeboxInfo? =
+    override fun providePopularSongs(service: String, count: Int, clientInfo: ClientInfo?): List<JukeboxInfo> =
         use { connection ->
-            val select = connection.prepareStatement("SELECT song_name, song_title, song_artist, song_url, song_duration FROM info_cache WHERE id=? LIMIT 1;")
+            val select =
+                connection.prepareStatement("SELECT song_id, hits FROM popular WHERE service=? ORDER BY hits DESC LIMIT $count;")
+            select.setString(1, service)
+            select.execute()
+
+            val results = select.resultSet
+            val popular: MutableList<String> = ArrayList()
+
+            while (results.next()) {
+                popular.add(results.getString("song_id"))
+            }
+
+            return@use popular
+        }.mapNotNull { songID -> getInfo(songID, clientInfo) }
+
+    fun getInfo(songID: String, clientInfo: ClientInfo?): JukeboxInfo? {
+        val info = use { connection ->
+            val select =
+                connection.prepareStatement("SELECT song_name, song_title, song_artist, song_url, song_duration FROM info_cache WHERE id=? LIMIT 1;")
             select.setString(1, songID)
             select.execute()
 
-            val info = select.resultSet.use { rs ->
+            select.resultSet.use { rs ->
                 if (rs.next()) {
                     JukeboxInfo(
                         service = "SPOTIFY",
@@ -152,12 +159,15 @@ abstract class HikariDatabase : IDatabase {
                     null
                 }
             }
+        }
 
-            if (info != null) return@use info
+        if (info != null) return info
 
-            val result = runBlocking { EternalJukebox.spotify.getInfo(songID, clientInfo) } ?: return@use null
+        val result = runBlocking { EternalJukebox.spotify.getInfo(songID, clientInfo) } ?: return null
 
-            val insert = connection.prepareStatement("INSERT INTO info_cache(id, song_name, song_title, song_artist, song_url, song_duration) VALUES (?, ?, ?, ?, ?, ?);")
+        use { connection ->
+            val insert =
+                connection.prepareStatement("INSERT INTO info_cache(id, song_name, song_title, song_artist, song_url, song_duration) VALUES (?, ?, ?, ?, ?, ?);")
             insert.setString(1, result.id)
             insert.setString(2, result.name)
             insert.setString(3, result.title)
@@ -165,26 +175,29 @@ abstract class HikariDatabase : IDatabase {
             insert.setString(5, result.url)
             insert.setInt(6, result.duration)
             insert.execute()
-
-            return@use result
         }
+
+        return result
+    }
 
     override fun makeSongPopular(service: String, id: String, clientInfo: ClientInfo?) {
         use { connection ->
-            val select = connection.prepareStatement("SELECT id, hits FROM popular WHERE service=? AND song_id=? ORDER BY hits DESC;")
+            val select =
+                connection.prepareStatement("SELECT id, hits FROM popular WHERE service=? AND song_id=? ORDER BY hits DESC;")
             select.setString(1, service)
             select.setString(2, id)
             select.execute()
 
             val results = select.resultSet
-            if(results.next()) {
+            if (results.next()) {
                 val update = connection.prepareStatement("UPDATE popular SET hits=? WHERE id=?;")
                 update.setLong(1, results.getLong("hits") + 1)
                 update.setLong(2, results.getLong("id"))
 
                 update.execute()
             } else {
-                val insert = connection.prepareStatement("INSERT INTO popular (song_id, service, hits) VALUES (?, ?, ?);")
+                val insert =
+                    connection.prepareStatement("INSERT INTO popular (song_id, service, hits) VALUES (?, ?, ?);")
                 insert.setString(1, id)
                 insert.setString(2, service)
                 insert.setLong(3, 1)
@@ -196,7 +209,7 @@ abstract class HikariDatabase : IDatabase {
         }
     }
 
-    override fun provideShortURL(params: Array<String>, clientInfo: ClientInfo?): String = use { connection ->
+    override fun provideShortURL(params: Array<String>, clientInfo: ClientInfo?): String {
         val joined = buildString {
             for (param in params) {
                 if (length > 4096)
@@ -209,23 +222,29 @@ abstract class HikariDatabase : IDatabase {
             }
         }
 
-        val select = connection.prepareStatement("SELECT * FROM short_urls WHERE params=?;")
-        select.setString(1, joined)
-        select.execute()
+        var id = use { connection ->
+            val select = connection.prepareStatement("SELECT * FROM short_urls WHERE params=?;")
+            select.setString(1, joined)
+            select.execute()
 
-        val results = select.resultSet
+            val results = select.resultSet
 
-        if (results.first())
-            return@use results.getString("id")
+            if (results.first()) results.getString("id")
+            else null
+        }
 
-        val id = obtainNewShortID(connection)
+        if (id != null) return id
 
-        val insert = connection.prepareStatement("INSERT INTO short_urls (id, params) VALUES (?, ?);")
-        insert.setString(1, id)
-        insert.setString(2, joined)
-        insert.execute()
+        id = obtainNewShortID()
 
-        return@use id
+        use { connection ->
+            val insert = connection.prepareStatement("INSERT INTO short_urls (id, params) VALUES (?, ?);")
+            insert.setString(1, id)
+            insert.setString(2, joined)
+            insert.execute()
+        }
+
+        return id
     }
 
     override fun expandShortURL(id: String, clientInfo: ClientInfo?): Array<String>? = use { connection ->
@@ -246,7 +265,7 @@ abstract class HikariDatabase : IDatabase {
         select.execute()
 
         val resultSet = select.resultSet
-        if(resultSet.next()) {
+        if (resultSet.next()) {
             val path = resultSet.getString("path")
 
             val drop = connection.prepareStatement("DELETE FROM oauth_state WHERE id=?;")
@@ -259,7 +278,7 @@ abstract class HikariDatabase : IDatabase {
     }
 
     override fun storeOAuthState(path: String, clientInfo: ClientInfo?): String = use { connection ->
-        val id = obtainNewShortID(connection, "oauth_state", (0 until 32))
+        val id = obtainNewShortID("oauth_state", 32)
 
         val insert = connection.prepareStatement("INSERT INTO oauth_state (id, path) VALUES (?, ?);")
         insert.setString(1, id)
@@ -283,7 +302,8 @@ abstract class HikariDatabase : IDatabase {
 
     override fun storeAudioLocation(id: String, location: String, clientInfo: ClientInfo?) {
         use { connection ->
-            val insert = connection.prepareStatement("INSERT INTO audio_locations (id, location) VALUES (?, ?) ON DUPLICATE KEY UPDATE location=VALUES(location);")
+            val insert =
+                connection.prepareStatement("INSERT INTO audio_locations (id, location) VALUES (?, ?) ON DUPLICATE KEY UPDATE location=VALUES(location);")
             insert.setString(1, id)
             insert.setString(2, location)
 
@@ -291,16 +311,26 @@ abstract class HikariDatabase : IDatabase {
         }
     }
 
-    fun obtainNewShortID(connection: Connection, table: String = "short_urls", range: IntRange = (0 until 4)): String {
-        val preparedSelect = connection.prepareStatement("SELECT id FROM $table WHERE id=? LIMIT 1")
-        (0 until 4096).forEach {
-            val id = buildString { for (i in range) append(EternalJukebox.BASE_64_URL[EternalJukebox.secureRandom.nextInt(64)]) }
-            preparedSelect.setString(1, id)
-            preparedSelect.execute()
-            preparedSelect.resultSet.use {
-                if (!it.isBeforeFirst)
-                    return@obtainNewShortID id
+    fun obtainNewShortID(table: String = "short_urls", count: Int = 5): String {
+        for (i in 0 until 4096) {
+            val id =
+                buildString {
+                    repeat(count) {
+                        append(
+                            EternalJukebox.BASE_64_URL[EternalJukebox.secureRandom.nextInt(
+                                64
+                            )]
+                        )
+                    }
+                }
+            val exists = use { connection ->
+                val preparedSelect = connection.prepareStatement("SELECT id FROM $table WHERE id=? LIMIT 1")
+                preparedSelect.setString(1, id)
+                preparedSelect.execute()
+                preparedSelect.resultSet.next()
             }
+
+            if (!exists) return id
 
             println("Generated $id, no success")
         }
@@ -316,15 +346,22 @@ abstract class HikariDatabase : IDatabase {
         use { connection ->
             //            connection.createStatement().execute("USE $databaseName")
 
-            connection.createStatement().execute("CREATE TABLE IF NOT EXISTS overrides (id VARCHAR(64) PRIMARY KEY NOT NULL, url VARCHAR(8192) NOT NULL);")
-            connection.createStatement().execute("CREATE TABLE IF NOT EXISTS short_urls (id VARCHAR(16) PRIMARY KEY NOT NULL, params VARCHAR(4096) NOT NULL);")
-            connection.createStatement().execute("CREATE TABLE IF NOT EXISTS accounts (eternal_id VARCHAR(64) PRIMARY KEY NOT NULL, google_id VARCHAR(64) NOT NULL, google_access_token VARCHAR(255), google_refresh_token VARCHAR(255), eternal_access_token VARCHAR(255));")
-            connection.createStatement().execute("CREATE TABLE IF NOT EXISTS popular (id INT PRIMARY KEY AUTO_INCREMENT, song_id VARCHAR(64) NOT NULL, service VARCHAR(64) NOT NULL, hits BIGINT NOT NULL);")
-            connection.createStatement().execute("CREATE TABLE IF NOT EXISTS audio_locations (id VARCHAR(64) PRIMARY KEY NOT NULL, location VARCHAR(8192) NOT NULL);")
-            connection.createStatement().execute("CREATE TABLE IF NOT EXISTS info_cache (id VARCHAR(64) PRIMARY KEY NOT NULL, song_name VARCHAR(256) NOT NULL, song_title VARCHAR(256) NOT NULL, song_artist VARCHAR(256) NOT NULL, song_url VARCHAR(1024) NOT NULL, song_duration INT NOT NULL);")
+            connection.createStatement()
+                .execute("CREATE TABLE IF NOT EXISTS overrides (id VARCHAR(64) PRIMARY KEY NOT NULL, url VARCHAR(8192) NOT NULL);")
+            connection.createStatement()
+                .execute("CREATE TABLE IF NOT EXISTS short_urls (id VARCHAR(16) PRIMARY KEY NOT NULL, params VARCHAR(4096) NOT NULL);")
+            connection.createStatement()
+                .execute("CREATE TABLE IF NOT EXISTS accounts (eternal_id VARCHAR(64) PRIMARY KEY NOT NULL, google_id VARCHAR(64) NOT NULL, google_access_token VARCHAR(255), google_refresh_token VARCHAR(255), eternal_access_token VARCHAR(255));")
+            connection.createStatement()
+                .execute("CREATE TABLE IF NOT EXISTS popular (id INT PRIMARY KEY AUTO_INCREMENT, song_id VARCHAR(64) NOT NULL, service VARCHAR(64) NOT NULL, hits BIGINT NOT NULL);")
+            connection.createStatement()
+                .execute("CREATE TABLE IF NOT EXISTS audio_locations (id VARCHAR(64) PRIMARY KEY NOT NULL, location VARCHAR(8192) NOT NULL);")
+            connection.createStatement()
+                .execute("CREATE TABLE IF NOT EXISTS info_cache (id VARCHAR(64) PRIMARY KEY NOT NULL, song_name VARCHAR(256) NOT NULL, song_title VARCHAR(256) NOT NULL, song_artist VARCHAR(256) NOT NULL, song_url VARCHAR(1024) NOT NULL, song_duration INT NOT NULL);")
 
             connection.createStatement().execute("DROP TABLE IF EXISTS oauth_state;")
-            connection.createStatement().execute("CREATE TABLE oauth_state (id VARCHAR(32) PRIMARY KEY NOT NULL, path VARCHAR(8192) NOT NULL);")
+            connection.createStatement()
+                .execute("CREATE TABLE oauth_state (id VARCHAR(32) PRIMARY KEY NOT NULL, path VARCHAR(8192) NOT NULL);")
 
             Unit
         }
