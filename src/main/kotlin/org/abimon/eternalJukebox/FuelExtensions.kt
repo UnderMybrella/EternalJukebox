@@ -1,8 +1,6 @@
 package org.abimon.eternalJukebox
 
 import com.github.kittinunf.fuel.core.Request
-import java.io.File
-import java.io.FileInputStream
 import java.io.InputStream
 import java.io.OutputStream
 import kotlin.reflect.KClass
@@ -11,25 +9,25 @@ import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.safeCast
 import kotlin.reflect.jvm.isAccessible
 
-fun Request.source(data: InputStream, size: Long = data.available().toLong()): Request {
-    bodyCallback = body@ { request, outputStream, totalLength ->
-        var contentLength = 0L
-        val progressCallback: ((Long, Long) -> Unit)? = request.progressCallback
-        outputStream.apply {
-            //input file data
-            if (outputStream != null) {
-                data.use { it.copyWithProgress(outputStream, 1024) { writtenBytes -> progressCallback?.invoke(contentLength + writtenBytes, totalLength) } }
-            }
-
-            contentLength += size
-        }
-
-        progressCallback?.invoke(contentLength, totalLength)
-        return@body contentLength
-    }
-
-    return this
-}
+//fun Request.source(data: InputStream, size: Long = data.available().toLong()): Request {
+//    bodyCallback = body@ { request, outputStream, totalLength ->
+//        var contentLength = 0L
+//        val progressCallback: ((Long, Long) -> Unit)? = request.progressCallback
+//        outputStream.apply {
+//            //input file data
+//            if (outputStream != null) {
+//                data.use { it.copyWithProgress(outputStream, 1024) { writtenBytes -> progressCallback?.invoke(contentLength + writtenBytes, totalLength) } }
+//            }
+//
+//            contentLength += size
+//        }
+//
+//        progressCallback?.invoke(contentLength, totalLength)
+//        return@body contentLength
+//    }
+//
+//    return this
+//}
 
 val taskRequestClass = Class.forName("com.github.kittinunf.fuel.core.requests.TaskRequest")
 val taskRequestProperty = Request::class["taskRequest", taskRequestClass]
@@ -56,8 +54,6 @@ operator fun <C: Any, T> KClass<C>.get(property: String): KProperty<T> {
     field.isAccessible = true
     return field as KProperty<T>
 }
-
-fun Request.source(file: File): Request = source(FileInputStream(file), file.length())
 
 fun Request.bearer(token: String): Request = header("Authorization" to "Bearer $token")
 

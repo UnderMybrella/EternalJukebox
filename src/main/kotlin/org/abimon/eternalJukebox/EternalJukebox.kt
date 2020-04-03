@@ -15,7 +15,6 @@ import io.vertx.core.Vertx
 import io.vertx.core.VertxOptions
 import io.vertx.core.http.HttpServer
 import io.vertx.ext.web.Router
-import io.vertx.ext.web.handler.CookieHandler
 import org.abimon.eternalJukebox.data.analysis.IAnalyser
 import org.abimon.eternalJukebox.data.analysis.SpotifyAnalyser
 import org.abimon.eternalJukebox.data.analytics.IAnalyticsProvider
@@ -23,7 +22,6 @@ import org.abimon.eternalJukebox.data.analytics.IAnalyticsStorage
 import org.abimon.eternalJukebox.data.audio.IAudioSource
 import org.abimon.eternalJukebox.data.database.IDatabase
 import org.abimon.eternalJukebox.data.storage.IStorage
-import org.abimon.eternalJukebox.handlers.OpenGraphHandler
 import org.abimon.eternalJukebox.handlers.PopularHandler
 import org.abimon.eternalJukebox.handlers.StaticResources
 import org.abimon.eternalJukebox.handlers.api.*
@@ -31,6 +29,7 @@ import org.abimon.eternalJukebox.objects.ConstantValues
 import org.abimon.eternalJukebox.objects.EmptyDataAPI
 import org.abimon.eternalJukebox.objects.JukeboxConfig
 import org.abimon.visi.lang.Snowstorm
+import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.OutputStream
 import java.io.PrintStream
@@ -81,6 +80,8 @@ object EternalJukebox {
     val visitorAlgorithm: Algorithm
     val visitorVerifier: JWTVerifier
 
+    val logger = LoggerFactory.getLogger("EternalBox")
+
     val oldVisitorToken: String
         get() = JWT.create()
                 .withIssuedAt(Date.from(Instant.EPOCH))
@@ -106,7 +107,7 @@ object EternalJukebox {
 
     fun start() {
         webserver.listen(config.port)
-        log("Now listening on port ${config.port}")
+        logger.info("Now listening on port {}", config.port)
     }
 
     @JvmStatic
@@ -125,9 +126,9 @@ object EternalJukebox {
         logStreams = config.logFiles.mapValues { (_, filename) -> if(filename != null) PrintStream(File(filename)) else emptyPrintStream }
 
         if(config.printConfig)
-            log("Loaded config: $config")
+            logger.trace("Loaded config: $config")
         else
-            log("Loaded config")
+            logger.trace("Loaded config")
 
         if (referrersFile.exists())
             referrers.addAll(referrersFile.readLines())
@@ -150,7 +151,6 @@ object EternalJukebox {
         val mainRouter = Router.router(vertx)
 
         //Something something check for cookies
-        mainRouter.route().handler(CookieHandler.create())
         mainRouter.route().handler {
             val ip = it.request().remoteAddress().host()
 
@@ -234,8 +234,8 @@ object EternalJukebox {
         if (isEnabled("nodeAPI"))
             apis.add(NodeAPI)
 
-        if (isEnabled("profileAPI"))
-            apis.add(ProfileAPI)
+//        if (isEnabled("profileAPI"))
+//            apis.add(ProfileAPI)
 
         analyticsProviders.forEach { provider -> provider.setupWebAnalytics(mainRouter) }
 
@@ -248,12 +248,12 @@ object EternalJukebox {
 
         if (isEnabled("popular"))
             PopularHandler.setup(mainRouter)
-        if (isEnabled("openGraph"))
-            OpenGraphHandler.setup(mainRouter)
+//        if (isEnabled("openGraph"))
+//            OpenGraphHandler.setup(mainRouter)
         if (isEnabled("staticResources"))
             StaticResources.setup(mainRouter)
 
-        webserver.requestHandler(mainRouter::accept)
+        webserver.requestHandler(mainRouter)
 
         schedule.scheduleAtFixedRate(0, 1, TimeUnit.HOURS) { referrersFile.writeText(referrers.joinToString("\n")) }
 

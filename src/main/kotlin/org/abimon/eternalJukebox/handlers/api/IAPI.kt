@@ -14,9 +14,4 @@ interface IAPI {
     val name: String
 
     fun setup(router: Router)
-
-    /**
-     * Is this API working properly?
-     */
-    fun test(): Boolean = true
 }

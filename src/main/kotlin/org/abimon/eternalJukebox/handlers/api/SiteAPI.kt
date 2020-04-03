@@ -7,6 +7,10 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.BodyHandler
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import org.abimon.eternalJukebox.*
 import org.abimon.eternalJukebox.objects.ClientInfo
 import org.abimon.eternalJukebox.objects.EnumAnalyticType
@@ -16,8 +20,6 @@ import org.abimon.visi.time.timeDifference
 import java.lang.management.ManagementFactory
 import java.text.DecimalFormat
 import java.time.LocalDateTime
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
 
 object SiteAPI: IAPI {
     override val mountPath: String = "/site"
@@ -29,16 +31,14 @@ object SiteAPI: IAPI {
 
     val osBean = ManagementFactory.getOperatingSystemMXBean() as OperatingSystemMXBean
 
-    val usageTimer: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
-
     override fun setup(router: Router) {
         router.get("/healthy").handler { it.response().end("Up for ${startupTime.timeDifference()}") }
         router.get("/usage").handler(SiteAPI::usage)
 
         router.post().handler(BodyHandler.create().setBodyLimit(1 * 1000 * 1000).setDeleteUploadedFilesOnEnd(true))
 
-        router.get("/expand/:id").handler(SiteAPI::expand)
-        router.get("/expand/:id/redirect").handler(SiteAPI::expandAndRedirect)
+        router.get("/expand/:id").suspendingHandler(SiteAPI::expand)
+        router.get("/expand/:id/redirect").suspendingHandler(SiteAPI::expandAndRedirect)
         router.post("/shrink").handler(SiteAPI::shrink)
 
         router.get("/popular/:service").handler(this::popular)
@@ -64,14 +64,14 @@ object SiteAPI: IAPI {
         context.response().putHeader("X-Client-UID", context.clientInfo.userUID).end(FlipTable.of(arrayOf("Key", "Value"), rows.map { (one, two) -> arrayOf(one, two) }.toTypedArray()))
     }
 
-    fun expand(context: RoutingContext) {
+    suspend fun expand(context: RoutingContext) {
         val id = context.pathParam("id")
         val clientInfo = context.clientInfo
         val expanded = expand(id, clientInfo) ?: return context.response().putHeader("X-Client-UID", clientInfo.userUID).setStatusCode(400).end(jsonObjectOf("error" to "No short ID stored", "id" to id))
         context.response().end(expanded)
     }
 
-    fun expandAndRedirect(context: RoutingContext) {
+    suspend fun expandAndRedirect(context: RoutingContext) {
         val id = context.pathParam("id")
         val clientInfo = context.clientInfo
         val expanded = expand(id, clientInfo) ?: return context.response().putHeader("X-Client-UID", clientInfo.userUID).setStatusCode(400).end(jsonObjectOf("error" to "No short ID stored", "id" to id))
@@ -79,7 +79,7 @@ object SiteAPI: IAPI {
         context.response().redirect(expanded.getString("url"))
     }
 
-    fun expand(id: String, clientInfo: ClientInfo): JsonObject? {
+    suspend fun expand(id: String, clientInfo: ClientInfo): JsonObject? {
         val params = EternalJukebox.database.expandShortURL(id, clientInfo) ?: return null
         val paramsMap = params.map { pair -> pair.split('=', limit = 2) }.filter { pair -> pair.size == 2 }.map { pair -> Pair(pair[0], pair[1]) }.toMap(HashMap())
 
@@ -108,18 +108,20 @@ object SiteAPI: IAPI {
     }
 
     init {
-        usageTimer.scheduleAtFixedRate(EternalJukebox.config.usageWritePeriod, EternalJukebox.config.usageWritePeriod) {
-            val time = System.currentTimeMillis()
+        GlobalScope.launch {
+            while (isActive) {
+                val time = System.currentTimeMillis()
 
-            try {
-                EternalJukebox.analyticsProviders.forEach { provider ->
-                    EternalJukebox.analytics.storeMultiple(time, provider.provideMultiple(time, *EnumAnalyticType.VALUES.filter { type -> provider.shouldProvide(type) }.toTypedArray()).map { (type, data) -> type to data })
+                try {
+                    EternalJukebox.analyticsProviders.forEach { provider ->
+                        EternalJukebox.analytics.storeMultiple(time, provider.provideMultiple(time, *EnumAnalyticType.VALUES.filter { type -> provider.shouldProvide(type) }.toTypedArray()).map { (type, data) -> type to data })
+                    }
+                } catch (th: Throwable) {
+                    th.printStackTrace()
                 }
-            } catch (th: Throwable) {
-                th.printStackTrace()
+
+                delay(EternalJukebox.config.usageWritePeriod)
             }
         }
-
-        log("Initialised Site API")
     }
 }

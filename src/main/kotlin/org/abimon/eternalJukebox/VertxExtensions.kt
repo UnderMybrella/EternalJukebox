@@ -1,13 +1,14 @@
 package org.abimon.eternalJukebox
 
-import io.vertx.core.AsyncResult
-import io.vertx.core.Future
-import io.vertx.core.Handler
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpServerResponse
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
+import io.vertx.ext.web.Route
 import io.vertx.ext.web.RoutingContext
+import io.vertx.kotlin.coroutines.dispatcher
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.abimon.eternalJukebox.objects.ClientInfo
 import org.abimon.eternalJukebox.objects.ConstantValues
 import org.abimon.visi.io.DataSource
@@ -62,10 +63,6 @@ val RoutingContext.clientInfo: ClientInfo
         return info
     }
 
-fun <T> executeBlocking(operation: () -> T, onComplete: (AsyncResult<T>) -> Unit) {
-    EternalJukebox.vertx.executeBlocking(Handler<Future<T>> { future ->
-        future.complete(operation())
-    }, Handler { result -> onComplete(result) })
-}
-
 operator fun JsonObject.set(key: String, value: Any) = put(key, value)
+
+fun Route.suspendingHandler(handler: suspend (RoutingContext) -> Unit): Route = handler { ctx -> GlobalScope.launch(ctx.vertx().dispatcher()) { handler(ctx) } }

@@ -1,6 +1,7 @@
 package org.abimon.eternalJukebox.data.analytics
 
 import com.github.kittinunf.fuel.Fuel
+import com.github.kittinunf.fuel.core.extensions.authentication
 import org.abimon.eternalJukebox.EternalJukebox
 import org.abimon.eternalJukebox.objects.EnumAnalyticType
 import org.abimon.eternalJukebox.simpleClassName
@@ -19,7 +20,7 @@ object InfluxAnalyticsStorage : IAnalyticsStorage {
 
         val postRequest = Fuel.post("${if (ip.indexOf("://") == -1) "http://" else ""}$ip/write?db=$db")
         if (user != null && pass != null)
-            postRequest.authenticate(user, pass)
+            postRequest.authentication().basic(user, pass)
 
         val (_, response) = postRequest.body("eternal_jukebox ${type::class.simpleClassName.toLowerCase()}=$data $ns").response()
         return response.statusCode == 204
@@ -30,7 +31,7 @@ object InfluxAnalyticsStorage : IAnalyticsStorage {
 
         val postRequest = Fuel.post("${if (ip.indexOf("://") == -1) "http://" else ""}$ip/write?db=$db")
         if (user != null && pass != null)
-            postRequest.authenticate(user, pass)
+            postRequest.authentication().basic(user, pass)
 
         postRequest.body("eternal_jukebox ${data.joinToString(",") { (type, value) -> "${type::class.simpleClassName.toLowerCase()}=$value" }} $ns").response { _, _, _ ->  }
     }

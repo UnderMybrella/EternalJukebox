@@ -14,7 +14,7 @@ interface IAudioSource {
      * Provide the audio data for a required song
      * Returns a data source pointing to a **valid audio file**, or null if none can be obtained
      */
-    fun provide(info: JukeboxInfo, clientInfo: ClientInfo?): DataSource?
+    suspend fun provide(info: JukeboxInfo, clientInfo: ClientInfo?): DataSource?
 
     /**
      * Provide a location for a required song

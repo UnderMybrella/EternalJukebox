@@ -9,7 +9,7 @@ import org.abimon.visi.io.DataSource
 object NodeAudioSource: NodeSource(), IAudioSource {
     override val nodeHosts: Array<String>
 
-    override fun provide(info: JukeboxInfo, clientInfo: ClientInfo?): DataSource? = provide("audio/${info.id}?user_uid=${clientInfo?.userUID}")
+    override suspend fun provide(info: JukeboxInfo, clientInfo: ClientInfo?): DataSource? = provide("audio/${info.id}?user_uid=${clientInfo?.userUID}")
 
     init {
         if (audioSourceOptions.containsKey("NODE_HOST"))

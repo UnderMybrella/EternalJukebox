@@ -5,63 +5,34 @@ import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.vertx.core.json.JsonObject
-import kotlinx.coroutines.experimental.delay
-import kotlinx.coroutines.experimental.launch
-import org.abimon.visi.collections.copyFrom
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.InputStream
 import java.io.Reader
 import java.util.*
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
+import kotlin.math.min
+import kotlin.math.pow
 import kotlin.reflect.KClass
 import kotlin.reflect.jvm.jvmName
-
-fun log(msg: String, error: Boolean = false) {
-    val there = Thread.currentThread().stackTrace.copyFrom(1).firstOrNull { it.className != "org.abimon.eternalJukebox.GeneralUtilsKt" && !it.className.contains('$') }
-            ?: run {
-                if (error)
-                    System.err.println("[Unknown] $msg")
-                else
-                    println("[Unknown] $msg")
-                return@log
-            }
-
-    val className = run {
-        try {
-            return@run Class.forName(there.className).simpleName
-        } catch (notFound: ClassNotFoundException) {
-            return@run there.className
-        }
-    }
-
-    (EternalJukebox.logStreams[className] ?: (if (error) System.err else System.out)).println("[$className -> ${there.methodName}] $msg")
-
-//    if (error)
-//        System.err.println("[$className -> ${there.methodName}] $msg")
-//    else
-//        println("[$className -> ${there.methodName}] $msg")
-}
-
-fun <T> logNull(msg: String, error: Boolean = false): T? {
-    log(msg, error)
-    return null
-}
 
 /**
  * @param task return true if we need to back off
  */
-fun exponentiallyBackoff(maximumBackoff: Long, maximumTries: Long, task: (Long) -> Boolean): Boolean {
+suspend fun exponentiallyBackoff(maximumBackoff: Long, maximumTries: Long, task: suspend (Long) -> Boolean): Boolean {
     if (!task(0))
         return true
-
-    val rng = Random()
 
     for (i in 0 until maximumTries) {
         if (!task(i))
             return true
 
-        Thread.sleep(Math.min((Math.pow(2.0, i.toDouble()) + rng.nextInt(1000)).toLong(), maximumBackoff))
+        delay(min((2.0.pow(i.toDouble()) + kotlin.random.Random.nextInt(1000)).toLong(), maximumBackoff))
     }
 
     return false
@@ -81,7 +52,7 @@ fun jsonObjectOf(vararg pairs: Pair<String, Any>): JsonObject = JsonObject(pairs
  * Perform an action with this file if it exists, and then delete it.
  * Returns null if the file does not exist
  */
-fun <T> File.useThenDelete(action: (File) -> T): T? {
+inline fun <T> File.useThenDelete(action: (File) -> T): T? {
     try {
         if (exists())
             return action(this)
@@ -92,22 +63,24 @@ fun <T> File.useThenDelete(action: (File) -> T): T? {
     }
 }
 
+val logger = LoggerFactory.getLogger("Miscellaneous")
+
 fun File.guaranteeDelete() {
     delete()
     if (exists()) {
-        log("$this was not deleted successfully; deleting on exit and starting coroutine", error = true)
+        logger.trace("{} was not deleted successfully; deleting on exit and starting coroutine", this)
         deleteOnExit()
 
-        launch {
+        GlobalScope.launch {
             val rng = Random()
             var i = 0
             while (isActive && exists()) {
                 delete()
                 if (!exists()) {
-                    log("Finally deleted $this after $i attempts")
+                    logger.trace("Finally deleted {} after {} attempts", this, i)
                 }
 
-                delay(Math.min((Math.pow(2.0, (i++).toDouble()) + rng.nextInt(1000)).toLong(), 64000), TimeUnit.MILLISECONDS)
+                delay(min((2.0.pow((i++).toDouble()) + rng.nextInt(1000)).toLong(), 64000))
             }
         }
     }

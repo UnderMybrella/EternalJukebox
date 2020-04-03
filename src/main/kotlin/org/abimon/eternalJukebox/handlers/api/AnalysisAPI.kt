@@ -3,21 +3,25 @@ package org.abimon.eternalJukebox.handlers.api
 import io.vertx.core.json.JsonArray
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.abimon.eternalJukebox.*
 import org.abimon.eternalJukebox.objects.EnumStorageType
 import org.abimon.eternalJukebox.objects.JukeboxInfo
 import org.abimon.visi.io.ByteArrayDataSource
+import org.slf4j.LoggerFactory
 
 object AnalysisAPI : IAPI {
     override val mountPath: String = "/analysis"
     override val name: String = "ANALYSIS"
+    val logger = LoggerFactory.getLogger("AnalysisApi")
 
     override fun setup(router: Router) {
-        router.get("/analyse/:id").blockingHandler(AnalysisAPI::analyseSpotify)
-        router.get("/search").blockingHandler(AnalysisAPI::searchSpotify)
+        router.get("/analyse/:id").suspendingHandler(this::analyseSpotify)
+        router.get("/search").suspendingHandler(AnalysisAPI::searchSpotify)
     }
 
-    fun analyseSpotify(context: RoutingContext) {
+    suspend fun analyseSpotify(context: RoutingContext) {
         if (EternalJukebox.storage.shouldStore(EnumStorageType.ANALYSIS)) {
             val id = context.pathParam("id")
             val update = context.request().getParam("update")?.toBoolean() ?: false
@@ -31,7 +35,7 @@ object AnalysisAPI : IAPI {
             }
 
             if (update)
-                log("[${context.clientInfo.userUID}] ${context.request().connection().remoteAddress()} is requesting an update for $id")
+                logger.info("[{}] {} is requesting an update for {}", context.clientInfo.userUID, context.clientInfo.remoteAddress, id)
 
             val track = EternalJukebox.spotify.analyse(id, context.clientInfo)
 
@@ -43,7 +47,15 @@ object AnalysisAPI : IAPI {
             else {
                 context.response().putHeader("X-Client-UID", context.clientInfo.userUID).end(track.toJsonObject())
 
-                EternalJukebox.storage.store("$id.json", EnumStorageType.ANALYSIS, ByteArrayDataSource(track.toJsonObject().toString().toByteArray(Charsets.UTF_8)), "application/json", context.clientInfo)
+                withContext(Dispatchers.IO) {
+                    EternalJukebox.storage.store(
+                        "$id.json",
+                        EnumStorageType.ANALYSIS,
+                        ByteArrayDataSource(track.toJsonObject().toString().toByteArray(Charsets.UTF_8)),
+                        "application/json",
+                        context.clientInfo
+                    )
+                }
             }
         } else {
             context.response().putHeader("X-Client-UID", context.clientInfo.userUID).setStatusCode(501).end(jsonObjectOf(
@@ -53,7 +65,7 @@ object AnalysisAPI : IAPI {
         }
     }
 
-    fun searchSpotify(context: RoutingContext) {
+    suspend fun searchSpotify(context: RoutingContext) {
         val query = context.request().getParam("query") ?: "Never Gonna Give You Up"
         val results = EternalJukebox.spotify.search(query, context.clientInfo)
 
@@ -61,10 +73,6 @@ object AnalysisAPI : IAPI {
     }
 
     init {
-        log("Initialised Analysis API")
-    }
-
-    override fun test(): Boolean {
-        return EternalJukebox.spotify.analyse(EternalJukebox.spotify.search("Never Gonna Give You Up", null).firstOrNull()?.id ?: return false, null) != null
+        logger.info("Initialised Analysis Api")
     }
 }

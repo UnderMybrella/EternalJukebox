@@ -1,6 +1,7 @@
 package org.abimon.eternalJukebox.data.database
 
 import com.zaxxer.hikari.HikariDataSource
+import kotlinx.coroutines.runBlocking
 import org.abimon.eternalJukebox.EternalJukebox
 import org.abimon.eternalJukebox.objects.ClientInfo
 import org.abimon.eternalJukebox.objects.JukeboxAccount
@@ -124,11 +125,49 @@ abstract class HikariDatabase : IDatabase {
 
         while (results.next()) {
             val songID = results.getString("song_id")
-            popular.add(EternalJukebox.spotify.getInfo(songID, clientInfo) ?: continue)
+            popular.add(getInfo(songID, clientInfo) ?: continue)
         }
 
         return@use popular
     }
+
+    fun getInfo(songID: String, clientInfo: ClientInfo?): JukeboxInfo? =
+        use { connection ->
+            val select = connection.prepareStatement("SELECT song_name, song_title, song_artist, song_url, song_duration FROM info_cache WHERE id=? LIMIT 1;")
+            select.setString(1, songID)
+            select.execute()
+
+            val info = select.resultSet.use { rs ->
+                if (rs.next()) {
+                    JukeboxInfo(
+                        service = "SPOTIFY",
+                        id = songID,
+                        name = rs.getString("song_name"),
+                        title = rs.getString("song_title"),
+                        artist = rs.getString("song_artist"),
+                        url = rs.getString("song_url"),
+                        duration = rs.getInt("song_duration")
+                    )
+                } else {
+                    null
+                }
+            }
+
+            if (info != null) return@use info
+
+            val result = runBlocking { EternalJukebox.spotify.getInfo(songID, clientInfo) } ?: return@use null
+
+            val insert = connection.prepareStatement("INSERT INTO info_cache(id, song_name, song_title, song_artist, song_url, song_duration) VALUES (?, ?, ?, ?, ?, ?);")
+            insert.setString(1, result.id)
+            insert.setString(2, result.name)
+            insert.setString(3, result.title)
+            insert.setString(4, result.artist)
+            insert.setString(5, result.url)
+            insert.setInt(6, result.duration)
+            insert.execute()
+
+            return@use result
+        }
 
     override fun makeSongPopular(service: String, id: String, clientInfo: ClientInfo?) {
         use { connection ->
@@ -253,7 +292,7 @@ abstract class HikariDatabase : IDatabase {
     }
 
     fun obtainNewShortID(connection: Connection, table: String = "short_urls", range: IntRange = (0 until 4)): String {
-        val preparedSelect = connection.prepareStatement("SELECT * FROM $table WHERE id=?")
+        val preparedSelect = connection.prepareStatement("SELECT id FROM $table WHERE id=? LIMIT 1")
         (0 until 4096).forEach {
             val id = buildString { for (i in range) append(EternalJukebox.BASE_64_URL[EternalJukebox.secureRandom.nextInt(64)]) }
             preparedSelect.setString(1, id)
@@ -282,6 +321,7 @@ abstract class HikariDatabase : IDatabase {
             connection.createStatement().execute("CREATE TABLE IF NOT EXISTS accounts (eternal_id VARCHAR(64) PRIMARY KEY NOT NULL, google_id VARCHAR(64) NOT NULL, google_access_token VARCHAR(255), google_refresh_token VARCHAR(255), eternal_access_token VARCHAR(255));")
             connection.createStatement().execute("CREATE TABLE IF NOT EXISTS popular (id INT PRIMARY KEY AUTO_INCREMENT, song_id VARCHAR(64) NOT NULL, service VARCHAR(64) NOT NULL, hits BIGINT NOT NULL);")
             connection.createStatement().execute("CREATE TABLE IF NOT EXISTS audio_locations (id VARCHAR(64) PRIMARY KEY NOT NULL, location VARCHAR(8192) NOT NULL);")
+            connection.createStatement().execute("CREATE TABLE IF NOT EXISTS info_cache (id VARCHAR(64) PRIMARY KEY NOT NULL, song_name VARCHAR(256) NOT NULL, song_title VARCHAR(256) NOT NULL, song_artist VARCHAR(256) NOT NULL, song_url VARCHAR(1024) NOT NULL, song_duration INT NOT NULL);")
 
             connection.createStatement().execute("DROP TABLE IF EXISTS oauth_state;")
             connection.createStatement().execute("CREATE TABLE oauth_state (id VARCHAR(32) PRIMARY KEY NOT NULL, path VARCHAR(8192) NOT NULL);")

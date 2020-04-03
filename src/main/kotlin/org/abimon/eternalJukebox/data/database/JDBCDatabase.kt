@@ -7,7 +7,9 @@ object JDBCDatabase: HikariDatabase() {
     override val ds: HikariDataSource
 
     init {
-        Class.forName("com.mysql.jdbc.Driver").newInstance()
+        Class.forName("com.mysql.jdbc.Driver")
+            .getDeclaredConstructor()
+            .newInstance()
 
         val config = HikariConfig()
         config.jdbcUrl = databaseOptions["jdbcUrl"]?.toString() ?: throw IllegalStateException("jdbcUrl was not provided!")
