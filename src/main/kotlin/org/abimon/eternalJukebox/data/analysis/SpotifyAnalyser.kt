@@ -325,7 +325,7 @@ object SpotifyAnalyser : IAnalyser {
         val success = exponentiallyBackoff(64000, 8) { attempt ->
             logger.trace("Attempting to reload Spotify Token; Attempt {}", attempt)
             val (_, response, _) =
-                Fuel.post("https://accounts.spotify.com/api/token").body("grant_type=client_credentials")
+                Fuel.post("https://accounts.spotify.com/api/token").header("Content-Type", "application/x-www-form-urlencoded").body("grant_type=client_credentials")
                     .authentication().basic(EternalJukebox.config.spotifyClient
                         ?: run {
                             error = SpotifyError.NO_AUTH_DETAILS
