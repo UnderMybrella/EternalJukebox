@@ -1,5 +1,7 @@
 package org.abimon.eternalJukebox.data.analytics
 
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.abimon.eternalJukebox.EternalJukebox
 import org.abimon.eternalJukebox.guaranteeDelete
 import org.abimon.eternalJukebox.objects.EnumAnalyticType
@@ -26,16 +28,26 @@ object LocalAnalyticStorage : IAnalyticsStorage {
     }
 
     init {
-        storageLocations.forEach { (type, log) ->
-            if (log.exists()) {
-                if (EternalJukebox.storage.shouldStore(EnumStorageType.LOG)) {
-                    log.useThenDelete { file -> EternalJukebox.storage.store("Analysis-${type::class.simpleClassName}-${UUID.randomUUID()}.log", EnumStorageType.LOG, FileDataSource(file), "text/plain", null) }
-                } else {
-                    log.guaranteeDelete()
+        GlobalScope.launch {
+            storageLocations.forEach { (type, log) ->
+                if (log.exists()) {
+                    if (EternalJukebox.storage.shouldStore(EnumStorageType.LOG)) {
+                        log.useThenDelete { file ->
+                            EternalJukebox.storage.store(
+                                "Analysis-${type::class.simpleClassName}-${UUID.randomUUID()}.log",
+                                EnumStorageType.LOG,
+                                FileDataSource(file),
+                                "text/plain",
+                                null
+                            )
+                        }
+                    } else {
+                        log.guaranteeDelete()
+                    }
                 }
-            }
 
-            log.createNewFile()
+                log.createNewFile()
+            }
         }
     }
 }

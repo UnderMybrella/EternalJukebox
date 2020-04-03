@@ -9,6 +9,7 @@ import org.abimon.eternalJukebox.clientInfo
 import org.abimon.eternalJukebox.suspendingHandler
 
 object PopularHandler {
+    val SPOTIFY_REGEX = "[0-9a-zA-Z]+".toRegex()
 
     fun setup(router: Router) {
         router.get("/jukebox_go.html").suspendingHandler(this::makeJukeboxPopular)
@@ -18,7 +19,7 @@ object PopularHandler {
     suspend fun makeJukeboxPopular(context: RoutingContext) {
         val clientInfo = context.clientInfo
         val id = context.request().getParam("id") ?: return context.next()
-        if (EternalJukebox.spotify.getInfo(id, clientInfo) != null)
+        if (SPOTIFY_REGEX.matches(id))
             withContext(Dispatchers.IO) { EternalJukebox.database.makeSongPopular("jukebox", id, clientInfo) }
 
         context.next()
@@ -27,7 +28,7 @@ object PopularHandler {
     suspend fun makeCanonizerPopular(context: RoutingContext) {
         val clientInfo = context.clientInfo
         val id = context.request().getParam("id") ?: return context.next()
-        if (EternalJukebox.spotify.getInfo(id, clientInfo) != null)
+        if (SPOTIFY_REGEX.matches(id))
             withContext(Dispatchers.IO) { EternalJukebox.database.makeSongPopular("canonizer", id, clientInfo) }
 
         context.next()

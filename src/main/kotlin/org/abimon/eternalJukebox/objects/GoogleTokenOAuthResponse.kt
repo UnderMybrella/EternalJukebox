@@ -2,8 +2,8 @@ package org.abimon.eternalJukebox.objects
 
 data class GoogleTokenOAuthResponse(
         val access_token: String,
-        val refresh_token: String?,
+        val refresh_token: String? = null,
         val expires_in: Int,
         val token_type: String,
-        val id_token: String?
+        val id_token: String? = null
 )

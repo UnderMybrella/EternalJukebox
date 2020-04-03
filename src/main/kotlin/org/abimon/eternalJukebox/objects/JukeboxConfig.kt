@@ -41,5 +41,7 @@ data class JukeboxConfig(
 
         val printConfig: Boolean = false,
 
-        val logFiles: Map<String, String?> = emptyMap()
+        val logFiles: Map<String, String?> = emptyMap(),
+
+        val hikariBatchTimeBetweenUpdatesMs: Int = 5 * 60_000
 )

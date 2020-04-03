@@ -14,19 +14,19 @@ object LocalStorage : IStorage {
 
     override fun shouldStore(type: EnumStorageType): Boolean = !disabledStorageTypes.contains(type)
 
-    override fun store(name: String, type: EnumStorageType, data: DataSource, mimeType: String, clientInfo: ClientInfo?): Boolean {
+    override suspend fun store(name: String, type: EnumStorageType, data: DataSource, mimeType: String, clientInfo: ClientInfo?): Boolean {
         FileOutputStream(File(storageLocations[type]!!, name)).use { fos -> data.use { inputStream -> inputStream.copyTo(fos) } }
         return true
     }
 
-    override fun provide(name: String, type: EnumStorageType, clientInfo: ClientInfo?): DataSource? {
+    override suspend fun provide(name: String, type: EnumStorageType, clientInfo: ClientInfo?): DataSource? {
         val file = File(storageLocations[type]!!, name)
         if(file.exists())
             return FileDataSource(file)
         return null
     }
 
-    override fun provide(name: String, type: EnumStorageType, context: RoutingContext, clientInfo: ClientInfo?): Boolean {
+    override suspend fun provide(name: String, type: EnumStorageType, context: RoutingContext, clientInfo: ClientInfo?): Boolean {
         val file = File(storageLocations[type]!!, name)
         if(file.exists()) {
             context.response().putHeader("X-Client-UID", clientInfo?.userUID ?: "N/a").sendFile(file.absolutePath)
@@ -36,7 +36,7 @@ object LocalStorage : IStorage {
         return false
     }
 
-    override fun isStored(name: String, type: EnumStorageType): Boolean = File(storageLocations[type]!!, name).exists()
+    override suspend fun isStored(name: String, type: EnumStorageType): Boolean = File(storageLocations[type]!!, name).exists()
 
     init {
         storageLocations.values.forEach { if(!it.exists()) it.mkdirs() }

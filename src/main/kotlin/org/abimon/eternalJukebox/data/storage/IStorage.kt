@@ -24,19 +24,19 @@ interface IStorage {
      * Store [data] under [name], as type [type]
      * Returns true if successfully stored; false otherwise
      */
-    fun store(name: String, type: EnumStorageType, data: DataSource, mimeType: String, clientInfo: ClientInfo?): Boolean
+    suspend fun store(name: String, type: EnumStorageType, data: DataSource, mimeType: String, clientInfo: ClientInfo?): Boolean
 
     /**
      * Provide previously stored data of name [name] and type [type]
      * Returns the data stored under the name; null otherwise
      */
-    fun provide(name: String, type: EnumStorageType, clientInfo: ClientInfo?): DataSource?
+    suspend fun provide(name: String, type: EnumStorageType, clientInfo: ClientInfo?): DataSource?
 
     /**
      * Provide previously stored data of name [name] and type [type] to the routing context.
      * Returns true if handled; false otherwise. If false, [provide] is called.
      */
-    fun provide(name: String, type: EnumStorageType, context: RoutingContext, clientInfo: ClientInfo?): Boolean
+    suspend fun provide(name: String, type: EnumStorageType, context: RoutingContext, clientInfo: ClientInfo?): Boolean
 
-    fun isStored(name: String, type: EnumStorageType): Boolean
+    suspend fun isStored(name: String, type: EnumStorageType): Boolean
 }

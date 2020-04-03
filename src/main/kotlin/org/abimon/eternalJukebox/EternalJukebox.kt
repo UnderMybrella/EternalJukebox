@@ -141,12 +141,12 @@ object EternalJukebox {
 //        oauthStateAlgorithm = Algorithm.HMAC512(ByteArray(config.oauthStateSecretSize).apply { secureRandom.nextBytes(this) })
 //        oauthStateVerifier = JWT.require(oauthStateAlgorithm).build()
 
-        storage = config.storageType.storage
-
         vertx = Vertx.vertx(VertxOptions().setMaxWorkerExecuteTime(config.workerExecuteTime))
         webserver = vertx.createHttpServer()
 
         snowstorm = Snowstorm(config.epoch)
+
+        storage = config.storageType.storage
 
         val mainRouter = Router.router(vertx)
 

@@ -9,24 +9,19 @@ import org.abimon.eternalJukebox.objects.JukeboxAccount
 import org.abimon.eternalJukebox.objects.JukeboxInfo
 import org.abimon.visi.io.errPrintln
 import java.sql.Connection
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
 
 abstract class HikariDatabase : IDatabase {
-    companion object {
-        val UPDATE_INTERVAL_NS = TimeUnit.NANOSECONDS.convert(5, TimeUnit.MINUTES)
-        val TIME_BETWEEN_UPDATES_MS = TimeUnit.MILLISECONDS.convert(5, TimeUnit.MINUTES)
-    }
-
     abstract val ds: HikariDataSource
+    val TIME_BETWEEN_UPDATES_MS = EternalJukebox.config.hikariBatchTimeBetweenUpdatesMs.toLong()
 
     val popularLocks: Map<String, ReentrantReadWriteLock> =
         mapOf("jukebox" to ReentrantReadWriteLock(), "canonizer" to ReentrantReadWriteLock())
     val popularUpdates: Map<String, Channel<String>> =
         mapOf("jukebox" to Channel(Channel.BUFFERED), "canonizer" to Channel(Channel.BUFFERED))
-    val popularSongs: MutableMap<String, Array<String>> = HashMap()
+    val popularSongs: MutableMap<String, Array<String>> = mutableMapOf("jukebox" to emptyArray(), "canonizer" to emptyArray())
 
     val dispatcher = newSingleThreadContext("HikariPropagateDispatcher")
 
@@ -353,6 +348,25 @@ abstract class HikariDatabase : IDatabase {
 
     open infix fun <T> use(op: (Connection) -> T): T = ds.connection.use(op)
 
+    open fun updatePopular(connection: Connection, updates: Map<String, Int>) {
+        val insertUpdate =
+            connection.prepareStatement("INSERT INTO popular (song_id, service, hits) VALUES(?, ?, ?) ON DUPLICATE KEY UPDATE hits = hits + ?")
+
+        updates.entries.chunked(100) { chunk ->
+            insertUpdate.clearBatch()
+
+            chunk.forEach { (key, amount) ->
+                insertUpdate.setString(1, key.substringBefore(':'))
+                insertUpdate.setString(2, key.substringAfter(':'))
+                insertUpdate.setInt(3, amount)
+                insertUpdate.setInt(4, amount)
+                insertUpdate.addBatch()
+            }
+
+            insertUpdate.executeBatch()
+        }
+    }
+
     fun initialise() {
         use { connection ->
             //            connection.createStatement().execute("USE $databaseName")
@@ -380,38 +394,18 @@ abstract class HikariDatabase : IDatabase {
         GlobalScope.launch {
             while (isActive) {
                 println("[Condensing Updates]")
-                val startTime = System.nanoTime()
                 val updates: MutableMap<String, Int> = HashMap()
 
-                while (System.nanoTime() - startTime < UPDATE_INTERVAL_NS) {
-                    popularUpdates.forEach { (service, channel) ->
-                        while (!channel.isEmpty)
-                            updates.compute("$service:${channel.receive()}") { _, v -> v?.plus(1) ?: 1 }
-                    }
-
-                    delay(50)
+                popularUpdates.forEach { (service, channel) ->
+                    while (!channel.isEmpty)
+                        updates.compute("$service:${channel.receive()}") { _, v -> v?.plus(1) ?: 1 }
                 }
 
                 println("[Updating Database]")
 
                 withContext(Dispatchers.IO) {
                     use { connection ->
-                        val insertUpdate =
-                            connection.prepareStatement("INSERT INTO popular (song_id, service, hits) VALUES(?, ?, ?) ON DUPLICATE KEY UPDATE hits = hits + ?")
-
-                        updates.entries.chunked(100) { chunk ->
-                            insertUpdate.clearBatch()
-
-                            chunk.forEach { (key, amount) ->
-                                insertUpdate.setString(1, key.substringBefore(':'))
-                                insertUpdate.setString(2, key.substringAfter(':'))
-                                insertUpdate.setInt(3, amount)
-                                insertUpdate.setInt(4, amount)
-                                insertUpdate.addBatch()
-                            }
-
-                            insertUpdate.executeBatch()
-                        }
+                        updatePopular(connection, updates)
 
                         val select =
                             connection.prepareStatement("SELECT song_id, hits FROM popular WHERE service=? ORDER BY hits DESC LIMIT 100;")
