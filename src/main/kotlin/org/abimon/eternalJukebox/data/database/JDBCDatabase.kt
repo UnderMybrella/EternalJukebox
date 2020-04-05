@@ -2,6 +2,7 @@ package org.abimon.eternalJukebox.data.database
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import java.sql.DriverManager;
 
 object JDBCDatabase: HikariDatabase() {
     override val ds: HikariDataSource
@@ -10,7 +11,10 @@ object JDBCDatabase: HikariDatabase() {
         Class.forName("com.mysql.jdbc.Driver")
             .getDeclaredConstructor()
             .newInstance()
-
+	    Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver")
+            .getDeclaredConstructor()
+            .newInstance()
+	
         val config = HikariConfig("hikari.properties")
         config.jdbcUrl = databaseOptions["jdbcUrl"]?.toString() ?: throw IllegalStateException("jdbcUrl was not provided!")
 

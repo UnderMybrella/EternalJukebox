@@ -56,3 +56,5 @@ working/
 !/src/main/kotlin/org/abimon/eternalJukebox/data/audio
 /data/
 web
+build
+.gradle
