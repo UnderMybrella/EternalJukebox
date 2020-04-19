@@ -36,6 +36,7 @@ dependencies {
 
     implementation "com.h2database:h2:1.4.196"
     implementation "mysql:mysql-connector-java:5.1.45"
+    compile  "com.microsoft.sqlserver:mssql-jdbc:8.2.2.jre8"
     implementation "com.zaxxer:HikariCP:2.7.7"
     implementation "com.google.cloud.sql:mysql-socket-factory:1.0.5"
 

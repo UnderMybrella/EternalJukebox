@@ -8,7 +8,7 @@ import org.abimon.eternalJukebox.objects.JukeboxAccount
 import org.abimon.eternalJukebox.objects.JukeboxInfo
 import org.abimon.visi.io.errPrintln
 import java.sql.Connection
-
+import java.sql.ResultSet
 abstract class HikariDatabase : IDatabase {
     abstract val ds: HikariDataSource
 
@@ -25,8 +25,16 @@ abstract class HikariDatabase : IDatabase {
 
     override fun storeAudioTrackOverride(id: String, newURL: String, clientInfo: ClientInfo?) {
         use { connection ->
-            val insert =
-                connection.prepareStatement("INSERT INTO overrides (id, url) VALUES (?, ?) ON DUPLICATE KEY UPDATE url=VALUES(url);")
+        var insertStr = ""
+            if(databaseType == 0){
+                //mysql
+                insertStr ="INSERT INTO overrides (id, url) VALUES (?, ?) ON DUPLICATE KEY UPDATE url=VALUES(url);"
+            }
+            else if(databaseType == 1){
+                //sqlserver
+                insertStr = "MERGE INTO overrides as o USING (select id=?,url=?) as s on o.id = s.id when matched then update set id=s.id, url=s.url when not matched then insert (id, url) values (id, url);"
+            }
+            val insert = connection.prepareStatement(insertStr)
             insert.setString(1, id)
             insert.setString(2, newURL)
 
@@ -122,8 +130,17 @@ abstract class HikariDatabase : IDatabase {
 
     override fun providePopularSongs(service: String, count: Int, clientInfo: ClientInfo?): List<JukeboxInfo> =
         use { connection ->
-            val select =
-                connection.prepareStatement("SELECT song_id, hits FROM popular WHERE service=? ORDER BY hits DESC LIMIT $count;")
+        var selectStr = ""
+        if(databaseType == 0){
+            //mysql
+            selectStr = "SELECT song_id, hits FROM popular WHERE service=? ORDER BY hits DESC LIMIT 5"
+        }
+
+        else if(databaseType == 1){
+            //sqlserver
+            selectStr = "SELECT top 5 song_id, hits FROM popular WHERE service=? ORDER BY hits DESC"
+        }
+            val select = connection.prepareStatement(selectStr)
             select.setString(1, service)
             select.execute()
 
@@ -139,8 +156,16 @@ abstract class HikariDatabase : IDatabase {
 
     fun getInfo(songID: String, clientInfo: ClientInfo?): JukeboxInfo? {
         val info = use { connection ->
-            val select =
-                connection.prepareStatement("SELECT song_name, song_title, song_artist, song_url, song_duration FROM info_cache WHERE id=? LIMIT 1;")
+            var selectStr = ""
+            if(databaseType == 0){
+                //mysql
+            selectStr = "SELECT song_name, song_title, song_artist, song_url, song_duration FROM info_cache WHERE id=? LIMIT 1"
+            }
+            else if(databaseType == 1){   
+                //sqlserver         
+            selectStr = "SELECT top 1 song_name, song_title, song_artist, song_url, song_duration FROM info_cache WHERE id=?"
+            }
+            val select = connection.prepareStatement(selectStr)
             select.setString(1, songID)
             select.execute()
 
@@ -182,9 +207,16 @@ abstract class HikariDatabase : IDatabase {
 
     override fun makeSongPopular(service: String, id: String, clientInfo: ClientInfo?) {
         use { connection ->
-            val insertUpdate =
-                connection.prepareStatement("INSERT INTO popular (song_id, service, hits) VALUES(?, ?, 1) ON DUPLICATE KEY UPDATE hits = hits + 1")
-
+            var insertUpdateStr = ""
+            if(databaseType == 0){
+                //mysql
+                insertUpdateStr = "INSERT INTO popular (song_id, service, hits) VALUES(?, ?, 1) ON DUPLICATE KEY UPDATE hits = hits + 1"
+            }
+            else if(databaseType == 1){
+                //sqlserver
+                insertUpdateStr = "MERGE INTO popular as p USING (select song_id=?,service=?, hits=1) as s on p.song_id = s.song_id when matched then update set hits=p.hits + 1 when not matched then insert (song_id, service, hits) values(song_id, service, hits);"
+            }
+            val insertUpdate = connection.prepareStatement(insertUpdateStr)
             insertUpdate.setString(1, id)
             insertUpdate.setString(2, service)
             insertUpdate.execute()
@@ -207,7 +239,8 @@ abstract class HikariDatabase : IDatabase {
         }
 
         var id = use { connection ->
-            val select = connection.prepareStatement("SELECT * FROM short_urls WHERE params=?;")
+            val select = connection.prepareStatement("SELECT * FROM short_urls WHERE params=?;",ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
+            //BoySanic - I added the TYPE_SCROLL_INSENSITIVE flag here so that the results.first() line would work. I'm not sure if this is database type independent.
             select.setString(1, joined)
             select.execute()
 
@@ -232,7 +265,9 @@ abstract class HikariDatabase : IDatabase {
     }
 
     override fun expandShortURL(id: String, clientInfo: ClientInfo?): Array<String>? = use { connection ->
-        val select = connection.prepareStatement("SELECT * FROM short_urls WHERE id=?;")
+        val select = connection.prepareStatement("SELECT * FROM short_urls WHERE id=?;",ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
+        //BoySanic - I added the TYPE_SCROLL_INSENSITIVE flag here so that the results.first() line would work. I'm not sure if this is database type independent.
+    
         select.setString(1, id)
         select.execute()
 
@@ -286,11 +321,18 @@ abstract class HikariDatabase : IDatabase {
 
     override fun storeAudioLocation(id: String, location: String, clientInfo: ClientInfo?) {
         use { connection ->
-            val insert =
-                connection.prepareStatement("INSERT INTO audio_locations (id, location) VALUES (?, ?) ON DUPLICATE KEY UPDATE location=VALUES(location);")
+            var insertStr = ""
+            if(databaseType == 0){
+                //mysql
+                insertStr = "INSERT INTO audio_locations (id, location) VALUES (?, ?) ON DUPLICATE KEY UPDATE location=VALUES(location);"
+            }
+            else if(databaseType == 1){
+                //sqlserver
+                insertStr = "MERGE INTO audio_locations as al using (select id=?, location=?) as s on al.id=s.id when matched then update set id=s.id, location=s.location when not matched then insert (id, location) values (id, location);"
+            }
+            val insert = connection.prepareStatement(insertStr)
             insert.setString(1, id)
             insert.setString(2, location)
-
             insert.execute()
         }
     }
@@ -308,7 +350,7 @@ abstract class HikariDatabase : IDatabase {
                     }
                 }
             val exists = use { connection ->
-                val preparedSelect = connection.prepareStatement("SELECT id FROM $table WHERE id=? LIMIT 1")
+                val preparedSelect = connection.prepareStatement("SELECT top 1 id FROM short_urls WHERE id=?")
                 preparedSelect.setString(1, id)
                 preparedSelect.execute()
                 preparedSelect.resultSet.next()
@@ -325,11 +367,27 @@ abstract class HikariDatabase : IDatabase {
     }
 
     open infix fun <T> use(op: (Connection) -> T): T = ds.connection.use(op)
-
+    var databaseType: Int = 0
+    fun checkjbdcUrl(jdbcUrl: String) : Int{
+        if("sqlserver" in jdbcUrl){
+            return 1
+        }
+        if("mysql" in jdbcUrl){
+            return 0
+        }
+        else{
+            throw Error("Database info not populated, or unimplemented database type!")
+            return 1024
+        }
+        //Add more if other sql servers have syntax problems
+    }
     fun initialise() {
         use { connection ->
             //            connection.createStatement().execute("USE $databaseName")
-
+        var jdbcUrl = databaseOptions["jdbcUrl"]?.toString() ?: throw IllegalStateException("jdbcUrl was not provided!")
+        databaseType = checkjbdcUrl(jdbcUrl)
+        if(databaseType == 0){
+            //mysql
             connection.createStatement()
                 .execute("CREATE TABLE IF NOT EXISTS overrides (id VARCHAR(64) PRIMARY KEY NOT NULL, url VARCHAR(8192) NOT NULL);")
             connection.createStatement()
@@ -349,5 +407,28 @@ abstract class HikariDatabase : IDatabase {
 
             Unit
         }
+        else if(databaseType == 1){
+            //sqlserver
+            connection.createStatement()
+                .execute("IF NOT EXISTS (select * from INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'overrides') CREATE TABLE overrides (id VARCHAR(64) PRIMARY KEY NOT NULL, url VARCHAR(8000) NOT NULL);")
+            connection.createStatement()
+                .execute("IF NOT EXISTS (select * from INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'short_urls') CREATE TABLE short_urls (id VARCHAR(16) PRIMARY KEY NOT NULL, params VARCHAR(4096) NOT NULL);")
+            connection.createStatement()
+                .execute("IF NOT EXISTS (select * from INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'accounts') CREATE TABLE accounts (eternal_id VARCHAR(64) PRIMARY KEY NOT NULL, google_id VARCHAR(64) NOT NULL, google_access_token VARCHAR(255), google_refresh_token VARCHAR(255), eternal_access_token VARCHAR(255));")
+            connection.createStatement()
+                .execute("IF NOT EXISTS (select * from INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'popular') CREATE TABLE popular (id INT PRIMARY KEY IDENTITY(1,1), song_id VARCHAR(64) NOT NULL, service VARCHAR(64) NOT NULL, hits BIGINT NOT NULL);")
+            connection.createStatement()
+                .execute("IF NOT EXISTS (select * from INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'audio_locations') CREATE TABLE audio_locations (id VARCHAR(64) PRIMARY KEY NOT NULL, location VARCHAR(MAX) NOT NULL);")
+            connection.createStatement()
+                .execute("IF NOT EXISTS (select * from INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'info_cache') CREATE TABLE info_cache (id VARCHAR(64) PRIMARY KEY NOT NULL, song_name VARCHAR(256) NOT NULL, song_title VARCHAR(256) NOT NULL, song_artist VARCHAR(256) NOT NULL, song_url VARCHAR(1024) NOT NULL, song_duration INT NOT NULL);")
+
+            connection.createStatement().execute("IF EXISTS (select * from INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'oauth_state') DROP TABLE oauth_state;")
+            connection.createStatement()
+                .execute("CREATE TABLE oauth_state (id VARCHAR(32) PRIMARY KEY NOT NULL, path VARCHAR(MAX) NOT NULL);")
+
+            Unit
+        }
+        }
     }
 }
+
