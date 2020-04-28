@@ -1,16 +1,34 @@
 package org.abimon.eternalJukebox.data.database
 
 import com.zaxxer.hikari.HikariDataSource
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import org.abimon.eternalJukebox.EternalJukebox
 import org.abimon.eternalJukebox.objects.ClientInfo
 import org.abimon.eternalJukebox.objects.JukeboxAccount
 import org.abimon.eternalJukebox.objects.JukeboxInfo
 import org.abimon.visi.io.errPrintln
 import java.sql.Connection
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.read
+import kotlin.concurrent.write
 
 abstract class HikariDatabase : IDatabase {
+    companion object {
+        val UPDATE_INTERVAL_NS = TimeUnit.NANOSECONDS.convert(5, TimeUnit.MINUTES)
+        val TIME_BETWEEN_UPDATES_MS = TimeUnit.MILLISECONDS.convert(5, TimeUnit.MINUTES)
+    }
+
     abstract val ds: HikariDataSource
+
+    val popularLocks: Map<String, ReentrantReadWriteLock> =
+        mapOf("jukebox" to ReentrantReadWriteLock(), "canonizer" to ReentrantReadWriteLock())
+    val popularUpdates: Map<String, Channel<String>> =
+        mapOf("jukebox" to Channel(Channel.BUFFERED), "canonizer" to Channel(Channel.BUFFERED))
+    val popularSongs: MutableMap<String, Array<String>> = HashMap()
+
+    val dispatcher = newSingleThreadContext("HikariPropagateDispatcher")
 
     override fun provideAudioTrackOverride(id: String, clientInfo: ClientInfo?): String? = use { connection ->
         val select = connection.prepareStatement("SELECT * FROM overrides WHERE id=?;")
@@ -120,22 +138,29 @@ abstract class HikariDatabase : IDatabase {
         }
     }
 
-    override fun providePopularSongs(service: String, count: Int, clientInfo: ClientInfo?): List<JukeboxInfo> =
-        use { connection ->
-            val select =
-                connection.prepareStatement("SELECT song_id, hits FROM popular WHERE service=? ORDER BY hits DESC LIMIT $count;")
-            select.setString(1, service)
-            select.execute()
+    override fun providePopularSongs(service: String, count: Int, clientInfo: ClientInfo?): List<JukeboxInfo> {
+//        use { connection ->
+//            val select =
+//                connection.prepareStatement("SELECT song_id, hits FROM popular WHERE service=? ORDER BY hits DESC LIMIT $count;")
+//            select.setString(1, service)
+//            select.execute()
+//
+//            val results = select.resultSet
+//            val popular: MutableList<String> = ArrayList()
+//
+//            while (results.next()) {
+//                popular.add(results.getString("song_id"))
+//            }
+//
+//            return@use popular
+//        }.mapNotNull { songID -> getInfo(songID, clientInfo) }
 
-            val results = select.resultSet
-            val popular: MutableList<String> = ArrayList()
-
-            while (results.next()) {
-                popular.add(results.getString("song_id"))
-            }
-
-            return@use popular
-        }.mapNotNull { songID -> getInfo(songID, clientInfo) }
+        return popularLocks[service]?.read {
+            popularSongs[service]?.take(count)
+        }?.mapNotNull { songID ->
+            getInfo(songID, clientInfo)
+        } ?: emptyList()
+    }
 
     fun getInfo(songID: String, clientInfo: ClientInfo?): JukeboxInfo? {
         val info = use { connection ->
@@ -181,16 +206,18 @@ abstract class HikariDatabase : IDatabase {
     }
 
     override fun makeSongPopular(service: String, id: String, clientInfo: ClientInfo?) {
-        use { connection ->
-            val insertUpdate =
-                connection.prepareStatement("INSERT INTO popular (song_id, service, hits) VALUES(?, ?, 1) ON DUPLICATE KEY UPDATE hits = hits + 1")
+//        use { connection ->
+//            val insertUpdate =
+//                connection.prepareStatement("INSERT INTO popular (song_id, service, hits) VALUES(?, ?, 1) ON DUPLICATE KEY UPDATE hits = hits + 1")
+//
+//            insertUpdate.setString(1, id)
+//            insertUpdate.setString(2, service)
+//            insertUpdate.execute()
+//
+//            Unit
+//        }
 
-            insertUpdate.setString(1, id)
-            insertUpdate.setString(2, service)
-            insertUpdate.execute()
-
-            Unit
-        }
+        GlobalScope.launch(dispatcher) { popularUpdates[service]?.send(id) }
     }
 
     override fun provideShortURL(params: Array<String>, clientInfo: ClientInfo?): String {
@@ -348,6 +375,67 @@ abstract class HikariDatabase : IDatabase {
                 .execute("CREATE TABLE oauth_state (id VARCHAR(32) PRIMARY KEY NOT NULL, path VARCHAR(8192) NOT NULL);")
 
             Unit
+        }
+
+        GlobalScope.launch {
+            while (isActive) {
+                println("[Condensing Updates]")
+                val startTime = System.nanoTime()
+                val updates: MutableMap<String, Int> = HashMap()
+
+                while (System.nanoTime() - startTime < UPDATE_INTERVAL_NS) {
+                    popularUpdates.forEach { (service, channel) ->
+                        while (!channel.isEmpty)
+                            updates.compute("$service:${channel.receive()}") { _, v -> v?.plus(1) ?: 1 }
+                    }
+
+                    delay(50)
+                }
+
+                println("[Updating Database]")
+
+                withContext(Dispatchers.IO) {
+                    use { connection ->
+                        val insertUpdate =
+                            connection.prepareStatement("INSERT INTO popular (song_id, service, hits) VALUES(?, ?, ?) ON DUPLICATE KEY UPDATE hits = hits + ?")
+
+                        updates.entries.chunked(100) { chunk ->
+                            insertUpdate.clearBatch()
+
+                            chunk.forEach { (key, amount) ->
+                                insertUpdate.setString(1, key.substringBefore(':'))
+                                insertUpdate.setString(2, key.substringAfter(':'))
+                                insertUpdate.setInt(3, amount)
+                                insertUpdate.setInt(4, amount)
+                                insertUpdate.addBatch()
+                            }
+
+                            insertUpdate.executeBatch()
+                        }
+
+                        val select =
+                            connection.prepareStatement("SELECT song_id, hits FROM popular WHERE service=? ORDER BY hits DESC LIMIT 100;")
+
+                        popularSongs.keys.forEach { service ->
+                            select.setString(1, service)
+                            select.execute()
+
+                            val results = select.resultSet
+                            val popular: MutableList<String> = ArrayList()
+
+                            while (results.next()) {
+                                popular.add(results.getString("song_id"))
+                            }
+
+                            popularLocks[service]?.write {
+                                popularSongs[service] = popular.toTypedArray()
+                            }
+                        }
+                    }
+                }
+
+                delay(TIME_BETWEEN_UPDATES_MS)
+            }
         }
     }
 }
