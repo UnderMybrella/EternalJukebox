@@ -608,6 +608,8 @@ abstract class HikariDatabase : IDatabase {
                         insert.executeBatch()
                     }
                 }
+                 
+                 delay(TIME_BETWEEN_UPDATES_MS)
             }
         }
 
