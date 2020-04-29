@@ -538,7 +538,12 @@ object GoogleStorage : IStorage {
                 attempt
             )
             val response =
-                webClient.headAbs("https://www.googleapis.com/storage/v1/b/$bucket/o/${URLEncoder.encode(path, "UTF-8")}")
+                webClient.headAbs(
+                        "https://www.googleapis.com/storage/v1/b/$bucket/o/${URLEncoder.encode(
+                            path,
+                            "UTF-8"
+                        )}"
+                    )
                     .bearerTokenAuthentication(accessTokenLock.readAwait { googleAccessToken })
                     .sendAwait()
 
@@ -704,69 +709,77 @@ object GoogleStorage : IStorage {
         GlobalScope.launch {
             reload()
 
-            val corsTypes = publicStorageTypes.filter { storageType ->
-                val bucket = storageBuckets[storageType] ?: return@filter false
-                var errored = false
-                val success = exponentiallyBackoff(64000, 8) { attempt ->
-                    logger.info("Attempting to get {} to support CORS; Attempt {}", bucket, attempt)
+            val corsTypes =
+                publicStorageTypes.mapNotNull { storageType -> Pair(storageType, storageBuckets[storageType]) }
+                    .distinctBy(Pair<EnumStorageType, String>::second)
+                    .filter { (storageType, bucket) ->
+                        var errored = false
+                        val success = exponentiallyBackoff(64000, 8) { attempt ->
+                            logger.info("Attempting to get {} to support CORS; Attempt {}", bucket, attempt)
 
-                    val response = webClient.patchAbs("https://www.googleapis.com/storage/v1/b/$bucket")
-                        .putHeader("Content-Type", "application/json")
-                        .bearerTokenAuthentication(accessTokenLock.readAwait { googleAccessToken })
-                        .sendJsonAwait(
-                            mapOf(
-                                "cors" to arrayOf(
+                            val response = webClient.patchAbs("https://www.googleapis.com/storage/v1/b/$bucket")
+                                .putHeader("Content-Type", "application/json")
+                                .bearerTokenAuthentication(accessTokenLock.readAwait { googleAccessToken })
+                                .sendJsonAwait(
                                     mapOf(
-                                        "method" to arrayOf(
-                                            "*"
-                                        ), "origin" to arrayOf("*")
+                                        "cors" to arrayOf(
+                                            mapOf(
+                                                "method" to arrayOf(
+                                                    "*"
+                                                ), "origin" to arrayOf("*")
+                                            )
+                                        )
                                     )
                                 )
-                            )
-                        )
 
-                    when (response.statusCode()) {
-                        200 -> return@exponentiallyBackoff false
-                        400 -> {
-                            logger.error("Got back response code 400 with data {}; returning", response.bodyAsString())
-                            errored = true
-                            return@exponentiallyBackoff false
-                        }
-                        401 -> {
-                            if (attempt == 0L) {
-                                logger.error("Got back response code 401; reloading token and trying again")
-                                reload()
-                                return@exponentiallyBackoff true
-                            } else {
-                                logger.error(
-                                    "Got back response code 401 with data {}; reloading token and trying again",
-                                    response.bodyAsString()
-                                )
-                                return@exponentiallyBackoff false
+                            when (response.statusCode()) {
+                                200 -> return@exponentiallyBackoff false
+                                400 -> {
+                                    logger.error(
+                                        "Got back response code 400 with data {}; returning",
+                                        response.bodyAsString()
+                                    )
+                                    errored = true
+                                    return@exponentiallyBackoff false
+                                }
+                                401 -> {
+                                    if (attempt == 0L) {
+                                        logger.error("Got back response code 401; reloading token and trying again")
+                                        reload()
+                                        return@exponentiallyBackoff true
+                                    } else {
+                                        logger.error(
+                                            "Got back response code 401 with data {}; reloading token and trying again",
+                                            response.bodyAsString()
+                                        )
+                                        return@exponentiallyBackoff false
+                                    }
+                                }
+                                403 -> {
+                                    logger.error(
+                                        "Got back response code 403 with data {}; returning",
+                                        response.bodyAsString()
+                                    )
+                                    errored = true
+                                    return@exponentiallyBackoff false
+                                }
+                                404 -> {
+                                    errored = true
+                                    return@exponentiallyBackoff false
+                                }
+                                else -> {
+                                    logger.warn(
+                                        "Got back response code {} with data {}; backing off and trying again",
+                                        response.statusCode(),
+                                        response.bodyAsString()
+                                    )
+                                    return@exponentiallyBackoff true
+                                }
                             }
-                        }
-                        403 -> {
-                            logger.error("Got back response code 403 with data {}; returning", response.bodyAsString())
-                            errored = true
-                            return@exponentiallyBackoff false
-                        }
-                        404 -> {
-                            errored = true
-                            return@exponentiallyBackoff false
-                        }
-                        else -> {
-                            logger.warn(
-                                "Got back response code {} with data {}; backing off and trying again",
-                                response.statusCode(),
-                                response.bodyAsString()
-                            )
-                            return@exponentiallyBackoff true
-                        }
-                    }
-                } && !errored
+                        } && !errored
 
-                return@filter success
-            }
+                        return@filter success
+                    }
             storageSupportsCors.addAll(corsTypes)
         }
     }
