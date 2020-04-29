@@ -132,7 +132,6 @@ fun String.toBase64LongOrNull(): Long? {
     var limit: Long = -Long.Companion.MAX_VALUE
 
     return if (len > 0) {
-        val firstChar: Char = get(0)
         val multmin: Long = limit / 64
         var result: Long = 0
         while (i < len) {
@@ -158,7 +157,6 @@ fun String.toBase64Long(): Long {
     var limit: Long = -Long.Companion.MAX_VALUE
 
     return if (len > 0) {
-        val firstChar: Char = get(0)
         val multmin: Long = limit / 64
         var result: Long = 0
         while (i < len) {
@@ -181,12 +179,11 @@ fun String.toBase64Long(): Long {
 
 fun Long.toBase64(): String {
     val buf = StringBuffer()
-    var charPos = 64
     var i = -this
     while (i <= -64) {
-        charPos = (charPos - 1) shl 1
         buf.append(EternalJukebox.BASE_64_URL[-(i % 64).toInt()])
         i /= 64
     }
-    return buf.toString()
+    buf.append(EternalJukebox.BASE_64_URL[-i.toInt()])
+    return buf.reverse().toString()
 }

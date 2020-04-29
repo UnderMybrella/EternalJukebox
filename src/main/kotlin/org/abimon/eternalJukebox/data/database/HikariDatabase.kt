@@ -22,7 +22,8 @@ import kotlin.concurrent.write
 
 abstract class HikariDatabase : IDatabase {
     abstract val ds: HikariDataSource
-    val TIME_BETWEEN_UPDATES_MS = EternalJukebox.config.hikariBatchTimeBetweenUpdatesMs.toLong()
+    val TIME_BETWEEN_UPDATES_MS = EternalJukebox.config.hikariBatchTimeBetweenUpdatesMs
+    val SHORT_ID_UPDATE_TIME_MS = EternalJukebox.config.hikariBatchShortIDUpdateTimeMs
 
     val popularLocks: Map<String, ReentrantReadWriteLock> =
         mapOf("jukebox" to ReentrantReadWriteLock(), "canonizer" to ReentrantReadWriteLock())
@@ -469,22 +470,6 @@ abstract class HikariDatabase : IDatabase {
         }
     }
 
-    open fun updateShortIDs(connection: Connection, updates: Map<String, String>) {
-        val insert = connection.prepareStatement("INSERT INTO short_urls (id, params) VALUES (?, ?);")
-
-        updates.entries.chunked(100) { chunk ->
-            insert.clearBatch()
-
-            chunk.forEach { (id, params) ->
-                insert.setString(1, id)
-                insert.setString(2, params)
-                insert.addBatch()
-            }
-
-            insert.executeBatch()
-        }
-    }
-
     open fun updateInfo(connection: Connection, updates: Collection<JukeboxInfo>) {
         val insert =
             connection.prepareStatement("INSERT INTO info_cache(id, song_name, song_title, song_artist, song_url, song_duration) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE;")
@@ -597,27 +582,32 @@ abstract class HikariDatabase : IDatabase {
             }
         }
 
-        GlobalScope.launch {
-            while (isActive) {
-                println("[Condensing Short ID Updates]")
+        GlobalScope.launch(Dispatchers.IO) {
+            use { connection ->
                 val updates: MutableMap<String, String> = HashMap()
+                val insert = connection.prepareStatement("INSERT INTO short_urls (id, params) VALUES (?, ?);")
 
-                withTimeoutOrNull(5_000) {
-                    while (!shortIDUpdates.isEmpty) {
-                        val (k, v) = shortIDUpdates.receive()
-                        updates[k.toBase64()] = v
+                while (isActive) {
+                    updates.clear()
+                    withTimeoutOrNull(SHORT_ID_UPDATE_TIME_MS) {
+                        while (!shortIDUpdates.isEmpty) {
+                            val (k, v) = shortIDUpdates.receive()
+                            updates[k.toBase64()] = v
+                        }
+                    }
+
+                    updates.entries.chunked(100) { chunk ->
+                        insert.clearBatch()
+
+                        chunk.forEach { (id, params) ->
+                            insert.setString(1, id)
+                            insert.setString(2, params)
+                            insert.addBatch()
+                        }
+
+                        insert.executeBatch()
                     }
                 }
-
-                println("[Updating Short ID Database]")
-
-                withContext(Dispatchers.IO) {
-                    use { connection ->
-                        updateShortIDs(connection, updates)
-                    }
-                }
-
-                delay(TIME_BETWEEN_UPDATES_MS)
             }
         }
 
