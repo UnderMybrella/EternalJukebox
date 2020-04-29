@@ -710,9 +710,11 @@ object GoogleStorage : IStorage {
             reload()
 
             val corsTypes =
-                publicStorageTypes.mapNotNull { storageType -> Pair(storageType, storageBuckets[storageType]) }
-                    .distinctBy(Pair<EnumStorageType, String>::second)
+                publicStorageTypes.map { storageType -> Pair(storageType, storageBuckets[storageType]) }
+                    .distinctBy(Pair<EnumStorageType, String?>::second)
                     .filter { (storageType, bucket) ->
+                        if (bucket == null) return@filter false
+
                         var errored = false
                         val success = exponentiallyBackoff(64000, 8) { attempt ->
                             logger.info("Attempting to get {} to support CORS; Attempt {}", bucket, attempt)
@@ -779,7 +781,7 @@ object GoogleStorage : IStorage {
                         } && !errored
 
                         return@filter success
-                    }
+                    }.map(Pair<EnumStorageType, *>::first)
             storageSupportsCors.addAll(corsTypes)
         }
     }
