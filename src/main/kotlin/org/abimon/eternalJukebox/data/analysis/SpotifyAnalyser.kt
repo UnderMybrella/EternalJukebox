@@ -386,8 +386,7 @@ object SpotifyAnalyser : IAnalyser {
                 429 -> {
                     val backoff = response.header("Retry-After").firstOrNull()?.toIntOrNull() ?: 4
                     logger.warn(
-                        "[{}] Got back response code 429; waiting {} seconds before trying again",
-                        clientInfo?.userUID
+                        "Got back response code 429; waiting {} seconds before trying again"
                     )
                     delay(backoff * 1000L)
                     return@exponentiallyBackoff true
