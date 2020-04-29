@@ -81,6 +81,15 @@ object SpotifyAnalyser : IAnalyser {
                     reload()
                     return@exponentiallyBackoff true
                 }
+                429 -> {
+                    val backoff = response.header("Retry-After").firstOrNull()?.toIntOrNull() ?: 4
+                    logger.warn(
+                        "[{}] Got back response code 429; waiting {} seconds before trying again",
+                        clientInfo?.userUID
+                    )
+                    delay(backoff * 1000L)
+                    return@exponentiallyBackoff true
+                }
                 else -> {
                     if (logger.isErrorEnabled) logger.error(
                         "[{}] Got back response code {} with data \"{}\"; backing off and trying again",
@@ -230,6 +239,15 @@ object SpotifyAnalyser : IAnalyser {
                     reload()
                     return@exponentiallyBackoff true
                 }
+                429 -> {
+                    val backoff = response.header("Retry-After").firstOrNull()?.toIntOrNull() ?: 4
+                    logger.warn(
+                        "[{}] Got back response code 429; waiting {} seconds before trying again",
+                        clientInfo?.userUID
+                    )
+                    delay(backoff * 1000L)
+                    return@exponentiallyBackoff true
+                }
                 else -> {
                     logger.warn(
                         "[{}] Got back response code {} with data \"{}\"; backing off and trying again",
@@ -300,6 +318,15 @@ object SpotifyAnalyser : IAnalyser {
                     reload()
                     return@exponentiallyBackoff true
                 }
+                429 -> {
+                    val backoff = response.header("Retry-After").firstOrNull()?.toIntOrNull() ?: 4
+                    logger.warn(
+                        "[{}] Got back response code 429; waiting {} seconds before trying again",
+                        clientInfo?.userUID
+                    )
+                    delay(backoff * 1000L)
+                    return@exponentiallyBackoff true
+                }
                 else -> {
                     logger.warn(
                         "[{}] Got back response code {} with data \"{}\"; backing off and trying again",
@@ -355,6 +382,15 @@ object SpotifyAnalyser : IAnalyser {
                     )
                     error = SpotifyError.INVALID_AUTH_DETAILS
                     return@exponentiallyBackoff false
+                }
+                429 -> {
+                    val backoff = response.header("Retry-After").firstOrNull()?.toIntOrNull() ?: 4
+                    logger.warn(
+                        "[{}] Got back response code 429; waiting {} seconds before trying again",
+                        clientInfo?.userUID
+                    )
+                    delay(backoff * 1000L)
+                    return@exponentiallyBackoff true
                 }
                 else -> {
                     logger.warn(
