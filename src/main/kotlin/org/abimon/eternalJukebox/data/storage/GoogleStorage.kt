@@ -76,7 +76,7 @@ object GoogleStorage : IStorage {
 
         var errored = false
 
-        val body = withContext(Dispatchers.IO) { Buffer.buffer(data.use { stream -> stream.readAllBytes() }) }
+        val body = withContext(Dispatchers.IO) { Buffer.buffer(data.use { stream -> stream.readBytes() }) }
 
         val success = exponentiallyBackoff(64000, 8) { attempt ->
             logger.trace(

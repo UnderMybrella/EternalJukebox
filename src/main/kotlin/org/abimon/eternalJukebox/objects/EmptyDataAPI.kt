@@ -22,21 +22,21 @@ object EmptyDataAPI: IAnalyser, IAudioSource, IDatabase, IStorage, IAnalyticsSto
     override suspend fun isStored(name: String, type: EnumStorageType): Boolean = false
     override fun shouldStore(type: EnumAnalyticType<*>): Boolean = false
     override fun <T: Any> store(now: Long, data: T, type: EnumAnalyticType<T>): Boolean = false
-    override fun provideAudioTrackOverride(id: String, clientInfo: ClientInfo?): String? = null
+    override suspend fun provideAudioTrackOverride(id: String, clientInfo: ClientInfo?): String? = null
     override fun storeAudioTrackOverride(id: String, newURL: String, clientInfo: ClientInfo?) {}
     override fun provideAccountForGoogleID(googleID: String, clientInfo: ClientInfo?): JukeboxAccount? = null
-    override fun providePopularSongs(service: String, count: Int, clientInfo: ClientInfo?): List<JukeboxInfo> = emptyList()
-    override fun provideShortURL(params: Array<String>, clientInfo: ClientInfo?): String = ""
+    override suspend fun providePopularSongs(service: String, count: Int, clientInfo: ClientInfo?): List<JukeboxInfo> = emptyList()
+    override suspend fun provideShortURL(params: Array<String>, clientInfo: ClientInfo?): String = ""
     override fun shouldProvide(type: EnumAnalyticType<*>): Boolean = false
     override fun <T: Any> provide(now: Long, type: EnumAnalyticType<T>): T? = null
     override fun provideAccountForID(accountID: String, clientInfo: ClientInfo?): JukeboxAccount? = null
     override fun provideAccountForEternalAuth(eternalAuth: String, clientInfo: ClientInfo?): JukeboxAccount? = null
     override fun storeAccount(account: JukeboxAccount, clientInfo: ClientInfo?) {}
     override fun makeSongPopular(service: String, id: String, clientInfo: ClientInfo?) {}
-    override fun expandShortURL(id: String, clientInfo: ClientInfo?): Array<String>? = null
+    override suspend fun expandShortURL(id: String, clientInfo: ClientInfo?): Array<String>? = null
     override fun setupWebAnalytics(router: Router) {}
-    override fun storeOAuthState(path: String, clientInfo: ClientInfo?): String = ""
+    override suspend fun storeOAuthState(path: String, clientInfo: ClientInfo?): String = ""
     override fun retrieveOAuthState(state: String, clientInfo: ClientInfo?): String? = null
-    override fun provideAudioLocation(id: String, clientInfo: ClientInfo?): String? = null
-    override fun storeAudioLocation(id: String, location: String, clientInfo: ClientInfo?) {}
+    override suspend fun provideAudioLocation(id: String, clientInfo: ClientInfo?): String? = null
+    override suspend fun storeAudioLocation(id: String, location: String, clientInfo: ClientInfo?) {}
 }

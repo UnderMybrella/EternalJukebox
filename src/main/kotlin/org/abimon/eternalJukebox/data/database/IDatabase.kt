@@ -11,7 +11,7 @@ interface IDatabase {
     val databaseName
         get() = databaseOptions["databaseName"] ?: "eternal_jukebox"
 
-    fun provideAudioTrackOverride(id: String, clientInfo: ClientInfo?): String?
+    suspend fun provideAudioTrackOverride(id: String, clientInfo: ClientInfo?): String?
     fun storeAudioTrackOverride(id: String, newURL: String, clientInfo: ClientInfo?)
 
     fun provideAccountForID(accountID: String, clientInfo: ClientInfo?): JukeboxAccount?
@@ -19,15 +19,15 @@ interface IDatabase {
     fun provideAccountForEternalAuth(eternalAuth: String, clientInfo: ClientInfo?): JukeboxAccount?
     fun storeAccount(account: JukeboxAccount, clientInfo: ClientInfo?)
 
-    fun providePopularSongs(service: String, count: Int, clientInfo: ClientInfo?): List<JukeboxInfo>
+    suspend fun providePopularSongs(service: String, count: Int, clientInfo: ClientInfo?): List<JukeboxInfo>
     fun makeSongPopular(service: String, id: String, clientInfo: ClientInfo?)
 
-    fun provideShortURL(params: Array<String>, clientInfo: ClientInfo?): String
-    fun expandShortURL(id: String, clientInfo: ClientInfo?): Array<String>?
+    suspend fun provideShortURL(params: Array<String>, clientInfo: ClientInfo?): String
+    suspend fun expandShortURL(id: String, clientInfo: ClientInfo?): Array<String>?
 
-    fun provideAudioLocation(id: String, clientInfo: ClientInfo?): String?
-    fun storeAudioLocation(id: String, location: String, clientInfo: ClientInfo?)
+    suspend fun provideAudioLocation(id: String, clientInfo: ClientInfo?): String?
+    suspend fun storeAudioLocation(id: String, location: String, clientInfo: ClientInfo?)
 
-    fun storeOAuthState(path: String, clientInfo: ClientInfo?): String
+    suspend fun storeOAuthState(path: String, clientInfo: ClientInfo?): String
     fun retrieveOAuthState(state: String, clientInfo: ClientInfo?): String?
 }

@@ -1,14 +1,21 @@
 package org.abimon.eternalJukebox.data.database
 
+import com.github.benmanes.caffeine.cache.AsyncCache
+import com.github.benmanes.caffeine.cache.Caffeine
 import com.zaxxer.hikari.HikariDataSource
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import org.abimon.eternalJukebox.EternalJukebox
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.future.future
+import org.abimon.eternalJukebox.*
 import org.abimon.eternalJukebox.objects.ClientInfo
 import org.abimon.eternalJukebox.objects.JukeboxAccount
 import org.abimon.eternalJukebox.objects.JukeboxInfo
-import org.abimon.visi.io.errPrintln
 import java.sql.Connection
+import java.sql.ResultSet
+import java.sql.SQLTransientConnectionException
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
@@ -21,19 +28,59 @@ abstract class HikariDatabase : IDatabase {
         mapOf("jukebox" to ReentrantReadWriteLock(), "canonizer" to ReentrantReadWriteLock())
     val popularUpdates: Map<String, Channel<String>> =
         mapOf("jukebox" to Channel(Channel.BUFFERED), "canonizer" to Channel(Channel.BUFFERED))
-    val popularSongs: MutableMap<String, Array<String>> = mutableMapOf("jukebox" to emptyArray(), "canonizer" to emptyArray())
+    val popularSongs: MutableMap<String, Array<String>> =
+        mutableMapOf("jukebox" to emptyArray(), "canonizer" to emptyArray())
+    val locationUpdates: Channel<Pair<String, String>> =
+        Channel(Channel.BUFFERED)
+    val shortIDUpdates: Channel<Pair<Long, String>> =
+        Channel(Channel.BUFFERED)
+    val infoUpdates: Channel<JukeboxInfo> =
+        Channel(Channel.BUFFERED)
+
+    val infoCache: AsyncCache<String, JukeboxInfo> = Caffeine.newBuilder()
+        .expireAfterAccess(EternalJukebox.config.jukeboxInfoCacheStayDurationMinutes.toLong(), TimeUnit.MINUTES)
+        .maximumSize(EternalJukebox.config.maximumJukeboxInfoCacheSize)
+        .buildAsync()
+
+    val shortIDCache: AsyncCache<Long, String> = Caffeine.newBuilder()
+        .expireAfterAccess(EternalJukebox.config.shortIDCacheStayDurationMinutes.toLong(), TimeUnit.MINUTES)
+        .maximumSize(EternalJukebox.config.maximumShortIDCacheSize)
+        .buildAsync()
+
+    val shortIDReverseCache: AsyncCache<String, Long> = Caffeine.newBuilder()
+        .expireAfterAccess(EternalJukebox.config.shortIDCacheStayDurationMinutes.toLong(), TimeUnit.MINUTES)
+        .maximumSize(EternalJukebox.config.maximumShortIDCacheSize)
+        .buildAsync()
+
+    val overridesCache: AsyncCache<String, String> = Caffeine.newBuilder()
+        .expireAfterAccess(EternalJukebox.config.overridesCacheStayDurationMinutes.toLong(), TimeUnit.MINUTES)
+        .maximumSize(EternalJukebox.config.maximumOverridesCacheSize)
+        .buildAsync()
+
+    val locationCache: AsyncCache<String, String> = Caffeine.newBuilder()
+        .expireAfterAccess(EternalJukebox.config.locationsCacheStayDurationMinutes.toLong(), TimeUnit.MINUTES)
+        .maximumSize(EternalJukebox.config.maximumLocationCacheSize)
+        .buildAsync()
+
+    val shortIDStorm = LocalisedSnowstorm.getInstance(1585659600000L)
 
     val dispatcher = newSingleThreadContext("HikariPropagateDispatcher")
 
-    override fun provideAudioTrackOverride(id: String, clientInfo: ClientInfo?): String? = use { connection ->
-        val select = connection.prepareStatement("SELECT * FROM overrides WHERE id=?;")
-        select.setString(1, id)
-        select.execute()
+    override suspend fun provideAudioTrackOverride(id: String, clientInfo: ClientInfo?): String? {
+        val cachedValue = overridesCache.get(id) { id ->
+            use { connection ->
+                val select = connection.prepareStatement("SELECT * FROM overrides WHERE id=?;")
+                select.setString(1, id)
+                select.execute()
 
-        val results = select.resultSet
-        if (results.next())
-            return@use results.getString("url")
-        return@use null
+                val results = select.resultSet
+                if (results.next())
+                    return@use results.getString("url")
+                return@use null
+            }
+        }
+
+        return cachedValue.await()
     }
 
     override fun storeAudioTrackOverride(id: String, newURL: String, clientInfo: ClientInfo?) {
@@ -133,7 +180,7 @@ abstract class HikariDatabase : IDatabase {
         }
     }
 
-    override fun providePopularSongs(service: String, count: Int, clientInfo: ClientInfo?): List<JukeboxInfo> {
+    override suspend fun providePopularSongs(service: String, count: Int, clientInfo: ClientInfo?): List<JukeboxInfo> {
 //        use { connection ->
 //            val select =
 //                connection.prepareStatement("SELECT song_id, hits FROM popular WHERE service=? ORDER BY hits DESC LIMIT $count;")
@@ -157,47 +204,59 @@ abstract class HikariDatabase : IDatabase {
         } ?: emptyList()
     }
 
-    fun getInfo(songID: String, clientInfo: ClientInfo?): JukeboxInfo? {
-        val info = use { connection ->
-            val select =
-                connection.prepareStatement("SELECT song_name, song_title, song_artist, song_url, song_duration FROM info_cache WHERE id=? LIMIT 1;")
-            select.setString(1, songID)
-            select.execute()
+    private suspend fun getInfo(songID: String, clientInfo: ClientInfo?): JukeboxInfo? {
+        val cachedValue = infoCache.get(songID) { _, executor ->
+            GlobalScope.future(executor.asCoroutineDispatcher()) {
+                val info = try {
+                    use { connection ->
+                        val select =
+                            connection.prepareStatement("SELECT song_name, song_title, song_artist, song_url, song_duration FROM info_cache WHERE id=? LIMIT 1;")
+                        select.setString(1, songID)
+                        select.execute()
 
-            select.resultSet.use { rs ->
-                if (rs.next()) {
-                    JukeboxInfo(
-                        service = "SPOTIFY",
-                        id = songID,
-                        name = rs.getString("song_name"),
-                        title = rs.getString("song_title"),
-                        artist = rs.getString("song_artist"),
-                        url = rs.getString("song_url"),
-                        duration = rs.getInt("song_duration")
-                    )
-                } else {
+                        select.resultSet.use { rs ->
+                            if (rs.next()) {
+                                JukeboxInfo(
+                                    service = "SPOTIFY",
+                                    id = songID,
+                                    name = rs.getString("song_name"),
+                                    title = rs.getString("song_title"),
+                                    artist = rs.getString("song_artist"),
+                                    url = rs.getString("song_url"),
+                                    duration = rs.getInt("song_duration")
+                                )
+                            } else {
+                                null
+                            }
+                        }
+                    }
+                } catch (sqlTransientException: SQLTransientConnectionException) {
+                    logger.warn("Could not obtain connection in time, going to Spotify: ", sqlTransientException)
                     null
                 }
+
+                if (info != null) return@future info
+                val result = EternalJukebox.spotify.getInfo(songID, clientInfo) ?: return@future null
+
+//                use { connection ->
+//                    val insert =
+//                        connection.prepareStatement("INSERT INTO info_cache(id, song_name, song_title, song_artist, song_url, song_duration) VALUES (?, ?, ?, ?, ?, ?);")
+//                    insert.setString(1, result.id)
+//                    insert.setString(2, result.name)
+//                    insert.setString(3, result.title)
+//                    insert.setString(4, result.artist)
+//                    insert.setString(5, result.url)
+//                    insert.setInt(6, result.duration)
+//                    insert.execute()
+//                }
+
+                infoUpdates.send(result)
+
+                return@future result
             }
         }
 
-        if (info != null) return info
-
-        val result = runBlocking { EternalJukebox.spotify.getInfo(songID, clientInfo) } ?: return null
-
-        use { connection ->
-            val insert =
-                connection.prepareStatement("INSERT INTO info_cache(id, song_name, song_title, song_artist, song_url, song_duration) VALUES (?, ?, ?, ?, ?, ?);")
-            insert.setString(1, result.id)
-            insert.setString(2, result.name)
-            insert.setString(3, result.title)
-            insert.setString(4, result.artist)
-            insert.setString(5, result.url)
-            insert.setInt(6, result.duration)
-            insert.execute()
-        }
-
-        return result
+        return cachedValue.await()
     }
 
     override fun makeSongPopular(service: String, id: String, clientInfo: ClientInfo?) {
@@ -215,7 +274,7 @@ abstract class HikariDatabase : IDatabase {
         GlobalScope.launch(dispatcher) { popularUpdates[service]?.send(id) }
     }
 
-    override fun provideShortURL(params: Array<String>, clientInfo: ClientInfo?): String {
+    override suspend fun provideShortURL(params: Array<String>, clientInfo: ClientInfo?): String {
         val joined = buildString {
             for (param in params) {
                 if (length > 4096)
@@ -228,41 +287,57 @@ abstract class HikariDatabase : IDatabase {
             }
         }
 
-        var id = use { connection ->
-            val select = connection.prepareStatement("SELECT * FROM short_urls WHERE params=?;")
-            select.setString(1, joined)
-            select.execute()
+        var id = shortIDReverseCache.get(joined) { _ ->
+            use { connection ->
+                val select = connection.prepareStatement("SELECT id FROM short_urls WHERE params=?;")
+                select.setString(1, joined)
+                select.execute()
 
-            val results = select.resultSet
+                val results = select.resultSet
 
-            if (results.first()) results.getString("id")
-            else null
-        }
+                if (results.first()) results.getString("id").toBase64Long()
+                else null
+            }
+        }.await()
 
-        if (id != null) return id
+        if (id != null) return id.toBase64()
 
         id = obtainNewShortID()
 
-        use { connection ->
-            val insert = connection.prepareStatement("INSERT INTO short_urls (id, params) VALUES (?, ?);")
-            insert.setString(1, id)
-            insert.setString(2, joined)
-            insert.execute()
-        }
+//        withContext(Dispatchers.IO) {
+//            use { connection ->
+//                val insert = connection.prepareStatement("INSERT INTO short_urls (id, params) VALUES (?, ?);")
+//                insert.setString(1, id.toBase64())
+//                insert.setString(2, joined)
+//                insert.execute()
+//            }
+//        }
 
-        return id
+        shortIDCache.put(id, CompletableFuture.completedFuture(joined))
+        shortIDReverseCache.put(joined, CompletableFuture.completedFuture(id))
+        shortIDUpdates.send(Pair(id, joined))
+
+        return id.toBase64()
     }
 
-    override fun expandShortURL(id: String, clientInfo: ClientInfo?): Array<String>? = use { connection ->
-        val select = connection.prepareStatement("SELECT * FROM short_urls WHERE id=?;")
-        select.setString(1, id)
-        select.execute()
+    override suspend fun expandShortURL(id: String, clientInfo: ClientInfo?): Array<String>? {
+        val expanded = shortIDCache.get(id.toBase64LongOrNull() ?: return null) { _ ->
+            use { connection ->
+                val select = connection.prepareStatement("SELECT params FROM short_urls WHERE id=?;")
+                select.setString(1, id)
+                select.execute()
 
-        val results = select.resultSet
-        if (results.first())
-            return@use results.getString("params").split("&").toTypedArray()
+                select.resultSet.use { rs ->
+                    if (rs.next()) {
+                        rs.getString("params")
+                    } else {
+                        null
+                    }
+                }
+            }
+        }
 
-        return@use null
+        return expanded.await()?.split("&")?.toTypedArray()
     }
 
     override fun retrieveOAuthState(state: String, clientInfo: ClientInfo?): String? = use { connection ->
@@ -283,8 +358,8 @@ abstract class HikariDatabase : IDatabase {
         return@use null
     }
 
-    override fun storeOAuthState(path: String, clientInfo: ClientInfo?): String = use { connection ->
-        val id = obtainNewShortID("oauth_state", 32)
+    override suspend fun storeOAuthState(path: String, clientInfo: ClientInfo?): String = use { connection ->
+        val id = obtainNewShortID().toBase64()
 
         val insert = connection.prepareStatement("INSERT INTO oauth_state (id, path) VALUES (?, ?);")
         insert.setString(1, id)
@@ -294,59 +369,70 @@ abstract class HikariDatabase : IDatabase {
         return@use id
     }
 
-    override fun provideAudioLocation(id: String, clientInfo: ClientInfo?): String? = use location@{ connection ->
-        val select = connection.prepareStatement("SELECT location FROM audio_locations WHERE id=?;")
-        select.setString(1, id)
-        select.execute()
+    override suspend fun provideAudioLocation(id: String, clientInfo: ClientInfo?): String? {
+        val location = locationCache.get(id) { _ ->
+            use { connection ->
+                val select = connection.prepareStatement("SELECT location FROM audio_locations WHERE id=?;")
+                select.setString(1, id)
+                select.execute()
 
-        return@location select.resultSet.use { resultSet ->
-            if (resultSet.next())
-                return@use resultSet.getString("location")
-            return@use null
-        }
-    }
-
-    override fun storeAudioLocation(id: String, location: String, clientInfo: ClientInfo?) {
-        use { connection ->
-            val insert =
-                connection.prepareStatement("INSERT INTO audio_locations (id, location) VALUES (?, ?) ON DUPLICATE KEY UPDATE location=VALUES(location);")
-            insert.setString(1, id)
-            insert.setString(2, location)
-
-            insert.execute()
-        }
-    }
-
-    fun obtainNewShortID(table: String = "short_urls", count: Int = 5): String {
-        for (i in 0 until 4096) {
-            val id =
-                buildString {
-                    repeat(count) {
-                        append(
-                            EternalJukebox.BASE_64_URL[EternalJukebox.secureRandom.nextInt(
-                                64
-                            )]
-                        )
-                    }
+                select.resultSet.use { resultSet ->
+                    resultSet.takeIf(ResultSet::next)?.getString("location")
                 }
-            val exists = use { connection ->
-                val preparedSelect = connection.prepareStatement("SELECT id FROM $table WHERE id=? LIMIT 1")
-                preparedSelect.setString(1, id)
-                preparedSelect.execute()
-                preparedSelect.resultSet.next()
             }
-
-            if (!exists) return id
-
-            println("Generated $id, no success")
         }
 
-        errPrintln("We've run out of new short IDs to send. This is bad.")
-
-        throw IllegalStateException("Run out of IDs")
+        return location.await()
     }
 
-    open infix fun <T> use(op: (Connection) -> T): T = ds.connection.use(op)
+    override suspend fun storeAudioLocation(id: String, location: String, clientInfo: ClientInfo?) {
+        locationCache.put(id, CompletableFuture.completedFuture(location))
+        locationUpdates.send(Pair(id, location))
+
+        /**
+         * use { connection ->
+        val insert =
+        connection.prepareStatement("INSERT INTO audio_locations (id, location) VALUES (?, ?) ON DUPLICATE KEY UPDATE location=VALUES(location);")
+        insert.setString(1, id)
+        insert.setString(2, location)
+
+        insert.execute()
+        }
+         */
+    }
+
+    suspend fun obtainNewShortID(): Long {
+//        for (i in 0 until 4096) {
+//            val id =
+//                buildString {
+//                    repeat(count) {
+//                        append(
+//                            EternalJukebox.BASE_64_URL[EternalJukebox.secureRandom.nextInt(
+//                                64
+//                            )]
+//                        )
+//                    }
+//                }
+//            val exists = use { connection ->
+//                val preparedSelect = connection.prepareStatement("SELECT id FROM $table WHERE id=? LIMIT 1")
+//                preparedSelect.setString(1, id)
+//                preparedSelect.execute()
+//                preparedSelect.resultSet.next()
+//            }
+//
+//            if (!exists) return id
+//
+//            println("Generated $id, no success")
+//        }
+//
+//        errPrintln("We've run out of new short IDs to send. This is bad.")
+//
+//        throw IllegalStateException("Run out of IDs")
+
+        return shortIDStorm.generateLongId()
+    }
+
+    inline infix fun <T> use(op: (Connection) -> T): T = ds.connection.use(op)
 
     open fun updatePopular(connection: Connection, updates: Map<String, Int>) {
         val insertUpdate =
@@ -364,6 +450,59 @@ abstract class HikariDatabase : IDatabase {
             }
 
             insertUpdate.executeBatch()
+        }
+    }
+
+    open fun updateLocation(connection: Connection, updates: Map<String, String>) {
+        val insert =
+            connection.prepareStatement("INSERT INTO audio_locations (id, location) VALUES (?, ?) ON DUPLICATE KEY UPDATE location=VALUES(location);")
+        updates.entries.chunked(100) { chunk ->
+            insert.clearBatch()
+
+            chunk.forEach { (id, location) ->
+                insert.setString(1, id)
+                insert.setString(2, location)
+                insert.addBatch()
+            }
+
+            insert.executeBatch()
+        }
+    }
+
+    open fun updateShortIDs(connection: Connection, updates: Map<String, String>) {
+        val insert = connection.prepareStatement("INSERT INTO short_urls (id, params) VALUES (?, ?);")
+
+        updates.entries.chunked(100) { chunk ->
+            insert.clearBatch()
+
+            chunk.forEach { (id, params) ->
+                insert.setString(1, id)
+                insert.setString(2, params)
+                insert.addBatch()
+            }
+
+            insert.executeBatch()
+        }
+    }
+
+    open fun updateInfo(connection: Connection, updates: Collection<JukeboxInfo>) {
+        val insert =
+            connection.prepareStatement("INSERT INTO info_cache(id, song_name, song_title, song_artist, song_url, song_duration) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE;")
+
+        updates.chunked(100) { chunk ->
+            insert.clearBatch()
+
+            chunk.forEach { info ->
+                insert.setString(1, info.id)
+                insert.setString(2, info.name)
+                insert.setString(3, info.title)
+                insert.setString(4, info.artist)
+                insert.setString(5, info.url)
+                insert.setInt(6, info.duration)
+                insert.addBatch()
+            }
+
+            insert.executeBatch()
         }
     }
 
@@ -393,15 +532,17 @@ abstract class HikariDatabase : IDatabase {
 
         GlobalScope.launch {
             while (isActive) {
-                println("[Condensing Updates]")
+                println("[Condensing Popular Updates]")
                 val updates: MutableMap<String, Int> = HashMap()
 
-                popularUpdates.forEach { (service, channel) ->
-                    while (!channel.isEmpty)
-                        updates.compute("$service:${channel.receive()}") { _, v -> v?.plus(1) ?: 1 }
+                withTimeoutOrNull(5_000) {
+                    popularUpdates.forEach { (service, channel) ->
+                        while (!channel.isEmpty)
+                            updates.compute("$service:${channel.receive()}") { _, v -> v?.plus(1) ?: 1 }
+                    }
                 }
 
-                println("[Updating Database]")
+                println("[Updating Popular Database]")
 
                 withContext(Dispatchers.IO) {
                     use { connection ->
@@ -425,6 +566,78 @@ abstract class HikariDatabase : IDatabase {
                                 popularSongs[service] = popular.toTypedArray()
                             }
                         }
+                    }
+                }
+
+                delay(TIME_BETWEEN_UPDATES_MS)
+            }
+        }
+
+        GlobalScope.launch {
+            while (isActive) {
+                println("[Condensing Location Updates]")
+                val updates: MutableMap<String, String> = HashMap()
+
+                withTimeoutOrNull(5_000) {
+                    while (!locationUpdates.isEmpty) {
+                        val (k, v) = locationUpdates.receive()
+                        updates[k] = v
+                    }
+                }
+
+                println("[Updating Location Database]")
+
+                withContext(Dispatchers.IO) {
+                    use { connection ->
+                        updateLocation(connection, updates)
+                    }
+                }
+
+                delay(TIME_BETWEEN_UPDATES_MS)
+            }
+        }
+
+        GlobalScope.launch {
+            while (isActive) {
+                println("[Condensing Short ID Updates]")
+                val updates: MutableMap<String, String> = HashMap()
+
+                withTimeoutOrNull(5_000) {
+                    while (!shortIDUpdates.isEmpty) {
+                        val (k, v) = shortIDUpdates.receive()
+                        updates[k.toBase64()] = v
+                    }
+                }
+
+                println("[Updating Short ID Database]")
+
+                withContext(Dispatchers.IO) {
+                    use { connection ->
+                        updateShortIDs(connection, updates)
+                    }
+                }
+
+                delay(TIME_BETWEEN_UPDATES_MS)
+            }
+        }
+
+        GlobalScope.launch {
+            while (isActive) {
+                println("[Condensing Info Updates]")
+                val updates: MutableMap<String, JukeboxInfo> = HashMap()
+
+                withTimeoutOrNull(5_000) {
+                    while (!infoUpdates.isEmpty) {
+                        val info = infoUpdates.receive()
+                        updates[info.id] = info
+                    }
+                }
+
+                println("[Updating Info Database]")
+
+                withContext(Dispatchers.IO) {
+                    use { connection ->
+                        updateInfo(connection, updates.values)
                     }
                 }
 

@@ -43,5 +43,14 @@ data class JukeboxConfig(
 
         val logFiles: Map<String, String?> = emptyMap(),
 
-        val hikariBatchTimeBetweenUpdatesMs: Int = 5 * 60_000
+        val hikariBatchTimeBetweenUpdatesMs: Int = 5 * 60_000,
+
+        val maximumShortIDCacheSize: Long = 10_000,
+        val shortIDCacheStayDurationMinutes: Int = 10,
+        val maximumOverridesCacheSize: Long = 1_000,
+        val overridesCacheStayDurationMinutes: Int = 10,
+        val maximumJukeboxInfoCacheSize: Long = 1_000,
+        val jukeboxInfoCacheStayDurationMinutes: Int = 10,
+        val locationsCacheStayDurationMinutes: Int = 5,
+        val maximumLocationCacheSize: Long = 1_000
 )

@@ -93,7 +93,12 @@ fun Reader.useLineByLine(op: (String) -> Unit) = this.use { reader -> reader.rea
 val KClass<*>.simpleClassName: String
     get() = simpleName ?: jvmName.substringAfterLast('.')
 
-fun ScheduledExecutorService.scheduleAtFixedRate(initialDelay: Long, every: Long, unit: TimeUnit = TimeUnit.MILLISECONDS, op: () -> Unit) = this.scheduleAtFixedRate(op, initialDelay, every, unit)
+fun ScheduledExecutorService.scheduleAtFixedRate(
+    initialDelay: Long,
+    every: Long,
+    unit: TimeUnit = TimeUnit.MILLISECONDS,
+    op: () -> Unit
+) = this.scheduleAtFixedRate(op, initialDelay, every, unit)
 
 fun ScheduledExecutorService.schedule(delay: Long, unit: TimeUnit = TimeUnit.MILLISECONDS, op: () -> Unit) = this.schedule(op, delay, unit)
 
@@ -119,4 +124,69 @@ fun <T : Any> ObjectMapper.tryReadValue(src: InputStream, klass: KClass<T>): T? 
     } catch (jsonParsing: JsonParseException) {
         return null
     }
+}
+
+fun String.toBase64LongOrNull(): Long? {
+    var i = 0
+    val len: Int = length
+    var limit: Long = -Long.Companion.MAX_VALUE
+
+    return if (len > 0) {
+        val firstChar: Char = get(0)
+        val multmin: Long = limit / 64
+        var result: Long = 0
+        while (i < len) {
+            // Accumulating negatively avoids surprises near MAX_VALUE
+            val digit: Int = EternalJukebox.BASE_64_URL.indexOf(get(i++))
+            if (digit < 0 || result < multmin) {
+                return null
+            }
+            result *= 64
+            if (result < limit + digit) {
+                return null
+            }
+            result -= digit.toLong()
+        }
+        -result
+    } else {
+        return null
+    }
+}
+fun String.toBase64Long(): Long {
+    var i = 0
+    val len: Int = length
+    var limit: Long = -Long.Companion.MAX_VALUE
+
+    return if (len > 0) {
+        val firstChar: Char = get(0)
+        val multmin: Long = limit / 64
+        var result: Long = 0
+        while (i < len) {
+            // Accumulating negatively avoids surprises near MAX_VALUE
+            val digit: Int = EternalJukebox.BASE_64_URL.indexOf(get(i++))
+            if (digit < 0 || result < multmin) {
+                throw NumberFormatException()
+            }
+            result *= 64
+            if (result < limit + digit) {
+                throw NumberFormatException()
+            }
+            result -= digit.toLong()
+        }
+       -result
+    } else {
+        throw NumberFormatException()
+    }
+}
+
+fun Long.toBase64(): String {
+    val buf = StringBuffer()
+    var charPos = 64
+    var i = -this
+    while (i <= -64) {
+        charPos = (charPos - 1) shl 1
+        buf.append(EternalJukebox.BASE_64_URL[-(i % 64) as Int])
+        i /= 64
+    }
+    return buf.toString()
 }
