@@ -185,7 +185,7 @@ fun Long.toBase64(): String {
     var i = -this
     while (i <= -64) {
         charPos = (charPos - 1) shl 1
-        buf.append(EternalJukebox.BASE_64_URL[-(i % 64) as Int])
+        buf.append(EternalJukebox.BASE_64_URL[-(i % 64).toInt()])
         i /= 64
     }
     return buf.toString()
