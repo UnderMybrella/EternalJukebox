@@ -99,7 +99,7 @@ class LocalisedSnowstorm constructor(private val twepoch: Long = LocalisedSnowst
                 else -> {
                     val addrData = addr.address
 
-                    id = (addrData[1].toInt() and 0x3 shl 8) or (addrData[1].toInt() and 0xFF)
+                    id = (addrData[addrData.size - 2].toInt() and 0x3 shl 8) or (addrData[addrData.size - 1].toInt() and 0xFF)
                 }
             }
 
