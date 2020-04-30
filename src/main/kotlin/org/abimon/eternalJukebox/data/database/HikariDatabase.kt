@@ -607,9 +607,9 @@ abstract class HikariDatabase : IDatabase {
 
                         insert.executeBatch()
                     }
+                    
+                    delay(SHORT_ID_UPDATE_TIME_MS)
                 }
-                 
-                 delay(TIME_BETWEEN_UPDATES_MS)
             }
         }
 
