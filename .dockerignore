@@ -1,0 +1,8 @@
+# ignore .git folder
+.git
+
+# ignore data directories
+data
+
+# ignore markdown files
+*.md

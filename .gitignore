@@ -56,3 +56,11 @@ working/
 !/src/main/kotlin/org/abimon/eternalJukebox/data/audio
 /data/
 web
+
+# ignore config files
+config.yml
+config.yaml
+config.json
+
+# docker-compose environment
+.env

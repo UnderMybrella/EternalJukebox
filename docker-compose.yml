@@ -1,0 +1,33 @@
+version: '3'
+services:
+  main:
+    build: .
+    image: eternaljukebox
+    networks:
+      - internal
+    ports:
+      - 8080:8080
+    env_file:
+      - .env
+    volumes:
+      - './envvar_config.yaml:/EternalJukebox/envvar_config.yaml'
+      - './data:/EternalJukebox/data'
+    depends_on:
+      - db
+
+  db:
+    image: mysql
+    restart: always
+    volumes:
+      - ./database:/var/lib/mysql 
+    networks:
+      - internal
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: ${SQL_PASSWORD}
+      MYSQL_DATABASE: ${SQL_DATABASE_NAME}
+      MYSQL_USER: ${SQL_USERNAME}
+      MYSQL_PASSWORD: ${SQL_PASSWORD}
+
+networks:
+  internal: 
