@@ -13,11 +13,17 @@ You need to install [docker](https://docs.docker.com/engine/install/) and [docke
 
 Then, download or clone the repository.
 
+## Configuration
+
+To configure, rename `.env.example` to `.env` and change the appropriate values. For advanced configuration edit `envvar_config.yaml`.
+
 ## Running
 
 To start, run `docker-compose up -d` in the repositories directory. To stop, run `docker-compose down`.
 
 If you change anything in the repository, like pulling updates, run `docker-compose build` to re-build the application.
+
+If you want to change the port from 8080, edit `docker-compose.yml` line 9, to be `- <your port>:8080`
 
 # Manual Install
 
