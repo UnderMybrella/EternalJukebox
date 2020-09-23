@@ -1,0 +1,39 @@
+# The base domain
+baseDomain: ${DOMAIN}
+# What port we're running on
+port: ${PORT}
+# Spotify Client / Secret; make an application over here: https://developer.spotify.com/my-applications/
+spotifyClient: ${SPOTIFYCLIENT}
+spotifySecret: ${SPOTIFYSECRET}
+
+# Only needed if you're doing oauth logins
+googleClient: ${GOOGLECLIENT}
+googleSecret: ${GOOGLESECRET}
+
+# These can be any folders you want
+storageType: LOCAL
+storageOptions:
+  ANALYSIS_FOLDER: data/analysis
+  AUDIO_FOLDER: data/audio
+  EXTERNAL_AUDIO_FOLDER: data/external_audio
+  UPLOADED_AUDIO_FOLDER: data/uploaded_audio
+  PROFILE_FOLDER: data/profile
+  LOG_FOLDER: data/log
+
+# If not provided, local audio should work
+audioSourceType: YOUTUBE
+audioSourceOptions:
+  # This can be obtained from here: https://developers.google.com/youtube/v3/getting-started
+  API_KEY: ${YOUTUBE_API_KEY}
+
+# How long blocking workers can go for (in ns)
+workerExecuteTime: 1200000000000
+
+# Can either be JDBC or H2
+# If H2, you'll need to provide 'databaseName' under options, or leave it blank to default to 'eternal_jukebox'
+# The values below are only needed if you're connecting to something like a MySQL database
+databaseType: JDBC
+databaseOptions:
+  username: ${SQL_USERNAME}
+  password: ${SQL_PASSWORD}
+  jdbcUrl: jdbc:${SQL_TYPE}://${SQL_HOST}:${SQL_PORT}/${SQL_DATABASE_NAME}?useSSL=false

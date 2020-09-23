@@ -5,7 +5,21 @@ This repo contains everything you need to host the EternalJukebox on your own se
 
 You can visit the official site [here](https://eternalbox.dev/), in case you want to mess around with it without doing all the hard stuff.  
 
-# Documentation
+# Docker Install
+
+## Prerequesits
+
+You need to install [docker](https://docs.docker.com/engine/install/) and [docker-compose](https://docs.docker.com/compose/install/)
+
+Then, download or clone the repository.
+
+## Running
+
+To start, run `docker-compose up -d` in the repositories directory. To stop, run `docker-compose down`.
+
+If you change anything in the repository, like pulling updates, run `docker-compose build` to re-build the application.
+
+# Manual Install
 
 ## Prerequisites
 
