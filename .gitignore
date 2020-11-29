@@ -64,3 +64,6 @@ config.json
 
 # docker-compose environment
 .env
+
+# docker-compose mysql
+database/
