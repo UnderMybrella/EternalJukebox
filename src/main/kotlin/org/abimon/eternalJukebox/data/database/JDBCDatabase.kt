@@ -16,6 +16,7 @@ object JDBCDatabase: HikariDatabase() {
 
         config.username = databaseOptions["username"]?.toString()
         config.password = databaseOptions["password"]?.toString()
+        config.initializationFailTimeout = 0
 
         val cloudSqlInstance = databaseOptions["cloudSqlInstance"]?.toString()
 

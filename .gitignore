@@ -37,6 +37,7 @@ crashlytics.properties
 crashlytics-build.properties
 fabric.properties
 
+.gradle/
 .idea/
 .vertx/
 EternalJukebox.iml
