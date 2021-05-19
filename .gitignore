@@ -51,7 +51,7 @@ gradle-app.setting
 .idea/
 frames/
 *.ogg
-eternalbot/
+client/eternalbot/
 
 application.properties
 application.yml
