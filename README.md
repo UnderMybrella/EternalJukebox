@@ -47,7 +47,7 @@ Use these commands in the terminal to install youtube-dl on Linux:
 
 ### ffmpeg:
 ##### Windows
-Download the exe from https://ffmpeg.zeranoe.com/builds/ and place it in `C:\Windows\`, or in another folder on teh PATH.
+Download the exe from https://ffmpeg.zeranoe.com/builds/ and place it in `C:\Windows\`, or in another folder on the PATH.
 ##### Linux
 ffmpeg is available to download in most distributions using `sudo apt-get install ffmpeg` or equivalent
 
