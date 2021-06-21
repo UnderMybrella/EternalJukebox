@@ -1,6 +1,6 @@
 ### Before
 - [ ] I have checked for similar issues already
-- [ ] My issue is not a bad syncronisation between the Spotify track and the YouTube audio (Those go [here.](https://github.com/UnderMybrella/EternalJukebox/issues/31))
+- [ ] My issue is not a bad synchronisation between the Spotify track and the YouTube audio (Those go [here.](https://github.com/UnderMybrella/EternalJukebox/issues/31))
 
 ### Description
 [Description of the issue]
