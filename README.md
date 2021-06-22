@@ -1,13 +1,13 @@
 # EternalJukebox
 
-The source files for the EternalJukebox, a rehosting of the Infinite Jukebox.  
+The source files for the EternalJukebox, a re-hosting of the Infinite Jukebox.  
 This repo contains everything you need to host the EternalJukebox on your own server!  
 
 You can visit the official site [here](https://eternalbox.dev/), in case you want to mess around with it without doing all the hard stuff.  
 
 # Docker Install
 
-## Prerequesits
+## Prerequisites
 
 You need to install [docker](https://docs.docker.com/engine/install/) and [docker-compose](https://docs.docker.com/compose/install/)
 
@@ -37,7 +37,7 @@ For Ubuntu or Debian-based distributions execute `sudo apt-get install default-j
 ##### Fedora and CentOS
 There is a tutorial for installing java on Fedora and CentOS at https://www.digitalocean.com/community/tutorials/how-to-install-java-on-centos-and-fedora   
 
-### Youtube-dl:
+### YouTube-dl:
 ##### Windows
 Download the .exe at https://yt-dl.org/latest/youtube-dl.exe and place it in `C:\Windows\`, or in another folder on the PATH.
 ##### Linux
@@ -45,11 +45,11 @@ Use these commands in the terminal to install youtube-dl on Linux:
 `sudo curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl`   
 `sudo chmod a+rx /usr/local/bin/youtube-dl`
 
-### ffmpeg:
+### FFmpeg:
 ##### Windows
-Download the exe from https://ffmpeg.zeranoe.com/builds/ and place it in `C:\Windows\`, or in another folder on teh PATH.
+Download the exe from https://ffmpeg.zeranoe.com/builds/ and place it in `C:\Windows\`, or in another folder on the PATH.
 ##### Linux
-ffmpeg is available to download in most distributions using `sudo apt-get install ffmpeg` or equivalent
+FFmpeg is available to download in most distributions using `sudo apt-get install ffmpeg` or equivalent
 
 ## Getting the project files:
 The whole process of obtaining project files is much easier now, as the build process is streamlined through Jenkins.
@@ -59,13 +59,13 @@ The project site is over [here](https://jenkins.abimon.org/job/EternalJukebox/),
 ## Configuring
 First thing to do is create a new file called either `config.yaml` or `config.json` (YAML tends to be easier to write, but takes up slightly more space), then open it with notepad/notepad++ on Windows and whatever text editor you like on Linux (for example nano: `nano config.json`)
 
-Now you should go to https://developer.spotify.com/my-applications/ and log in to your spotify account.  
+Now you should go to https://developer.spotify.com/my-applications/ and log in to your Spotify account.  
 Then click the "Create an app" button and a new page should popup.   
 There give it a name and description and click create.   
 It should send you to the new app's page, the only thing you need from here is your Client ID and Client Secret  
 (Note: Never share these with anyone!)  
 
-You will also need a Youtube Data API key, which you can find about how to obtain [here](https://developers.google.com/youtube/v3/getting-started).
+You will also need a YouTube Data API key, which you can find about how to obtain [here](https://developers.google.com/youtube/v3/getting-started).
 
 There are a variety of config options (documentation coming soon) that allow most portions of the EternalJukebox to be configured, and these can be entered here.
 

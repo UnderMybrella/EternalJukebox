@@ -26,7 +26,7 @@
     "apiKey": "<API_KEY>"
   },
   "workerExecuteTimeComment": "How long blocking workers can go for (in ns)",
-  "workerExecuteTime": 1200000000000
+  "workerExecuteTime": 1200000000000,
 
   "databaseTypeComment": "Can either be JDBC or H2",
   "databaseTypeComment2": "If H2, you'll need to provide 'databaseName' under options, or leave it blank to default to 'eternal_jukebox'",
