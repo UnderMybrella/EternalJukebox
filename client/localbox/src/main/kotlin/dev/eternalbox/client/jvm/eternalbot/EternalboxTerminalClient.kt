@@ -6,10 +6,10 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.source.local.LocalAudioSourceManager
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
-import dev.eternalbox.client.common.EternalboxTrack
-import dev.eternalbox.client.common.jukebox.EternalRemixer
-import dev.eternalbox.client.common.arbitraryProgressBar
-import dev.eternalbox.client.common.arbitrarySuspendedProgressBar
+import dev.eternalbox.common.EternalboxTrack
+import dev.eternalbox.common.jukebox.EternalRemixer
+import dev.eternalbox.common.arbitraryProgressBar
+import dev.eternalbox.common.arbitrarySuspendedProgressBar
 import dev.eternalbox.client.jvm.magma.loadItemAsync
 import dev.eternalbox.client.jvm.magma.playTrackToAsyncFrameChannel
 import io.ktor.client.HttpClient
@@ -26,8 +26,8 @@ import kotlinx.coroutines.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import dev.brella.kornea.errors.common.*
-import dev.eternalbox.client.common.flatCycle
-import dev.eternalbox.client.common.jukebox.toJukebox
+import dev.eternalbox.common.flatCycle
+import dev.eternalbox.common.jukebox.toJukebox
 import dev.eternalbox.client.jvm.magma.playTrackToAsyncFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.serialization.decodeFromString

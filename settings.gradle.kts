@@ -18,6 +18,8 @@ include(":client:magma")
 include(":client:localbox")
 include(":client:eternalbot")
 
-include(":server")
+include(":http-client")
+
+include(":server:core")
 
 enableFeaturePreview("GRADLE_METADATA")

@@ -5,8 +5,8 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackState
 import com.sedmelluq.discord.lavaplayer.track.playback.AudioFrame
 import com.sedmelluq.discord.lavaplayer.track.playback.MutableAudioFrame
-import dev.eternalbox.client.common.ExchangeChannel
-import dev.eternalbox.client.common.exchange
+import dev.eternalbox.common.ExchangeChannel
+import dev.eternalbox.common.exchange
 import kotlinx.coroutines.*
 import kotlinx.coroutines.NonCancellable.isActive
 import kotlinx.coroutines.channels.Channel

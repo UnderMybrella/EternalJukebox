@@ -5,9 +5,12 @@ plugins {
 	kotlin("plugin.serialization")
 }
 
-group = "dev.eternalbox.client.common"
+group = "dev.eternalbox"
 version = "1.0.0"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
+
+val kotlinx_serialisation_version: String by rootProject
+val kotlinx_coroutines_version: String by rootProject
 
 kotlin {
 	jvm()
@@ -19,21 +22,19 @@ kotlin {
 	sourceSets {
 		val commonMain by getting {
 			dependencies {
-				implementation(kotlin("stdlib-common"))
-				implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$KOTLINX_SERIALISATION_VERSION")
+				implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinx_serialisation_version")
+				implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_version")
 			}
 		}
 
 		jvm().compilations["main"].defaultSourceSet {
 			dependencies {
-				implementation(kotlin("stdlib-jdk8"))
 //				implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serialization_version")
 //				implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version")
 			}
 		}
 		js().compilations["main"].defaultSourceSet  {
 			dependencies {
-				implementation(kotlin("stdlib-js"))
 //				implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime-js:$serialization_version")
 //				implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:$coroutines_version")
 			}

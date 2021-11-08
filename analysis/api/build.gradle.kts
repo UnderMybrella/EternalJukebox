@@ -10,13 +10,11 @@ group = "dev.eternalbox.analysis.api"
 version = "0.0.1-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
+val kotlinx_coroutines_version: String by rootProject
+
 dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:$KOTLINX_COROUTINES_VERSION")
-
-	implementation("io.ktor:ktor-server-netty:$KTOR_VERSION")
-	implementation("io.ktor:ktor-serialization:$KTOR_VERSION")
 
 	api(project(":common"))
 }

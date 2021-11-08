@@ -1,71 +1,98 @@
 package dev.eternalbox.analysis.spotify
 
 import dev.eternalbox.analysis.AnalysisApi
-import kotlinx.coroutines.delay
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.boot.context.properties.ConfigurationProperties
-import org.springframework.boot.context.properties.ConstructorBinding
-import org.springframework.boot.context.properties.EnableConfigurationProperties
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
-import org.springframework.security.oauth2.client.AuthorizedClientServiceOAuth2AuthorizedClientManager
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientProviderBuilder
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService
-import org.springframework.security.oauth2.client.registration.ClientRegistration
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository
-import org.springframework.security.oauth2.client.web.reactive.function.client.ServletOAuth2AuthorizedClientExchangeFilterFunction
-import org.springframework.security.oauth2.core.AuthorizationGrantType
-import org.springframework.stereotype.Component
-import org.springframework.stereotype.Controller
-import org.springframework.stereotype.Service
-import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.reactive.function.client.awaitBody
+import dev.eternalbox.common.EternalboxTrack
+import dev.eternalbox.common.jukebox.EternalboxTrackDetails
+import dev.eternalbox.common.utils.TokenStore
+import dev.eternalbox.httpclient.authorise
+import dev.eternalbox.httpclient.formDataContent
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.features.*
+import io.ktor.client.features.compression.*
+import io.ktor.client.features.json.*
+import io.ktor.client.features.json.serializer.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import java.util.*
+import kotlin.coroutines.CoroutineContext
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
 
-@Component
-@ConditionalOnProperty(name = ["analysis-api"], havingValue = "Spotify")
-@EnableConfigurationProperties(SpotifyCredentials::class)
-@Controller
-class SpotifyAnalysisApi(val clientID: String, val clientSecret: String, clientRegistrationRepository: ClientRegistrationRepository, authorisedClientService: OAuth2AuthorizedClientService): AnalysisApi {
-    @Autowired
-    constructor(credentials: SpotifyCredentials, clientRegistrationRepository: ClientRegistrationRepository, authorisedClientService: OAuth2AuthorizedClientService): this(credentials.clientID, credentials.clientSecret, clientRegistrationRepository, authorisedClientService)
+class SpotifyAnalysisApi(clientID: String, clientSecret: String) : AnalysisApi, CoroutineScope {
+    override val service: String = "SPOTIFY"
+    override val coroutineContext: CoroutineContext = SupervisorJob()
 
-    val spotifyClientRegistration = ClientRegistration.withRegistrationId("spotify")
-            .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
-            .tokenUri("https://accounts.spotify.com/api/token")
-            .clientName("EternalBox Spotify Api")
-            .clientId(clientID)
-            .clientSecret(clientSecret)
-            .build()
-
-    @Bean
-    private fun webClient(authorizedClientManager: OAuth2AuthorizedClientManager): WebClient {
-        val oauth2Client = ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager)
-        return WebClient.builder()
-                .apply(oauth2Client.oauth2Configuration())
-                .build()
+    val json = Json {
+        ignoreUnknownKeys = true
     }
 
-    val authorizedClientManager: OAuth2AuthorizedClientManager by lazy {
-        val authorisedClientProvider = OAuth2AuthorizedClientProviderBuilder.builder()
-                .clientCredentials()
-                .build()
+    val client = HttpClient {
+        install(ContentEncoding) {
+            gzip()
+            deflate()
+            identity()
+        }
 
-        val authorisedClientManager = AuthorizedClientServiceOAuth2AuthorizedClientManager(clientRegistrationRepository, authorisedClientService)
-        authorisedClientManager.setAuthorizedClientProvider(authorisedClientProvider)
+        install(JsonFeature) {
+            serializer = KotlinxSerializer(json)
+        }
 
-        authorisedClientManager
+        install(HttpTimeout) {
+            connectTimeoutMillis = 30_000L
+        }
     }
-    val client: WebClient by lazy { webClient(authorizedClientManager) }
 
-    override suspend fun test() {
-        client.get()
-                .uri("https://google.com")
-                .retrieve()
-                .awaitBody<String>()
-                .apply { println(this) }
-        println("h-hewwo???")
-        delay(10_000)
+    private val clientCredentials: String = Base64
+        .getEncoder()
+        .encodeToString("$clientID:$clientSecret".encodeToByteArray())
+
+    @OptIn(ExperimentalTime::class)
+    val authToken = TokenStore(this) {
+        val response = client.post<HttpResponse>("https://accounts.spotify.com/api/token") {
+            header("Authorization", "Basic $clientCredentials")
+
+            body = formDataContent {
+                append("grant_type", "client_credentials")
+            }
+        }
+
+        if (response.status.isSuccess()) {
+            val token = response.receive<SpotifyClientCredentialsToken>()
+
+            TokenStore.TokenResult(token.accessToken, Duration.seconds(token.expiresIn))
+        } else {
+            null
+        }
+    }
+
+    override suspend fun getAnalysis(trackID: String): EternalboxTrack? =
+        authToken.authorise { token ->
+            client.get("https://api.spotify.com/v1/audio-analysis/$trackID") {
+                header("Authorization", "Bearer $token")
+            }
+        }
+
+    override suspend fun getTrackDetails(trackID: String): EternalboxTrackDetails? {
+        val track: SpotifyTrack = authToken.authorise { token ->
+            client.get("https://api.spotify.com/v1/tracks/$trackID") {
+                header("Authorization", "Bearer $token")
+            }
+        } ?: return null
+
+        return EternalboxTrackDetails(
+            service = service,
+            name = track.name,
+            albumName = track.album.name,
+            imageUrl = track.album.images.firstOrNull()?.url,
+            artists = track.artists.map(SpotifyArtist::name),
+            durationMs = track.durationMs
+        )
     }
 }

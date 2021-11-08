@@ -1,8 +1,0 @@
-const val KOTLIN_VERSION = "1.5.0"
-
-const val KOTLINX_ATOMICFU_VERSION = "0.16.1"
-const val KOTLINX_COROUTINES_VERSION = "1.5.0"
-const val KOTLINX_SERIALISATION_VERSION = "1.2.0"
-const val SHADOW_PLUGIN_VERSION = "4.0.3"
-
-const val KTOR_VERSION = "1.5.3"
