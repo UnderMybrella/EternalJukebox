@@ -47,3 +47,12 @@ public inline fun JsonObject.getDoubleOrNull(vararg keys: String) =
 
 public inline fun JsonObject.getBooleanOrNull(key: String) =
     (get(key) as? JsonPrimitive)?.booleanOrNull
+
+public inline fun <reified T> Iterable<*>.firstOf(): T = first { it is T } as T
+public inline fun <reified T> Iterable<*>.firstOfOrNull(): T? = firstOrNull { it is T } as? T
+
+public inline fun <reified T> Iterable<*>.firstOf(filter: (T) -> Boolean): T = first { it is T && filter(it) } as T
+public inline fun <reified T> Iterable<*>.firstOfOrNull(filter: (T) -> Boolean): T? = firstOrNull { it is T && filter(it) } as? T
+
+public inline fun <reified T, R> Iterable<*>.mapAs(transform: (T) -> R) = mapNotNull { if (it is T) transform(it) else null }
+public inline fun <reified T, R> Iterable<*>.mapAsNotNull(transform: (T) -> R?) = mapNotNull { if (it is T) transform(it) else null }

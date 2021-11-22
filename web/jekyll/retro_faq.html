@@ -1,0 +1,21 @@
+---
+title: 'The Eternal Jukebox'
+layout: retro
+type: faq
+app: jukebox
+---
+
+<center><h1>Frequently Asked Questions </h1></center>
+<br>
+<br>
+<br>
+<div id="faq">
+{% for item in site.data.faq.faq %}
+<li><b id="{{ item.id }}" class="question">{{ item.question }}</b>
+{% capture x %}
+{{ item.answer | liquify }}
+{% endcapture %}{{ x | markdownify }}
+</li>
+<br>
+{% endfor %}
+</div>

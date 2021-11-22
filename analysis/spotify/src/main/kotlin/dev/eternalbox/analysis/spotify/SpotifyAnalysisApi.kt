@@ -95,7 +95,8 @@ class SpotifyAnalysisApi(clientID: String, clientSecret: String) : AnalysisApi, 
             albumName = track.album.name,
             imageUrl = track.album.images.firstOrNull()?.url,
             artists = track.artists.map(SpotifyArtist::name),
-            durationMs = track.durationMs
+            durationMs = track.durationMs,
+            isrc = track.externalIDs.isrc
         )
     }
 }

@@ -20,6 +20,7 @@ dependencies {
 	implementation(project(":http-client"))
 
 	implementation(audioProject("api"))
+	implementation(audioProject("ytm-search"))
 }
 
 tasks.withType<Test> {

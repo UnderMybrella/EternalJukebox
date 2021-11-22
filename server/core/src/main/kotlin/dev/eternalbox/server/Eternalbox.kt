@@ -4,6 +4,7 @@ import dev.eternalbox.analysis.AnalysisApi
 import dev.eternalbox.audio.AudioApi
 import dev.eternalbox.audio.EnumAudioType
 import dev.eternalbox.common.utils.getString
+import dev.eternalbox.storage.base.EternalData
 import io.ktor.application.*
 import io.ktor.config.*
 import io.ktor.features.*
@@ -53,6 +54,9 @@ class EternalBox(application: Application) {
             .newInstance(config) as AudioApi
     }?.associateBy { it.service.lowercase() } ?: emptyMap()
 
+    val DEFAULT_AUDIO_TYPE = EnumAudioType.OPUS
+    val DEFAULT_FALLBACK_AUDIO_TYPE = EnumAudioType.M4A
+
     fun Routing.setup() {
         route("/api") {
             get("/{analysis_service}/{track_id}/audio/{audio_service}") {
@@ -75,9 +79,20 @@ class EternalBox(application: Application) {
                 val track = analysisApi.getTrackDetails(trackID)
                             ?: return@get call.respond(HttpStatusCode.NotFound)
 
-                audioApi.getAudio("", EnumAudioType.OPUS, track)?.let {
-                    call.respond(it.toString())
-                } ?: call.respond(HttpStatusCode.NotFound)
+                val supportsOpus = call.request.queryParameters["supports_opus"]?.toBooleanStrictOrNull()
+                val audioType = when (supportsOpus) {
+                    true -> EnumAudioType.OPUS
+                    false -> DEFAULT_FALLBACK_AUDIO_TYPE
+                    null -> DEFAULT_AUDIO_TYPE
+                }
+
+                val url = audioApi.getAudioUrl(track, audioType) ?: return@get call.respond(HttpStatusCode.NotFound, mapOf("error" to "No audio url for $track"))
+
+                when (val data = audioApi.getAudio(url, audioType, track)) {
+                    is EternalData.Raw -> call.respondBytes(data.data, ContentType.parse(data.contentType))
+                    is EternalData.Uploaded -> call.respondRedirect(data.url, permanent = false)
+                    null -> call.respond(HttpStatusCode.NotFound, mapOf("error" to "No audio data for $url ($track)"))
+                }
             }
 
             route("/{service}") {

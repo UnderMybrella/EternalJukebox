@@ -26,8 +26,11 @@ kotlin {
 		jvm().compilations["main"].defaultSourceSet {
 			dependencies {
 				api("io.ktor:ktor-client-cio:$KTOR_VERSION")
-				api("io.ktor:ktor-client-serialization:$KTOR_VERSION")
+				api("io.ktor:ktor-client-serialization:$KTOR_VERSION") {
+					exclude("org.jetbrains.kotlinx", "kotlinx-serialization-json")
+				}
 				api("io.ktor:ktor-client-encoding:$KTOR_VERSION")
+				api("org.jetbrains.kotlinx:kotlinx-serialization-json:$KOTLINX_SERIALISATION_VERSION")
 			}
 		}
 //		js().compilations["main"].defaultSourceSet  {

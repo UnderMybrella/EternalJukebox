@@ -5,6 +5,7 @@ import dev.brella.ytdlbox.YtdlBoxCompletionActionFeatureSet
 import dev.brella.ytdlbox.client.remoteBox
 import dev.eternalbox.audio.AudioApi
 import dev.eternalbox.audio.EnumAudioType
+import dev.eternalbox.audio.ytmsearch.YtmSearchApi
 import dev.eternalbox.common.jukebox.EternalboxTrackDetails
 import dev.eternalbox.common.jvm.hash
 import dev.eternalbox.common.utils.getString
@@ -54,8 +55,12 @@ class YtdlboxAudioApi(
         install(WebSockets)
     }
 
+    val youtubeMusicApi = YtmSearchApi(client)
     val remoteBox = async { client.remoteBox(url, auth, Pair(ContentType.Application.Json, json)) }
     val remoteBoxInfo = async { remoteBox.await().getServerInfo() }
+
+    override suspend fun getAudioUrl(track: EternalboxTrackDetails, type: EnumAudioType): String? =
+        youtubeMusicApi.fromEternalboxTrack(track)?.let { result -> "https://music.youtube.com/watch?v=${result.videoID}" }
 
     override suspend fun getAudio(url: String, type: EnumAudioType, track: EternalboxTrackDetails): EternalData? {
         val remoteBoxInfo = remoteBoxInfo.await()

@@ -16,7 +16,7 @@ dependencies {
 
 	implementation(project(":http-client"))
 
-	implementation(analysisProject("api"))
+	api(analysisProject("api"))
 }
 
 tasks.withType<Test> {
