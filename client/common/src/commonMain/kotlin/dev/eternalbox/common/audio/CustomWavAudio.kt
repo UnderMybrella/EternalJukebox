@@ -79,7 +79,6 @@ class CustomWavAudio private constructor(val pcmBuffer: DataPool<*, *>) : DataCl
         return KorneaResult.success(out)
     }
 
-    @ExperimentalUnsignedTypes
     override suspend fun close() {
         pcmBuffer.close()
         pcmBufferOutput.close()

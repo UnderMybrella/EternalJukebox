@@ -4,6 +4,7 @@ import dev.eternalbox.analysis.AnalysisApi
 import dev.eternalbox.common.EternalboxTrack
 import dev.eternalbox.common.jukebox.EternalboxTrackDetails
 import dev.eternalbox.common.utils.TokenStore
+import dev.eternalbox.common.utils.getString
 import dev.eternalbox.httpclient.authorise
 import dev.eternalbox.httpclient.formDataContent
 import io.ktor.client.*
@@ -26,6 +27,7 @@ import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
 class SpotifyAnalysisApi(clientID: String, clientSecret: String) : AnalysisApi, CoroutineScope {
+    constructor(config: JsonObject): this(config.getString("client_id"), config.getString("client_secret"))
     override val service: String = "SPOTIFY"
     override val coroutineContext: CoroutineContext = SupervisorJob()
 
@@ -88,6 +90,7 @@ class SpotifyAnalysisApi(clientID: String, clientSecret: String) : AnalysisApi, 
 
         return EternalboxTrackDetails(
             service = service,
+            id = track.id,
             name = track.name,
             albumName = track.album.name,
             imageUrl = track.album.images.firstOrNull()?.url,

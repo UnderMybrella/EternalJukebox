@@ -9,9 +9,6 @@ group = "dev.eternalbox"
 version = "1.0.0"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
-val kotlinx_serialisation_version: String by rootProject
-val kotlinx_coroutines_version: String by rootProject
-
 kotlin {
 	jvm()
 	js() {
@@ -22,8 +19,8 @@ kotlin {
 	sourceSets {
 		val commonMain by getting {
 			dependencies {
-				implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinx_serialisation_version")
-				implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_version")
+				implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$KOTLINX_SERIALISATION_VERSION")
+				implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$KOTLINX_COROUTINES_VERSION")
 			}
 		}
 

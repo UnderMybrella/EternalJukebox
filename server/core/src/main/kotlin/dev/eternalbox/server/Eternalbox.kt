@@ -1,42 +1,167 @@
 package dev.eternalbox.server
 
-import dev.eternalbox.analysis.spotify.SpotifyAnalysisApi
-import dev.eternalbox.common.utils.TokenStore
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
-import java.util.*
-import kotlin.time.Duration
-import kotlin.time.ExperimentalTime
+import dev.eternalbox.analysis.AnalysisApi
+import dev.eternalbox.audio.AudioApi
+import dev.eternalbox.audio.EnumAudioType
+import dev.eternalbox.common.utils.getString
+import io.ktor.application.*
+import io.ktor.config.*
+import io.ktor.features.*
+import io.ktor.http.*
+import io.ktor.response.*
+import io.ktor.routing.*
+import io.ktor.serialization.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.util.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import java.io.File
+import java.util.concurrent.TimeUnit
 
-@OptIn(ExperimentalTime::class)
-suspend fun main(args: Array<String>) {
-    val spotify = SpotifyAnalysisApi(args[0], args[1])
+class EternalBox(application: Application) {
+    val appConfig = application
+        .environment
+        .config
+        .config("eternalbox")
 
-    listOf(
-        "72XCIYkEtLwUYU911iGduu",
-        "5WGatOLP3uqV4mh8jkloUv",
-        "1QGzvMQyU4PQ2lJkvmqvVJ",
-        "7AMA1BVMMitfR8i7fIUv5U",
-        "0jqK7sGTLsHPkQrrcrGuKD"
-    ).forEach { trackID ->
-        println(spotify.getTrackDetails(trackID))
+    val configs = File(
+        appConfig.propertyOrNull("config")?.getString()
+        ?: System.getProperty("eternalbox.config")
+        ?: System.getenv("ETERNALBOX_CONFIG")
+        ?: "application.json"
+    ).takeIf(File::exists)
+        ?.readText()
+        ?.let(Json::parseToJsonElement) as? JsonArray
+
+    val analysisApis = configs?.mapNotNull { element ->
+        val config = element as? JsonObject ?: return@mapNotNull null
+        if (!config.getString("type").equals("analysis", true)) return@mapNotNull null
+
+        Class.forName(config.getString("class"))
+            .getConstructor(JsonObject::class.java)
+            .newInstance(config) as AnalysisApi
+    }?.associateBy { it.service.lowercase() } ?: emptyMap()
+
+    val audioApis = configs?.mapNotNull { element ->
+        val config = element as? JsonObject ?: return@mapNotNull null
+        if (!config.getString("type").equals("audio", true)) return@mapNotNull null
+
+        Class.forName(config.getString("class"))
+            .getConstructor(JsonObject::class.java)
+            .newInstance(config) as AudioApi
+    }?.associateBy { it.service.lowercase() } ?: emptyMap()
+
+    fun Routing.setup() {
+        route("/api") {
+            get("/{analysis_service}/{track_id}/audio/{audio_service}") {
+                val analysisService = call.parameters.getOrFail("analysis_service")
+                val audioService = call.parameters.getOrFail("audio_service")
+                val trackID = call.parameters.getOrFail("track_id")
+
+                val analysisApi = analysisApis[analysisService.lowercase()]
+                                  ?: return@get call.respond(
+                                      HttpStatusCode.ServiceUnavailable,
+                                      mapOf("error" to "No analysis api for $analysisService installed")
+                                  )
+
+                val audioApi = audioApis[audioService.lowercase()]
+                               ?: return@get call.respond(
+                                   HttpStatusCode.ServiceUnavailable,
+                                   mapOf("error" to "No audio api for $audioService installed")
+                               )
+
+                val track = analysisApi.getTrackDetails(trackID)
+                            ?: return@get call.respond(HttpStatusCode.NotFound)
+
+                audioApi.getAudio("", EnumAudioType.OPUS, track)?.let {
+                    call.respond(it.toString())
+                } ?: call.respond(HttpStatusCode.NotFound)
+            }
+
+            route("/{service}") {
+                route("/{track_id}") {
+                    get("/analysis") {
+                        val service = call.parameters.getOrFail("service")
+                        val trackID = call.parameters.getOrFail("track_id")
+
+                        val api = analysisApis[service.lowercase()]
+                        if (api == null) {
+                            call.respond(
+                                HttpStatusCode.ServiceUnavailable,
+                                mapOf("error" to "No analysis api for $service installed")
+                            )
+                        } else {
+                            api.getAnalysis(trackID)?.let {
+                                call.respond(it)
+                            } ?: call.respond(HttpStatusCode.NotFound)
+                        }
+                    }
+
+                    get("/info") {
+                        val service = call.parameters.getOrFail("service")
+                        val trackID = call.parameters.getOrFail("track_id")
+
+                        val api = analysisApis[service.lowercase()]
+                        if (api == null) {
+                            call.respond(
+                                HttpStatusCode.ServiceUnavailable,
+                                mapOf("error" to "No analysis api for $service installed")
+                            )
+                        } else {
+                            api.getTrackDetails(trackID)?.let {
+                                call.respond(it)
+                            } ?: call.respond(HttpStatusCode.NotFound)
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    spotify.getAnalysis("0jqK7sGTLsHPkQrrcrGuKD")
+    init {
+        application.install(ContentNegotiation) {
+            json()
+        }
 
-//    val tokenStore = TokenStore(GlobalScope) { TokenStore.TokenResult(UUID.randomUUID(), Duration.Companion.seconds(30) )}
-//
-//    tokenStore.token.onEach { println(it) }.launchIn(GlobalScope)
-//
-//    while (true) {
-//        delay(5_000)
-//        println("--Cancelling")
-//        tokenStore.refreshToken()
-//        println("--Resuming")
-//
-//        delay(5_000)
-//    }
+        application.install(CORS) {
+            anyHost()
+        }
+
+        application.install(ConditionalHeaders)
+        application.install(StatusPages)
+
+        application.routing { setup() }
+    }
+}
+
+var engine: NettyApplicationEngine? = null
+
+fun main(args: Array<String>): Unit {
+    val applicationEnvironment = commandLineEnvironment(args)
+    engine = NettyApplicationEngine(applicationEnvironment) { loadConfiguration(applicationEnvironment.config) }
+    engine?.addShutdownHook {
+        engine?.stop(3, 5, TimeUnit.SECONDS)
+    }
+
+    engine?.start(true)
+}
+
+fun NettyApplicationEngine.Configuration.loadConfiguration(config: ApplicationConfig) {
+    val deploymentConfig = config.config("ktor.deployment")
+    loadCommonConfiguration(deploymentConfig)
+    deploymentConfig.propertyOrNull("requestQueueLimit")?.getString()?.toInt()?.let {
+        requestQueueLimit = it
+    }
+    deploymentConfig.propertyOrNull("shareWorkGroup")?.getString()?.toBoolean()?.let {
+        shareWorkGroup = it
+    }
+    deploymentConfig.propertyOrNull("responseWriteTimeoutSeconds")?.getString()?.toInt()?.let {
+        responseWriteTimeoutSeconds = it
+    }
+}
+
+fun Application.module() {
+    EternalBox(this)
 }

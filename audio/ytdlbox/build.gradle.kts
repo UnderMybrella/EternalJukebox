@@ -6,12 +6,20 @@ plugins {
 	kotlin("plugin.serialization")
 }
 
-group = "dev.eternalbox"
+group = "dev.eternalbox.audio.ytdlbox"
 version = "0.0.1-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
 dependencies {
-	api(project(":common"))
+	implementation("org.jetbrains.kotlin:kotlin-reflect")
+	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$KOTLINX_COROUTINES_VERSION")
+
+	implementation("dev.brella.ytdlbox:client:1.2.2")
+
+	implementation(project(":http-client"))
+
+	implementation(audioProject("api"))
 }
 
 tasks.withType<Test> {

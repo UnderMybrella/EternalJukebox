@@ -12,6 +12,7 @@ java.sourceCompatibility = JavaVersion.VERSION_1_8
 
 dependencies {
 	api(project(":common"))
+	api(storageProject("base"))
 }
 
 tasks.withType<Test> {

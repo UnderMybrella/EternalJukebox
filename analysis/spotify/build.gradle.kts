@@ -6,21 +6,17 @@ plugins {
 	kotlin("plugin.serialization")
 }
 
-group = "dev.eternalbox.analysis.spotify"
+group = "dev.eternalbox"
 version = "0.0.1-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
-val kotlinx_coroutines_version: String by rootProject
-val ktor_version: String by rootProject
 
 dependencies {
-	implementation("org.jetbrains.kotlin:kotlin-reflect")
-	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_version")
+	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$KOTLINX_COROUTINES_VERSION")
 
 	implementation(project(":http-client"))
 
-	compileOnly(project(":analysis:api"))
+	implementation(analysisProject("api"))
 }
 
 tasks.withType<Test> {

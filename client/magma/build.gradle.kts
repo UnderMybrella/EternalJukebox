@@ -16,7 +16,7 @@ dependencies {
 
 	implementation("com.sedmelluq:lavaplayer:1.3.75")
 
-	implementation(project(":client:common"))
+	implementation(clientProject("common"))
 
 	implementation("dev.brella:kornea-io:5.2.0-alpha")
 	implementation("dev.brella:kornea-errors:2.0.3-alpha")

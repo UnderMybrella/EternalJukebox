@@ -9,10 +9,6 @@ group = "dev.eternalbox"
 version = "1.0.0"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
-val kotlinx_serialisation_version: String by rootProject
-val kotlinx_coroutines_version: String by rootProject
-val ktor_version: String by rootProject
-
 kotlin {
 	jvm()
 //	js() {
@@ -29,9 +25,9 @@ kotlin {
 
 		jvm().compilations["main"].defaultSourceSet {
 			dependencies {
-				api("io.ktor:ktor-client-cio:$ktor_version")
-				api("io.ktor:ktor-client-serialization:$ktor_version")
-				api("io.ktor:ktor-client-encoding:$ktor_version")
+				api("io.ktor:ktor-client-cio:$KTOR_VERSION")
+				api("io.ktor:ktor-client-serialization:$KTOR_VERSION")
+				api("io.ktor:ktor-client-encoding:$KTOR_VERSION")
 			}
 		}
 //		js().compilations["main"].defaultSourceSet  {

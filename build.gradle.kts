@@ -1,10 +1,10 @@
 plugins {
-    kotlin("jvm") version "1.5.31" apply false
-    kotlin("multiplatform") version "1.5.31" apply false
-    kotlin("kapt") version "1.5.31" apply false
-    kotlin("plugin.serialization") version "1.5.31" apply false
+    kotlin("jvm") apply false
+    kotlin("multiplatform") apply false
+    kotlin("kapt") apply false
+    kotlin("plugin.serialization") version "1.6.0" apply false
 
-    id("de.undercouch.download") version "4.1.1" apply false
+    id("de.undercouch.download") apply false
 }
 group = "dev.eternalbox"
 
