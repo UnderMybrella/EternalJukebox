@@ -16,7 +16,7 @@ repositories {
     mavenCentral()
     jcenter()
     maven { url 'https://jitpack.io' }
-    maven { url 'https://maven.abimon.org' }
+    maven { url 'https://maven.brella.dev' }
 }
 
 ext {
