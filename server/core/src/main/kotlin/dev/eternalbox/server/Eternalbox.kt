@@ -29,9 +29,9 @@ class EternalBox(application: Application) {
 
     val configs = File(
         appConfig.propertyOrNull("config")?.getString()
-        ?: System.getProperty("eternalbox.config")
-        ?: System.getenv("ETERNALBOX_CONFIG")
-        ?: "application.json"
+            ?: System.getProperty("eternalbox.config")
+            ?: System.getenv("ETERNALBOX_CONFIG")
+            ?: "application.json"
     ).takeIf(File::exists)
         ?.readText()
         ?.let(Json::parseToJsonElement) as? JsonArray
@@ -65,28 +65,30 @@ class EternalBox(application: Application) {
                 val trackID = call.parameters.getOrFail("track_id")
 
                 val analysisApi = analysisApis[analysisService.lowercase()]
-                                  ?: return@get call.respond(
-                                      HttpStatusCode.ServiceUnavailable,
-                                      mapOf("error" to "No analysis api for $analysisService installed")
-                                  )
+                    ?: return@get call.respond(
+                        HttpStatusCode.ServiceUnavailable,
+                        mapOf("error" to "No analysis api for $analysisService installed")
+                    )
 
                 val audioApi = audioApis[audioService.lowercase()]
-                               ?: return@get call.respond(
-                                   HttpStatusCode.ServiceUnavailable,
-                                   mapOf("error" to "No audio api for $audioService installed")
-                               )
+                    ?: return@get call.respond(
+                        HttpStatusCode.ServiceUnavailable,
+                        mapOf("error" to "No audio api for $audioService installed")
+                    )
 
                 val track = analysisApi.getTrackDetails(trackID)
-                            ?: return@get call.respond(HttpStatusCode.NotFound)
+                    ?: return@get call.respond(HttpStatusCode.NotFound)
 
-                val supportsOpus = call.request.queryParameters["supports_opus"]?.toBooleanStrictOrNull()
-                val audioType = when (supportsOpus) {
+                val audioType = when (call.request.queryParameters["supports_opus"]?.toBooleanStrictOrNull()) {
                     true -> EnumAudioType.OPUS
                     false -> DEFAULT_FALLBACK_AUDIO_TYPE
                     null -> DEFAULT_AUDIO_TYPE
                 }
 
-                val url = audioApi.getAudioUrl(track, audioType) ?: return@get call.respond(HttpStatusCode.NotFound, mapOf("error" to "No audio url for $track"))
+                val url = audioApi.getAudioUrl(track, audioType) ?: return@get call.respond(
+                    HttpStatusCode.NotFound,
+                    mapOf("error" to "No audio url for $track")
+                )
 
                 when (val data = audioApi.getAudio(url, audioType, track)) {
                     is EternalData.Raw -> call.respondBytes(data.data, ContentType.parse(data.contentType))

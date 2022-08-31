@@ -1,3 +1,5 @@
+import dev.brella.kornea.gradle.kotlinxSerialisationModule
+import dev.brella.kornea.gradle.ktorModule
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -19,18 +21,18 @@ kotlin {
 	sourceSets {
 		val commonMain by getting {
 			dependencies {
-				api(project(":common"))
+				api(project(":eternalbox-common"))
 			}
 		}
 
 		jvm().compilations["main"].defaultSourceSet {
 			dependencies {
-				api("io.ktor:ktor-client-cio:$KTOR_VERSION")
-				api("io.ktor:ktor-client-serialization:$KTOR_VERSION") {
+				api(ktorModule("client-cio"))
+				api(ktorModule("client-serialization")) {
 					exclude("org.jetbrains.kotlinx", "kotlinx-serialization-json")
 				}
-				api("io.ktor:ktor-client-encoding:$KTOR_VERSION")
-				api("org.jetbrains.kotlinx:kotlinx-serialization-json:$KOTLINX_SERIALISATION_VERSION")
+				api(ktorModule("client-encoding"))
+				api(kotlinxSerialisationModule("json"))
 			}
 		}
 //		js().compilations["main"].defaultSourceSet  {

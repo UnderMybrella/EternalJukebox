@@ -11,7 +11,7 @@ version = "0.0.1-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
 dependencies {
-	api(project(":common"))
+	api(project(":eternalbox-common"))
 }
 
 tasks.withType<Test> {

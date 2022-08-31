@@ -1,5 +1,6 @@
 package dev.eternalbox.common.audio
 
+import dev.brella.kornea.base.common.closeAfter
 import dev.eternalbox.common.audio.OggContainer.Companion.HEADER_TYPE_CONTINUED_PACKET
 import dev.eternalbox.common.audio.OggContainer.Companion.HEADER_TYPE_FIRST_PAGE_OF_BITSTREAM
 import dev.eternalbox.common.audio.OggContainer.Companion.HEADER_TYPE_LAST_PAGE_OF_BITSTREAM
@@ -10,7 +11,6 @@ import dev.brella.kornea.io.common.flow.InputFlow
 import dev.brella.kornea.io.common.flow.WindowedInputFlow
 import dev.brella.kornea.io.common.flow.extensions.readInt32LE
 import dev.brella.kornea.io.common.flow.extensions.readInt64LE
-import dev.brella.kornea.toolkit.common.closeAfter
 
 @ExperimentalUnsignedTypes
 open class OggContainer(val pages: Array<OggPage>, val dataSource: DataSource<*>) {

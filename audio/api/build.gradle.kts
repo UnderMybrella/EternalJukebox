@@ -1,3 +1,4 @@
+import dev.brella.kornea.gradle.projectFrom
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -11,8 +12,8 @@ version = "0.0.1-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
 dependencies {
-	api(project(":common"))
-	api(storageProject("base"))
+	api(project(":eternalbox-common"))
+	api(projectFrom("eternalbox", "storage", "base"))
 }
 
 tasks.withType<Test> {

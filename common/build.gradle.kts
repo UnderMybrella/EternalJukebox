@@ -1,3 +1,5 @@
+import dev.brella.kornea.gradle.kotlinxCoroutinesModule
+import dev.brella.kornea.gradle.kotlinxSerialisationModule
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -19,8 +21,8 @@ kotlin {
 	sourceSets {
 		val commonMain by getting {
 			dependencies {
-				implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$KOTLINX_SERIALISATION_VERSION")
-				implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$KOTLINX_COROUTINES_VERSION")
+				implementation(kotlinxSerialisationModule("json"))
+				implementation(kotlinxCoroutinesModule("core"))
 			}
 		}
 

@@ -1,3 +1,5 @@
+import dev.brella.kornea.gradle.kotlinxCoroutinesModule
+import dev.brella.kornea.gradle.projectFrom
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -13,14 +15,14 @@ java.sourceCompatibility = JavaVersion.VERSION_1_8
 dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$KOTLINX_COROUTINES_VERSION")
+	implementation(kotlinxCoroutinesModule("core"))
 
 	implementation("dev.brella.ytdlbox:client:1.2.2")
 
-	implementation(project(":http-client"))
+	implementation(project(":eternalbox-http-client"))
 
-	implementation(audioProject("api"))
-	implementation(audioProject("ytm-search"))
+	implementation(projectFrom("eternalbox", "audio", "api"))
+	implementation(projectFrom("eternalbox", "audio", "ytm-search"))
 }
 
 tasks.withType<Test> {

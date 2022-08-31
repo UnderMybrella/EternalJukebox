@@ -1,5 +1,8 @@
 package dev.eternalbox.common.audio
 
+import dev.brella.kornea.annotations.ExperimentalKorneaToolkit
+import dev.brella.kornea.base.common.DataCloseable
+import dev.brella.kornea.base.common.use
 import dev.brella.kornea.errors.common.*
 import dev.brella.kornea.io.common.*
 import dev.brella.kornea.io.common.flow.OutputFlow
@@ -7,9 +10,7 @@ import dev.brella.kornea.io.common.flow.extensions.copyTo
 import dev.brella.kornea.io.common.flow.extensions.writeInt16BE
 import dev.brella.kornea.io.common.flow.extensions.writeInt16LE
 import dev.brella.kornea.io.common.flow.extensions.writeInt32LE
-import dev.brella.kornea.toolkit.common.DataCloseable
 import dev.brella.kornea.toolkit.common.oneTimeMutable
-import dev.brella.kornea.toolkit.common.use
 
 //TODO: Fix terminology
 class CustomWavAudio private constructor(val pcmBuffer: DataPool<*, *>) : DataCloseable {
@@ -19,6 +20,7 @@ class CustomWavAudio private constructor(val pcmBuffer: DataPool<*, *>) : DataCl
         val FORMAT_CHUNK_MAGIC_NUMBER_LE = 0x20746D66
         val DATA_CHUNK_MAGIC_NUMBER_LE = 0x61746164
 
+        @OptIn(ExperimentalUnsignedTypes::class, ExperimentalKorneaToolkit::class)
         suspend operator fun invoke(): KorneaResult<CustomWavAudio> = invoke(BinaryDataPool())
         suspend operator fun invoke(pcmBuffer: DataPool<*, *>): KorneaResult<CustomWavAudio> = CustomWavAudio(pcmBuffer).init()
     }

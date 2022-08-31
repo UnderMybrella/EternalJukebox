@@ -15,7 +15,7 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
-	api(project(":common"))
+	api(project(":eternalbox-common"))
 }
 
 tasks.withType<Test> {

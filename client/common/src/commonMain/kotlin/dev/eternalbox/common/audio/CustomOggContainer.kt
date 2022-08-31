@@ -1,6 +1,13 @@
 package dev.eternalbox.common.audio
 
 import dev.brella.kornea.annotations.ExperimentalKorneaIO
+import dev.brella.kornea.base.common.use
+import dev.brella.kornea.io.common.flow.BinaryOutputFlow
+import dev.brella.kornea.io.common.flow.OutputFlow
+import dev.brella.kornea.io.common.flow.extensions.writeInt16LE
+import dev.brella.kornea.io.common.flow.extensions.writeInt32LE
+import dev.brella.kornea.io.common.flow.extensions.writeInt64BE
+import dev.brella.kornea.io.common.flow.extensions.writeInt64LE
 import dev.eternalbox.common.BufferWrapOutputFlow
 import dev.eternalbox.common.audio.OggContainer.Companion.CAPTURE_PATTERN_LE
 import dev.eternalbox.common.audio.OggContainer.Companion.HEADER_TYPE_CONTINUED_PACKET
@@ -50,16 +57,23 @@ import dev.eternalbox.common.audio.OpusOggFile.Companion.TOC_TWO_FRAMES_DIFFEREN
 import dev.eternalbox.common.audio.OpusOggFile.Companion.TOC_TWO_FRAMES_EQUAL_COMPRESSED_SIZE
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.receiveOrNull
-import dev.brella.kornea.io.common.*
-import dev.brella.kornea.io.common.flow.BinaryOutputFlow
-import dev.brella.kornea.io.common.flow.OutputFlow
-import dev.brella.kornea.io.common.flow.extensions.writeInt16LE
-import dev.brella.kornea.io.common.flow.extensions.writeInt32LE
-import dev.brella.kornea.io.common.flow.extensions.writeInt64BE
-import dev.brella.kornea.io.common.flow.extensions.writeInt64LE
-import dev.brella.kornea.toolkit.common.use
-import kotlin.IllegalArgumentException
+import kotlinx.coroutines.channels.onSuccess
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
+import kotlin.collections.List
+import kotlin.collections.MutableList
+import kotlin.collections.MutableMap
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.count
+import kotlin.collections.distinctBy
+import kotlin.collections.dropLast
+import kotlin.collections.forEach
+import kotlin.collections.lastOrNull
+import kotlin.collections.putAll
+import kotlin.collections.set
+import kotlin.collections.sumBy
+import kotlin.collections.sumByDouble
 
 @ExperimentalUnsignedTypes
 @ExperimentalKorneaIO
@@ -118,16 +132,16 @@ class CustomOggContainer {
     suspend fun writeTo(output: OutputFlow) {
         pages.close()
 
-        var buffer = pages.receiveOrNull()
-        buffer?.setFirstPageOfBitstream()
-        while (buffer != null && !pages.isClosedForReceive) {
-            output.write(buffer.getPacket())
-            buffer = pages.receiveOrNull()
+        var buffer = pages.receiveCatching()
+        buffer.onSuccess { it.setFirstPageOfBitstream() }
+        while (buffer.isSuccess && !pages.isClosedForReceive) {
+            output.write(buffer.getOrThrow().getPacket())
+            buffer = pages.receiveCatching()
         }
 
-        buffer?.setLastPageOfBitstream()
-        if (buffer != null) {
-            output.write(buffer.getPacket())
+        buffer.onSuccess { page ->
+            page.setLastPageOfBitstream()
+            output.write(page.getPacket())
         }
 
         pages.close()
@@ -267,7 +281,11 @@ open class CustomOpusAudioPacket {
     var isStereo: Boolean = false
     val frames: MutableList<ByteArray> = ArrayList()
 
-    fun config(codecLayer: OpusOggFile.CodecLayer, audioBandwidth: OpusOggFile.AudioBandwidth, frameDuration: OpusOggFile.FrameDuration) {
+    fun config(
+        codecLayer: OpusOggFile.CodecLayer,
+        audioBandwidth: OpusOggFile.AudioBandwidth,
+        frameDuration: OpusOggFile.FrameDuration
+    ) {
         this.codecLayer = codecLayer
         this.audioBandwidth = audioBandwidth
         this.frameDuration = frameDuration
@@ -500,7 +518,10 @@ class CustomOpusCommentPacketBuilder {
 @ExperimentalKorneaIO
 @ExperimentalUnsignedTypes
 @ExperimentalCoroutinesApi
-suspend inline fun OutputFlow.writeOggContainer(closeOnFinish: Boolean = true, init: CustomOggContainer.() -> Unit): CustomOggContainer {
+suspend inline fun OutputFlow.writeOggContainer(
+    closeOnFinish: Boolean = true,
+    init: CustomOggContainer.() -> Unit
+): CustomOggContainer {
     val ogg = CustomOggContainer()
     ogg.init()
     if (closeOnFinish) use { ogg.writeTo(it) }
@@ -515,7 +536,11 @@ fun CustomOggContainer.stream(coroutineScope: CoroutineScope, output: OutputFlow
 @ExperimentalKorneaIO
 @ExperimentalUnsignedTypes
 @ExperimentalCoroutinesApi
-suspend inline fun OutputFlow.streamOggContainer(coroutineScope: CoroutineScope, closeOnFinish: Boolean = true, init: CustomOggContainer.() -> Unit): CustomOggContainer {
+suspend inline fun OutputFlow.streamOggContainer(
+    coroutineScope: CoroutineScope,
+    closeOnFinish: Boolean = true,
+    init: CustomOggContainer.() -> Unit
+): CustomOggContainer {
     try {
         val ogg = CustomOggContainer()
         val job = ogg.stream(coroutineScope, this)
@@ -545,7 +570,14 @@ suspend fun CustomOggContainer.addOpusHeaderPage(init: CustomOpusHeaderPacketBui
 
 @ExperimentalKorneaIO
 @ExperimentalUnsignedTypes
-suspend fun CustomOggContainer.addOpusHeaderPage(version: Int? = null, channelCount: Int? = null, preskip: Int? = null, inputSampleRate: Int? = null, outputGain: Int? = null, channelMappingFamily: Int? = null) {
+suspend fun CustomOggContainer.addOpusHeaderPage(
+    version: Int? = null,
+    channelCount: Int? = null,
+    preskip: Int? = null,
+    inputSampleRate: Int? = null,
+    outputGain: Int? = null,
+    channelMappingFamily: Int? = null
+) {
     val packet = CustomOpusHeaderPacketBuilder()
     if (version != null) packet.version = version
     if (channelCount != null) packet.channelCount = channelCount

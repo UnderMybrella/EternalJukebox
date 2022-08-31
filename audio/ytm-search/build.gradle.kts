@@ -1,3 +1,4 @@
+import dev.brella.kornea.gradle.kotlinxCoroutinesModule
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -14,10 +15,10 @@ java.sourceCompatibility = JavaVersion.VERSION_1_8
 dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$KOTLINX_COROUTINES_VERSION")
+	implementation(kotlinxCoroutinesModule("core"))
 
-	implementation(project(":http-client"))
-	implementation(project(":common"))
+	implementation(project(":eternalbox-http-client"))
+	implementation(project(":eternalbox-common"))
 	implementation("me.xdrop:fuzzywuzzy:1.3.1")
 }
 

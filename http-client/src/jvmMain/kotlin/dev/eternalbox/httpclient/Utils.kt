@@ -23,7 +23,7 @@ public suspend inline fun <T, reified R> TokenStore<T>.authorise(block: (T) -> H
             val response = block(authToken)
 
             if (response.status.isSuccess()) {
-                return response.receive<R>()
+                return response.body<R>()
             } else {
                 when (response.status) {
                     HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden -> {
@@ -60,7 +60,7 @@ public suspend inline fun <T, reified R> TokenStore<T>.authorise(block: (T) -> H
 //                        }
 
                         println("Received a bad request; delaying then trying again")
-                        println(response.readText())
+                        println(response.bodyAsText())
 
                         delay((2.0.pow(i).plus(Random.nextDouble()) * 1000).roundToLong())
                     }
@@ -90,7 +90,7 @@ public suspend inline fun <T, reified R> TokenStore<T>.authorise(block: (T) -> H
 
 
                         println("Received a bad request; delaying then trying again")
-                        println(response.readText())
+                        println(response.bodyAsText())
 
                         delay((2.0.pow(i).plus(Random.nextDouble()) * 1000).roundToLong())
                     }

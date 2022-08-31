@@ -1,3 +1,6 @@
+import dev.brella.kornea.gradle.kotlinxCoroutinesModule
+import dev.brella.kornea.gradle.ktorModule
+import dev.brella.kornea.gradle.projectFrom
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -12,16 +15,16 @@ java.sourceCompatibility = JavaVersion.VERSION_11
 dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$KOTLINX_COROUTINES_VERSION")
+	implementation(kotlinxCoroutinesModule("core"))
 
-	implementation("io.ktor:ktor-server-netty:$KTOR_VERSION")
-	implementation("io.ktor:ktor-serialization:$KTOR_VERSION")
+	implementation(ktorModule("server-netty"))
+	implementation(ktorModule("serialization"))
 
-	implementation(analysisProject("api"))
-	implementation(analysisProject("spotify"))
+	implementation(projectFrom("eternalbox", "analysis", "api"))
+	implementation(projectFrom("eternalbox", "analysis", "spotify"))
 
-	implementation(audioProject("api"))
-	implementation(audioProject("ytdlbox"))
+	implementation(projectFrom("eternalbox", "audio", "api"))
+	implementation(projectFrom("eternalbox", "audio", "ytdlbox"))
 
 //	implementation(project(":audio:api"))
 //	implementation(project(":audio:ytdlbox"))

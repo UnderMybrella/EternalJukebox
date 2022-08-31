@@ -2,3 +2,5 @@ cdn: "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7"
 git: "https://github.com/UnderMybrella/EternalJukebox"
 jquery: "https://code.jquery.com"
 version: "1-1-1"
+
+base_api_url: http://localhost:6060

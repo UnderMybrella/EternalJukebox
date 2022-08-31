@@ -1,3 +1,5 @@
+import dev.brella.kornea.gradle.kotlinxCoroutinesModule
+import dev.brella.kornea.gradle.projectFrom
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -12,11 +14,11 @@ java.sourceCompatibility = JavaVersion.VERSION_1_8
 
 
 dependencies {
-	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$KOTLINX_COROUTINES_VERSION")
+	implementation(kotlinxCoroutinesModule("core"))
 
-	implementation(project(":http-client"))
+	implementation(project(":eternalbox-http-client"))
 
-	api(analysisProject("api"))
+	api(projectFrom("eternalbox", "analysis", "api"))
 }
 
 tasks.withType<Test> {

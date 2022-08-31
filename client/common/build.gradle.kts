@@ -1,3 +1,4 @@
+import dev.brella.kornea.gradle.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -11,7 +12,7 @@ java.sourceCompatibility = JavaVersion.VERSION_1_8
 
 kotlin {
 	jvm()
-	js() {
+	js(BOTH) {
 		browser()
 		nodejs()
 	}
@@ -19,13 +20,13 @@ kotlin {
 	sourceSets {
 		val commonMain by getting {
 			dependencies {
-				implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$KOTLINX_SERIALISATION_VERSION")
-				implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$KOTLINX_COROUTINES_VERSION")
+				implementation(kotlinxSerialisationModule("json"))
+				implementation(kotlinxCoroutinesModule("core"))
 
-				implementation("dev.brella:kornea-annotations:1.0.5-alpha")
-				implementation("dev.brella:kornea-io:5.2.0-alpha")
-				implementation("dev.brella:kornea-errors:2.0.3-alpha")
-				implementation("dev.brella:kornea-toolkit:3.3.1-alpha")
+				implementation(korneaAnnotationsModule())
+				implementation(korneaIOModule())
+				implementation(korneaErrorsModule())
+				implementation(korneaToolkitModule())
 			}
 		}
 		jvm().compilations["main"].defaultSourceSet {

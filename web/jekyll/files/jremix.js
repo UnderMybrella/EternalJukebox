@@ -1,55 +1,63 @@
-
 function createJRemixer(context, jquery) {
-    var $ = jquery;
+    const $ = jquery;
 
-    var remixer = {
-
-        remixTrackById: function(id, callback) {
-            $.getJSON("api/info/" + id, function(data) {
-                remixer.remixTrack(data, callback)
-            });
-        },
-
-        remixTrack : function(track, jukeboxData, callback) {
-
+    const remixer = {
+        remixTrack: function (track, jukeboxData, callback) {
             function fetchAudio(url) {
-                var request = new XMLHttpRequest();
+                //{{ site.data.var.version }}
+                const request = new XMLHttpRequest();
                 trace("fetchAudio " + url);
                 track.buffer = null;
                 request.open("GET", url, true);
                 request.responseType = "arraybuffer";
                 this.request = request;
 
-                request.onload = function() {
-                    trace('audio loaded');
-                     if (false) {
-                        track.buffer = context.createBuffer(request.response, false);
-                        track.status = 'ok';
-                        callback(1, track, 100);
+                request.onload = function () {
+                    if (request.status === 202) {
+                        let json = JSON.parse(new TextDecoder().decode(request.response));
+                        let sleep = json["sleep"];
+                        let queuePos = json["pos"];
+                        info("We are at position #" + (queuePos + 1) + " in the queue; checking again in " + (sleep / 1000) + " seconds.");
+
+                        setTimeout(function () {
+                            fetchAudio(url);
+                        }, sleep + (Math.random() * 1000));
+                    } else if (request.status >= 500) {
+                        info("Audio Retrieval failed with server error " + request.status + ": " + request.statusText)
+                    } else if (request.status >= 400) {
+                        let json = JSON.parse(new TextDecoder().decode(request.response));
+                        info(json["error"]);
                     } else {
-                        context.decodeAudioData(request.response, 
-                            function(buffer) {      // completed function
-                                track.buffer = buffer;
-                                track.status = 'ok';
-                                callback(1, track, 100);
-                            }, 
-                            function(e) { // error function
-                                track.status = 'error: loading audio';
-                                callback(-1, track, 0);
-                                console.log('audio error', e);
-                            }
-                        );
+                        trace('audio loaded');
+                        if (false) {
+                            track.buffer = context.createBuffer(request.response, false);
+                            track.status = 'ok';
+                            callback(1, track, 100);
+                        } else {
+                            context.decodeAudioData(request.response,
+                                function (buffer) {      // completed function
+                                    track.buffer = buffer;
+                                    track.status = 'ok';
+                                    callback(1, track, 100);
+                                },
+                                function (e) { // error function
+                                    track.status = 'error: loading audio';
+                                    callback(-1, track, 0);
+                                    console.log('audio error', e);
+                                }
+                            );
+                        }
                     }
                 };
 
-                request.onerror = function(e) {
+                request.onerror = function (e) {
                     trace('error loading loaded');
                     track.status = 'error: loading audio';
                     callback(-1, track, 0);
                 };
 
-                request.onprogress = function(e) {
-                    var percent = Math.round(e.loaded * 100  / e.total);
+                request.onprogress = function (e) {
+                    var percent = Math.round(e.loaded * 100 / e.total);
                     callback(0, track, percent);
                 };
                 request.send();
@@ -71,13 +79,13 @@ function createJRemixer(context, jquery) {
                         q.track = track;
                         q.which = j;
                         if (j > 0) {
-                            q.prev = qlist[j-1];
+                            q.prev = qlist[j - 1];
                         } else {
                             q.prev = null
                         }
 
                         if (j < qlist.length - 1) {
-                            q.next = qlist[j+1];
+                            q.next = qlist[j + 1];
                         } else {
                             q.next = null
                         }
@@ -109,7 +117,7 @@ function createJRemixer(context, jquery) {
                     var seg = track.analysis.segments[i];
                     var last = fsegs[fsegs.length - 1];
                     if (isSimilar(seg, last) && seg.confidence < threshold) {
-                        fsegs[fsegs.length -1].duration += seg.duration;
+                        fsegs[fsegs.length - 1].duration += seg.duration;
                     } else {
                         fsegs.push(seg);
                     }
@@ -135,7 +143,7 @@ function createJRemixer(context, jquery) {
                     for (var j = last; j < qchildren.length; j++) {
                         var qchild = qchildren[j];
                         if (qchild.start >= qparent.start
-                                    && qchild.start < qparent.start + qparent.duration) {
+                            && qchild.start < qparent.start + qparent.duration) {
                             qchild.parent = qparent;
                             qchild.indexInParent = qparent.children.length;
                             qparent.children.push(qchild);
@@ -193,10 +201,37 @@ function createJRemixer(context, jquery) {
             }
 
             preprocessTrack(track);
-            fetchAudio(jukeboxData.audioURL === null ? "api/audio/jukebox/" + track.info.id : ("api/audio/external?fallbackID=" + track.info.id + "&url=" + encodeURIComponent(jukeboxData.audioURL)));
+
+            const opusTestRequest = new XMLHttpRequest();
+            const audioLoad = () =>
+                fetchAudio(
+                    jukeboxData.audioURL === null
+                        ? jukeboxData.supportsOpus !== null
+                            ? "{{ site.data.var.version }}/api/spotify/" + track.info.id + "/audio/ytdlbox?supports_opus=" + jukeboxData.supportsOpus
+                            : "{{ site.data.var.version }}/api/spotify/" + track.info.id + "/audio/ytdlbox"
+                        : ("api/audio/external?fallbackID=" + track.info.id + "&url=" + encodeURIComponent(jukeboxData.audioURL))
+                );
+            opusTestRequest.open("GET", "https://cdn.eternalbox.dev/test.opus", true);
+            opusTestRequest.responseType = "arraybuffer";
+            opusTestRequest.onload = function () {
+                context.decodeAudioData(
+                    opusTestRequest.response,
+                    () => jukeboxData.supportsOpus = true,
+                    () => jukeboxData.supportsOpus = false
+                ).then(r => audioLoad());
+            };
+            opusTestRequest.onerror = function (e) {
+                console.log("Opus test failed: " + e);
+                console.log("Loading default audio type");
+
+                jukeboxData.supportsOpus = null;
+
+                audioLoad();
+            };
+            opusTestRequest.send();
         },
 
-        getPlayer : function() {
+        getPlayer: function () {
             var queueTime = 0;
             var audioGain = context.createGain();
             var curAudioSource = null;
@@ -310,25 +345,6 @@ function createJRemixer(context, jquery) {
             };
             return player;
         },
-
-        fetchSound : function(audioURL, callback) {
-            var request = new XMLHttpRequest();
-
-            trace("fetchSound " + audioURL);
-            request.open("GET", audioURL, true);
-            request.responseType = "arraybuffer";
-            this.request = request;
-
-            request.onload = function() {
-                var buffer = context.createBuffer(request.response, false);
-                callback(true, buffer);
-            };
-
-            request.onerror = function(e) {
-                callback(false, null);
-            };
-            request.send();
-        }
     };
 
     function isQuantum(a) {
@@ -401,6 +417,7 @@ function clusterSegments(track, numClusters, fieldName, vecName) {
         }
         return v1;
     }
+
     function getCentroid(cluster) {
         var count = 0;
         var segs = track.analysis.segments;

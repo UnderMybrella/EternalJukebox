@@ -1,3 +1,4 @@
+import dev.brella.kornea.gradle.*
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -12,21 +13,21 @@ java.sourceCompatibility = JavaVersion.VERSION_1_8
 dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
+	implementation(kotlinxCoroutinesModule("core"))
 
-	implementation("com.sedmelluq:lavaplayer:1.3.75")
-	implementation(clientProject("common"))
-	implementation(clientProject("magma"))
+//	implementation("com.sedmelluq:lavaplayer:1.3.75")
+	implementation("com.github.walkyst:lavaplayer-fork:1.3.98.4")
+	implementation(projectFrom("eternalbox", "client", "common"))
+	implementation(projectFrom("eternalbox", "client", "magma"))
 
-	implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.1")
-	implementation("io.ktor:ktor-client-core:1.6.4")
-	implementation("io.ktor:ktor-client-core-jvm:1.6.4")
-	implementation("io.ktor:ktor-client-apache:1.6.4")
-	implementation("io.ktor:ktor-client-json-jvm:1.6.4")
-	implementation("io.ktor:ktor-client-serialization-jvm:1.6.4")
+	implementation(kotlinxSerialisationModule("json"))
+	implementation(ktorModule("client-core-jvm"))
+	implementation(ktorModule("client-apache"))
+	implementation(ktorModule("client-json-jvm"))
+	implementation(ktorModule("client-serialization-jvm"))
 
-	implementation("dev.brella:kornea-io:5.2.0-alpha")
-	implementation("dev.brella:kornea-errors:2.0.3-alpha")
+	implementation(korneaIOModule())
+	implementation(korneaErrorsModule())
 //	implementation("club.minnced:opus-java-api:1.0.5")
 //	implementation("club.minnced:opus-java-natives:1.0.5")
 //	implementation("net.java.dev.jna:jna:4.4.0")

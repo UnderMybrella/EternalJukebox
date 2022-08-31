@@ -1,19 +1,34 @@
 package dev.eternalbox.common.audio
 
+import dev.brella.kornea.base.common.closeAfter
 import dev.brella.kornea.errors.common.*
 import dev.brella.kornea.io.common.*
 import dev.brella.kornea.io.common.flow.*
 import dev.brella.kornea.io.common.flow.extensions.readInt16LE
 import dev.brella.kornea.io.common.flow.extensions.readInt32LE
 import dev.brella.kornea.io.common.flow.extensions.readInt64BE
-import dev.brella.kornea.toolkit.common.closeAfter
 import dev.brella.kornea.toolkit.common.oneTimeMutable
 import dev.brella.kornea.toolkit.common.oneTimeMutableInline
 
-class OpusOggFile private constructor(pages: Array<OggPage>, dataSource: DataSource<*>) : OggContainer(pages, dataSource) {
-    data class OpusHeaderPacket(val version: Int, val channelCount: Int, val preskip: Int, val inputSampleRate: Int, val outputGain: Int, val channelMappingFamily: Int)
+class OpusOggFile private constructor(pages: Array<OggPage>, dataSource: DataSource<*>) :
+    OggContainer(pages, dataSource) {
+    data class OpusHeaderPacket(
+        val version: Int,
+        val channelCount: Int,
+        val preskip: Int,
+        val inputSampleRate: Int,
+        val outputGain: Int,
+        val channelMappingFamily: Int
+    )
+
     data class OpusCommentPacket(val vendor: String, val userComments: Map<String, String>)
-    data class OpusAudioPacket(val codecLayer: CodecLayer, val audioBandwidth: AudioBandwidth, val frameDuration: FrameDuration, val stereo: Boolean, val audioFrames: Array<ByteArray>)
+    data class OpusAudioPacket(
+        val codecLayer: CodecLayer,
+        val audioBandwidth: AudioBandwidth,
+        val frameDuration: FrameDuration,
+        val stereo: Boolean,
+        val audioFrames: Array<ByteArray>
+    )
 
     enum class CodecLayer {
         SILK,
@@ -107,13 +122,25 @@ class OpusOggFile private constructor(pages: Array<OggPage>, dataSource: DataSou
             SILK_ONLY_WIDEBAND_40MS to Triple(CodecLayer.SILK, AudioBandwidth.WIDEBAND, FrameDuration.FORTY_MS),
             SILK_ONLY_WIDEBAND_60MS to Triple(CodecLayer.SILK, AudioBandwidth.WIDEBAND, FrameDuration.SIXTY_MS),
 
-            HYBRID_SUPER_WIDEBAND_10MS to Triple(CodecLayer.HYBRID, AudioBandwidth.SUPER_WIDEBAND, FrameDuration.TEN_MS),
-            HYBRID_SUPER_WIDEBAND_20MS to Triple(CodecLayer.HYBRID, AudioBandwidth.SUPER_WIDEBAND, FrameDuration.TWENTY_MS),
+            HYBRID_SUPER_WIDEBAND_10MS to Triple(
+                CodecLayer.HYBRID,
+                AudioBandwidth.SUPER_WIDEBAND,
+                FrameDuration.TEN_MS
+            ),
+            HYBRID_SUPER_WIDEBAND_20MS to Triple(
+                CodecLayer.HYBRID,
+                AudioBandwidth.SUPER_WIDEBAND,
+                FrameDuration.TWENTY_MS
+            ),
 
             HYBRID_FULLBAND_10MS to Triple(CodecLayer.HYBRID, AudioBandwidth.FULLBAND, FrameDuration.TEN_MS),
             HYBRID_FULLBAND_20MS to Triple(CodecLayer.HYBRID, AudioBandwidth.FULLBAND, FrameDuration.TWENTY_MS),
 
-            CELT_ONLY_NARROWBAND_2MS to Triple(CodecLayer.CELT, AudioBandwidth.NARROWBAND, FrameDuration.TWO_POINT_FIVE_MS),
+            CELT_ONLY_NARROWBAND_2MS to Triple(
+                CodecLayer.CELT,
+                AudioBandwidth.NARROWBAND,
+                FrameDuration.TWO_POINT_FIVE_MS
+            ),
             CELT_ONLY_NARROWBAND_5MS to Triple(CodecLayer.CELT, AudioBandwidth.NARROWBAND, FrameDuration.FIVE_MS),
             CELT_ONLY_NARROWBAND_10MS to Triple(CodecLayer.CELT, AudioBandwidth.NARROWBAND, FrameDuration.TEN_MS),
             CELT_ONLY_NARROWBAND_20MS to Triple(CodecLayer.CELT, AudioBandwidth.NARROWBAND, FrameDuration.TWENTY_MS),
@@ -123,10 +150,26 @@ class OpusOggFile private constructor(pages: Array<OggPage>, dataSource: DataSou
             CELT_ONLY_WIDEBAND_10MS to Triple(CodecLayer.CELT, AudioBandwidth.WIDEBAND, FrameDuration.TEN_MS),
             CELT_ONLY_WIDEBAND_20MS to Triple(CodecLayer.CELT, AudioBandwidth.WIDEBAND, FrameDuration.TWENTY_MS),
 
-            CELT_ONLY_SUPER_WIDEBAND_2MS to Triple(CodecLayer.CELT, AudioBandwidth.SUPER_WIDEBAND, FrameDuration.TWO_POINT_FIVE_MS),
-            CELT_ONLY_SUPER_WIDEBAND_5MS to Triple(CodecLayer.CELT, AudioBandwidth.SUPER_WIDEBAND, FrameDuration.FIVE_MS),
-            CELT_ONLY_SUPER_WIDEBAND_10MS to Triple(CodecLayer.CELT, AudioBandwidth.SUPER_WIDEBAND, FrameDuration.TEN_MS),
-            CELT_ONLY_SUPER_WIDEBAND_20MS to Triple(CodecLayer.CELT, AudioBandwidth.SUPER_WIDEBAND, FrameDuration.TWENTY_MS),
+            CELT_ONLY_SUPER_WIDEBAND_2MS to Triple(
+                CodecLayer.CELT,
+                AudioBandwidth.SUPER_WIDEBAND,
+                FrameDuration.TWO_POINT_FIVE_MS
+            ),
+            CELT_ONLY_SUPER_WIDEBAND_5MS to Triple(
+                CodecLayer.CELT,
+                AudioBandwidth.SUPER_WIDEBAND,
+                FrameDuration.FIVE_MS
+            ),
+            CELT_ONLY_SUPER_WIDEBAND_10MS to Triple(
+                CodecLayer.CELT,
+                AudioBandwidth.SUPER_WIDEBAND,
+                FrameDuration.TEN_MS
+            ),
+            CELT_ONLY_SUPER_WIDEBAND_20MS to Triple(
+                CodecLayer.CELT,
+                AudioBandwidth.SUPER_WIDEBAND,
+                FrameDuration.TWENTY_MS
+            ),
 
             CELT_ONLY_FULLBAND_2MS to Triple(CodecLayer.CELT, AudioBandwidth.FULLBAND, FrameDuration.TWO_POINT_FIVE_MS),
             CELT_ONLY_FULLBAND_5MS to Triple(CodecLayer.CELT, AudioBandwidth.FULLBAND, FrameDuration.FIVE_MS),
@@ -189,7 +232,16 @@ class OpusOggFile private constructor(pages: Array<OggPage>, dataSource: DataSou
                     val outputGain = flow.readInt16LE() ?: return@closeAfter korneaNotEnoughData()
                     val channelMappingFamily = flow.read() ?: return@closeAfter korneaNotEnoughData()
 
-                    KorneaResult.success(OpusHeaderPacket(version, channelCount, preskip, inputSampleRate, outputGain, channelMappingFamily))
+                    KorneaResult.success(
+                        OpusHeaderPacket(
+                            version,
+                            channelCount,
+                            preskip,
+                            inputSampleRate,
+                            outputGain,
+                            channelMappingFamily
+                        )
+                    )
                 }
             }
 
@@ -216,7 +268,15 @@ class OpusOggFile private constructor(pages: Array<OggPage>, dataSource: DataSou
                             commentData.decodeToString()
                         }
 
-                        KorneaResult.success(OpusCommentPacket(vendorString, userComments.map { str -> Pair(str.substringBefore('='), str.substringAfter('=')) }.toMap()))
+                        KorneaResult.success(
+                            OpusCommentPacket(vendorString,
+                                userComments.associate { str ->
+                                    Pair(
+                                        str.substringBefore('='),
+                                        str.substringAfter('=')
+                                    )
+                                })
+                        )
                     }
                 }
 
@@ -267,8 +327,7 @@ class OpusOggFile private constructor(pages: Array<OggPage>, dataSource: DataSou
 //                                if (index == pages.size - 1) {
                                     val firstByte = flow.read() ?: return korneaNotEnoughData()
                                     if (firstByte >= 252) {
-                                        val firstSize = firstByte + (flow.read()
-                                                                     ?: return korneaNotEnoughData()) * 4
+                                        val firstSize = firstByte + (flow.read() ?: return korneaNotEnoughData()) * 4
 
                                         frameLengths = intArrayOf(firstSize, packetSize - 3 - firstSize)
                                     } else {
@@ -302,7 +361,7 @@ class OpusOggFile private constructor(pages: Array<OggPage>, dataSource: DataSou
                                         }
 
                                         vbrLengths[vbrLengths.size - 1] = packetSize - 2 -
-                                                                          (paddingLength ?: 0) - vbrLengths.sum()
+                                                (paddingLength ?: 0) - vbrLengths.sum()
 
                                         frameLengths = vbrLengths
 //                                    } else {
@@ -328,7 +387,7 @@ class OpusOggFile private constructor(pages: Array<OggPage>, dataSource: DataSou
                             val audioFrames = Array(frameLengths.size) { i ->
                                 val buffer = ByteArray(frameLengths[i])
                                 flow.readExact(buffer)
-                                ?: return korneaNotEnoughData("Failed to read ${frameLengths[i]} bytes")
+                                    ?: return korneaNotEnoughData("Failed to read ${frameLengths[i]} bytes")
                                 buffer
                             }
                             audioPages.add(

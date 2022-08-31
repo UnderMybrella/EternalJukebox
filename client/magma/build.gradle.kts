@@ -1,3 +1,7 @@
+import dev.brella.kornea.gradle.korneaErrorsModule
+import dev.brella.kornea.gradle.korneaIOModule
+import dev.brella.kornea.gradle.kotlinxCoroutinesModule
+import dev.brella.kornea.gradle.projectFrom
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -12,14 +16,15 @@ java.sourceCompatibility = JavaVersion.VERSION_1_8
 dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0")
+	implementation(kotlinxCoroutinesModule("core"))
 
-	implementation("com.sedmelluq:lavaplayer:1.3.75")
+//	implementation("com.sedmelluq:lavaplayer:1.3.75")
+	implementation("com.github.walkyst:lavaplayer-fork:1.3.98.4")
 
-	implementation(clientProject("common"))
+	implementation(projectFrom("eternalbox", "client", "common"))
 
-	implementation("dev.brella:kornea-io:5.2.0-alpha")
-	implementation("dev.brella:kornea-errors:2.0.3-alpha")
+	implementation(korneaIOModule())
+	implementation(korneaErrorsModule())
 
 //	implementation("club.minnced:opus-java-api:1.0.5")
 //	implementation("club.minnced:opus-java-natives:1.0.5")
