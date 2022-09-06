@@ -37,13 +37,13 @@ For Ubuntu or Debian-based distributions execute `sudo apt-get install default-j
 ##### Fedora and CentOS
 There is a tutorial for installing java on Fedora and CentOS at https://www.digitalocean.com/community/tutorials/how-to-install-java-on-centos-and-fedora   
 
-### Youtube-dl:
+### Yt-dlp (a more up-to-date fork of Youtube-dl):
 ##### Windows
-Download the .exe at https://yt-dl.org/latest/youtube-dl.exe and place it in `C:\Windows\`, or in another folder on the PATH.
+Download the .exe at https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe and place it in `C:\Windows\`, or in another folder on the PATH.
 ##### Linux
 Use these commands in the terminal to install youtube-dl on Linux:  
-`sudo curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl`   
-`sudo chmod a+rx /usr/local/bin/youtube-dl`
+`sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp`   
+`sudo chmod a+rx /usr/local/bin/yt-dlp`
 
 ### ffmpeg:
 ##### Windows
