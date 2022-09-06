@@ -77,6 +77,17 @@ function getTitle(title, artist, url) {
     return title;
 }
 
+function goDirect() {
+    var spotify = $("#direct-spotify").val();
+    var match = spotify.match(/spotify.com\/track\/([^/?]+)/);
+    if (match === null) {
+        alert("Please enter a valid Spotify song share link (open.spotify.com/track/<id>)");
+        return;
+    }
+    var params = new URLSearchParams({id: match[1], audio: $("#direct-audio").val()});
+    window.location.href = "{% if page.app == 'jukebox' %}jukebox{% elsif page.app == 'canonizer' %}canonizer{% endif %}_go.html?" + params.toString();
+}
+
 function init() {
     $("#go-search").click(function () {
         searchForTrack();
@@ -86,6 +97,10 @@ function init() {
         if (e.keyCode == 13) {
             searchForTrack();
         }
+    });
+
+    $("#go-direct").click(function () {
+        goDirect();
     });
 
     $.getJSON('api/site/popular/{% if page.app == 'jukebox' %}jukebox{% elsif page.app == 'canonizer' %}canonizer{% endif %}', {count: 12}, function (data) {
