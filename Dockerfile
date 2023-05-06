@@ -12,7 +12,7 @@ RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o 
 
 # build jar with gradle
 
-FROM gradle:jdk8 as gradle-build
+FROM gradle:7-jdk8 as gradle-build
 
 WORKDIR /home/gradle/project
 
