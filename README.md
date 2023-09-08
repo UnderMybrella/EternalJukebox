@@ -11,6 +11,10 @@ You can visit the official site [here](https://eternalbox.dev/), in case you wan
 
 You need to install [docker](https://docs.docker.com/engine/install/) and [docker-compose](https://docs.docker.com/compose/install/)
 
+You'll also need to install [Java's JDK](https://www.oracle.com/java/technologies/downloads/#jdk20-windows). Currently tested and working locally with JDK Development Kit 20.0.2, which is the latest at the time of writing.
+
+Docker version currently is at v4.22.1
+
 Then, download or clone the repository.
 
 ## Configuration
